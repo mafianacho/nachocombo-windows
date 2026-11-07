@@ -51,7 +51,7 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           mkdir -p dist/pkg
-          cp target/release/NachoCombo.exe README.md LICENSE dist/pkg/
+          cp target/release/NachoCombo.exe README.md LICENSE assets/fonts/*-OFL.txt dist/pkg/
           (cd dist/pkg && 7z a -tzip "../NachoCombo-windows-$VERSION-x64.zip" . >/dev/null)
           rm -rf dist/pkg
           (cd dist && sha256sum *.zip > SHA256SUMS.txt)

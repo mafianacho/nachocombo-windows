@@ -73,3 +73,5 @@ the person installing or operating it. The only network request is the public IP
 ## License
 
 [MIT](LICENSE) © 2026 Mafianacho. The "Nacho Combo" name and logo are not covered by this license.
+
+The bundled fonts, Anton and IBM Plex, are under the SIL Open Font License 1.1 ([Anton](assets/fonts/Anton-OFL.txt), [IBM Plex](assets/fonts/IBMPlex-OFL.txt)).
