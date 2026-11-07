@@ -37,7 +37,11 @@ jobs:
       - name: Unit tests
         run: cargo test --locked
       - name: Build NachoCombo.exe (release)
-        run: cargo build --release --locked
+        shell: pwsh
+        run: |
+          # Panic messages carry source paths; keep the runner's folders out of the shipped exe.
+          $env:RUSTFLAGS = "--remap-path-prefix=$env:USERPROFILE\.cargo=cargo --remap-path-prefix=$PWD=src"
+          cargo build --release --locked
       - name: Verify the executable
         env:
           VERSION: ${{ steps.ver.outputs.version }}
