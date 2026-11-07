@@ -1,10 +1,23 @@
 <p align="center"><img src="assets/AppIcon.png" width="128" alt="NachoCombo app icon: a smiling nacho chip on a takeout box"></p>
 
-# NachoCombo for Windows
+<h1 align="center">NachoCombo for Windows</h1>
 
-**A dozen utilities you would otherwise install one by one, in a single 3 MB exe.** Window tiling, floating screenshots you
-can draw on, clipboard history, a tray system monitor, keep-awake, sound and display control, a drag-and-drop shelf,
-focus dimming and a tidy tray. Each gadget is its own switch, or order a few together as a combo.
+<p align="center"><b>A dozen utilities you would otherwise install one by one, in a single 3 MB exe.</b></p>
+
+<p align="center">
+  <a href="https://github.com/mafianacho/nachocombo-windows/releases/latest"><img src="https://img.shields.io/github/v/release/mafianacho/nachocombo-windows?label=download&color=FFC23D" alt="Latest release"></a>
+  <a href="https://github.com/mafianacho/nachocombo-windows/actions/workflows/ci.yml"><img src="https://github.com/mafianacho/nachocombo-windows/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" alt="Windows 10 and 11">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+</p>
+
+<p align="center"><b>English</b> · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-Hans.md">简体中文</a></p>
+
+<p align="center"><img src="docs/screenshots/en-home.png" width="820" alt="NachoCombo for Windows: every gadget as its own switch"></p>
+
+Window tiling, floating screenshots you can draw on, clipboard history, a tray system monitor, keep-awake, sound and
+display control, a drag-and-drop shelf, focus dimming, a tidy tray and a disk map. Each gadget is its own switch, or
+order a few together as a combo.
 
 - **Portable:** one `NachoCombo.exe`. No installer, no runtime, no administrator rights, no driver.
 - **Light:** about 6 MB of its own memory with several gadgets on, and no CPU while idle. Native Win32 and Direct2D, no
@@ -27,15 +40,35 @@ The Windows edition of [Nacho Combo for macOS](https://github.com/mafianacho/nac
 | **File Shelf** | A floating shelf that opens when you shake a drag: files, attachments, images, links and text; drag one or all out again (always a copy). **Space in File Explorer previews the selected file.** | Dropover, QuickLook |
 | **Focus Dim** | Dims everything behind the active window, per display, with fade and pause (Ctrl+Alt+Win+H). | HazeOver |
 | **Tray Organizer** | Folds the tray icons you did not keep into Windows' overflow menu and brings them back, with auto-collapse; restores every icon when switched off. | Bartender |
+| **Disk Map** | See what fills a disk as blocks, go into a folder, open it or show it in File Explorer, and move what you no longer need to the Recycle Bin after you approve. Windows and other accounts' folders are never offered. | WinDirStat, WizTree |
 
-**Combos:** No.1 Starter, No.2 Desk, No.3 Builder, No.4 Focus, No.5 Meeting, No.6 Presenter, No.7 Full Combo, and up to
-five of your own. Ordering shows what changes first and can be undone for five minutes.
+## Combos
+
+<p align="center"><img src="docs/screenshots/en-combos.png" width="820" alt="Combos: No.1 Starter to No.7 Full Combo"></p>
+
+No.1 Starter, No.2 Desk, No.3 Builder, No.4 Focus, No.5 Meeting, No.6 Presenter, No.7 Full Combo, and up to five of
+your own. Ordering shows what changes first and can be undone for five minutes.
+
+## A closer look
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/en-snap.png" alt="Window Snap: every layout from the keyboard"><br><b>Window Snap</b>: halves, quarters, thirds and more from the keyboard.</td>
+    <td width="50%"><img src="docs/screenshots/en-capture.png" alt="Capture Float: capture, draw, copy text, pick a colour"><br><b>Capture Float</b>: capture, draw on it, copy its text, pick a colour.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/en-diskmap.png" alt="Disk Map: what fills the disk"><br><b>Disk Map</b>: what fills the disk, and a safe way to clear it.</td>
+    <td width="50%" align="center"><img src="docs/screenshots/en-panel.png" width="260" alt="Quick panel from the tray"><br><b>Quick panel</b>: every gadget one click from the tray.</td>
+  </tr>
+</table>
 
 ## Install
 
-Download `NachoCombo-windows-<version>-x64.zip` from [Releases](../../releases), unzip it anywhere and run
-`NachoCombo.exe`. General ▸ Open at Sign-In starts it with Windows. To remove it, quit it from the tray and delete the
-folder; settings live in `%APPDATA%\NachoCombo`.
+1. Download `NachoCombo-windows-<version>-x64.zip` from [Releases](https://github.com/mafianacho/nachocombo-windows/releases/latest).
+2. Unzip it anywhere and run `NachoCombo.exe`.
+3. General ▸ Open at Sign-In starts it with Windows.
+
+To remove it, quit it from the tray and delete the folder; settings live in `%APPDATA%\NachoCombo`.
 
 The exe is not code-signed yet, so SmartScreen may say "Windows protected your PC" on the first launch: choose
 **More info ▸ Run anyway**. Check the download with `certutil -hashfile <zip> SHA256` against `SHA256SUMS.txt`.
@@ -68,10 +101,12 @@ the person installing or operating it. The only network request is the public IP
 - Debug control channel: start with `NachoCombo.exe --debug-ctl`, then for example `NachoCombo.exe ctl set snap on`,
   `ctl snap left`, `ctl combo order desk`, `ctl gallery page devices`, `ctl snapshot settings out.png`, `ctl quit`. Each
   command prints the state JSON.
-- Releases: bump `version` in `Cargo.toml`, then push a tag `v<version>`. The workflow checks that they match.
+- Releases: bump `version` in `Cargo.toml`, then push a tag `v<version>`. The workflow checks that they match, builds the
+  zip and publishes the release.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, and [SECURITY.md](SECURITY.md) to report a
+vulnerability.
 
 ## License
 
 [MIT](LICENSE) © 2026 Mafianacho. The "Nacho Combo" name and logo are not covered by this license.
-
-The bundled fonts, Anton and IBM Plex, are under the SIL Open Font License 1.1 ([Anton](assets/fonts/Anton-OFL.txt), [IBM Plex](assets/fonts/IBMPlex-OFL.txt)).
