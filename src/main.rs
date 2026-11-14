@@ -15,6 +15,7 @@ mod i18n;
 mod monitor;
 mod monitor_data;
 mod monitor_panels;
+mod mouse;
 mod pages;
 mod panel;
 mod peek;

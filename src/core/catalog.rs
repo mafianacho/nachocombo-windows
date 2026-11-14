@@ -53,6 +53,7 @@ pub fn actions() -> Vec<Action> {
     add("device.dimmer", DeviceControl, "Darken External Displays", None);
     add("diskmap.open", DiskMap, "Open Disk Map", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
+    add("mouse.reverse", MouseTune, "Reverse Mouse Scrolling On / Off", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
     for item in MonitorItem::ALL {
         add(&format!("monitor.{}", item.name().to_lowercase()), SystemMonitor, &format!("Open {} Panel", item.name()), None);
@@ -253,6 +254,24 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "Files that live only in the cloud (OneDrive placeholders) take no space on this disk and are left out.",
                 "Moving to the Recycle Bin frees the space only once the Recycle Bin is emptied.",
                 "A full scan of a large drive takes about a minute; the map stays for ten minutes after you close it.",
+            ],
+        },
+        ModuleId::MouseTune => &Info {
+            tagline: "Sets up a wheel mouse your way: its own scroll direction, scroll speed, pointer speed and pointer precision.",
+            features: &[
+                f!("Own Scroll Direction", "Reverse the wheel of a mouse while a precision touchpad keeps the direction Windows gives it."),
+                f!("Scroll Speed", "Half to three times as many lines per notch as your Windows setting."),
+                f!("Pointer Speed", "Pick a pointer speed from here, or leave it as Windows has it."),
+                f!("Pointer Precision", "Turn Enhance pointer precision on or off, or leave it alone."),
+                f!("Your Values Come Back", "Switch the gadget off, quit the app, or restart after a crash: the values you had before return, unless you changed them yourself meanwhile."),
+            ],
+            tips: &[t!("", "Tray panel", "Reverse the wheel with one click")],
+            note: "No administrator rights needed. Pointer speed, scroll lines and precision are the per-user settings of Settings ▸ Bluetooth & devices ▸ Mouse; they last until you sign out even if the app is killed, and the app puts them back as it stops.",
+            limits: &[
+                "Smooth scrolling, side-button actions and a middle-button action are not offered: Windows has no system setting for smooth wheel scrolling (apps do it themselves), side buttons already go back and forward in browsers and File Explorer, and there is no Mission Control to open.",
+                "Only wheel notches are reversed. A precision touchpad or a free-spinning wheel sends finer steps and keeps its own direction; change those in Windows' touchpad settings.",
+                "Windows apps running as administrator do not receive reversed wheel events from an app that is not.",
+                "Not checked on a physical mouse or touchpad yet: it has been tried only with simulated wheel events.",
             ],
         },
         ModuleId::DeviceControl => &Info {

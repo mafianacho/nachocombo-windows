@@ -120,6 +120,7 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::Clipboard => (rgb(0x7FD3FF), rgb(0x1F7BE0), white),
         ModuleId::DeviceControl => (rgb(0x6FE7DD), rgb(0x0E8A93), white),
         ModuleId::DiskMap => (rgb(0x3F2E20), rgb(0x1E1610), NACHO),
+        ModuleId::MouseTune => (rgb(0xFF9A8A), rgb(0xC8321F), white),
     }
 }
 
@@ -292,6 +293,7 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::KeepAwake => if a.awake.active() { a.awake.minutes_left().map_or("Awake".into(), |m| format!("Awake · {m} min left")) } else { "Sleeps as usual".into() },
             ModuleId::Clipboard => format!("{} · {} item{}", shortcut_of("clipboard.show"), a.clipboard.items.len(), if a.clipboard.items.len() == 1 { "" } else { "s" }),
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
+            ModuleId::MouseTune => if a.settings.options.mouse_reverse { "Wheel reversed".into() } else { "Wheel as Windows has it".into() },
             ModuleId::DeviceControl => {
                 let out = a.devices.outputs.iter().find(|d| d.default).map_or("No output".to_string(), |d| d.name.clone());
                 if a.devices.mic_muted { format!("Mic muted · {out}") } else { out }
@@ -582,6 +584,29 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 let bw = ui.button_width("Clear History", true);
                 if ui.button("clearclips", "Clear History", x + w - 18.0 - bw, y + 11.0, Btn::Secondary, true) { a.clipboard.items.retain(|c| c.pinned); }
                 y += 46.0;
+            }
+            ModuleId::MouseTune => {
+                let (h, ny) = check(ui, "reverse", "Reverse the wheel (a precision touchpad stays as it is)", o.mouse_reverse, x, y, w);
+                if h { o.mouse_reverse = !o.mouse_reverse; }
+                y = ny;
+                sep(ui, y);
+                let speeds: Vec<(f64, String)> = crate::core::mouse::SPEED_CHOICES.iter().map(|s| (*s, format!("{s}×"))).collect();
+                let refs: Vec<(f64, &str)> = speeds.iter().map(|o| (o.0, o.1.as_str())).collect();
+                let (r, ny) = choice(ui, "mspeed", "Scroll Speed", &refs, o.mouse_speed, x, y, w);
+                if let Some(v) = r { o.mouse_speed = v; }
+                y = ny;
+                sep(ui, y);
+                let pointers: Vec<(i32, String)> = crate::core::mouse::POINTER_CHOICES.iter().map(|s| (*s, if *s == 0 { "As Windows has it".to_string() } else { s.to_string() })).collect();
+                let refs: Vec<(i32, &str)> = pointers.iter().map(|o| (o.0, o.1.as_str())).collect();
+                let (r, ny) = choice(ui, "mpointer", "Pointer Speed", &refs, o.mouse_pointer, x, y, w);
+                if let Some(v) = r { o.mouse_pointer = v; }
+                y = ny;
+                sep(ui, y);
+                use crate::core::mouse::Precision;
+                let (r, ny) = choice(ui, "mprecision", "Pointer Precision", &[(Precision::Keep, "As Windows has it"), (Precision::On, "On"), (Precision::Off, "Off")], o.mouse_precision, x, y, w);
+                if let Some(v) = r { o.mouse_precision = v; }
+                y = ny;
+                y += ui.label("Your own pointer and scroll settings come back when you switch this off or quit.", sans(12), x + 18.0, y + 6.0, w - 36.0, th.ink2) + 14.0;
             }
             ModuleId::DiskMap => {
                 y += ui.label("Disk Map has no options: it scans when you open it.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;

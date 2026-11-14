@@ -4,7 +4,7 @@ use crate::core::combos::{self, Combo, Snapshot};
 use crate::core::layout::SnapAction;
 use crate::core::settings::*;
 use crate::core::shortcut::*;
-use crate::{awake, capture, clipboard, devices, dim, hooks, monitor, panel, pages, shelf, snap, tray, trayorg};
+use crate::{awake, capture, clipboard, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use windows::core::*;
@@ -144,6 +144,7 @@ impl App {
             ModuleId::Clipboard => clipboard::start(),
             ModuleId::DeviceControl => devices::start(),
             ModuleId::DiskMap => crate::diskmap::start(),
+            ModuleId::MouseTune => mouse::start(),
         };
         self.states.insert(id, match r { Ok(()) => State::Running, Err(e) => State::Failed(e) });
         hooks::sync();
@@ -163,6 +164,7 @@ impl App {
             ModuleId::Clipboard => clipboard::stop(),
             ModuleId::DeviceControl => devices::stop(),
             ModuleId::DiskMap => crate::diskmap::stop(),
+            ModuleId::MouseTune => mouse::stop(),
         }
         self.states.insert(id, State::Off);
         hooks::sync();
@@ -241,6 +243,7 @@ impl App {
             "diskmap.open" => if self.state(ModuleId::DiskMap) == State::Running { crate::diskmap::open() },
             "device.theme" => if self.state(ModuleId::DeviceControl) == State::Running { devices::toggle_theme() },
             "window.onTop" => snap::toggle_on_top(),
+            "mouse.reverse" => mouse::toggle_reverse(),
             _ => {}
         }
     }
@@ -273,6 +276,7 @@ impl App {
     pub fn apply_options(&mut self) {
         dim::options_changed();
         monitor::options_changed();
+        mouse::options_changed();
         hooks::sync();
         self.changed();
     }
@@ -298,6 +302,7 @@ impl App {
             "clipboard": self.clipboard.diagnostics(),
             "devices": self.devices.diagnostics(),
             "diskmap": crate::diskmap::diagnostics(),
+            "mouse": mouse::diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
             "panel": self.panel.is_open(),
@@ -379,6 +384,7 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         let a = app();
         crate::window::register_class();
         tray::create_main();
+        mouse::recover();
         for id in ModuleId::ALL { if a.settings.is_on(id) { a.start(id); } }
         a.sync_hotkeys();
         a.write_state();
