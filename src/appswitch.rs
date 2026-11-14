@@ -91,7 +91,7 @@ fn describe(hwnd: HWND) -> Option<RawWindow> {
             id: hwnd.0 as isize, pid, app: String::new(),
             title: String::from_utf16_lossy(&title[..n.max(0) as usize]),
             class: String::from_utf16_lossy(&class[..cn.max(0) as usize]),
-            width: r.right - r.left, height: r.bottom - r.top, visible: visible || minimized, cloaked: cloaked != 0,
+            width: r.right - r.left, height: r.bottom - r.top, visible, cloaked: cloaked != 0,
             tool_window: ex & WS_EX_TOOLWINDOW.0 != 0, app_window: ex & WS_EX_APPWINDOW.0 != 0,
             owned: GetWindow(hwnd, GW_OWNER).is_ok_and(|o| !o.0.is_null()), minimized,
         })
