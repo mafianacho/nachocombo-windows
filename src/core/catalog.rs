@@ -52,6 +52,10 @@ pub fn actions() -> Vec<Action> {
     add("device.brighter", DeviceControl, "Brighten External Displays", None);
     add("device.dimmer", DeviceControl, "Darken External Displays", None);
     add("diskmap.open", DiskMap, "Open Disk Map", None);
+    add("appswitch.next", AppSwitch, "Switch Windows", Some(super::appswitch::NEXT_DEFAULT));
+    add("appswitch.previous", AppSwitch, "Switch Windows Backward", Some(super::appswitch::PREVIOUS_DEFAULT));
+    add("appswitch.hideOthers", AppSwitch, "Hide Other Windows", None);
+    add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
     add("mouse.reverse", MouseTune, "Reverse Mouse Scrolling On / Off", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
@@ -256,6 +260,38 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "A full scan of a large drive takes about a minute; the map stays for ten minutes after you close it.",
             ],
         },
+        ModuleId::AppSwitch => &Info {
+            tagline: "Goes through every window, not only apps, with a shortcut you hold and let go of.",
+            features: &[
+                f!("Window Switcher", "Hold Ctrl+Alt and press ` to go through every window; let go to switch to the one you stopped on."),
+                f!("Backward Too", "Add Shift to go the other way round the list."),
+                f!("Minimized Windows Too", "Minimized windows are listed after the open ones and come back when you pick them."),
+                f!("Pick with the Pointer", "Click a window in the switcher to go straight to it."),
+                f!("Hide Other Windows", "One shortcut minimizes every window except the front app's."),
+            ],
+            tips: &[t!("Ctrl+Alt+`", "", "Next window"), t!("Ctrl+Alt+Shift+`", "", "Previous window"), t!("", "Let go of Ctrl+Alt", "Switch to it"), t!("Esc", "", "Cancel")],
+            note: "No administrator rights needed. Windows' own Alt+Tab keeps working; this has shortcuts of its own, which you can change on the Shortcuts tab.",
+            limits: &[
+                "Windows keeps Alt+Tab for itself, so the default is Ctrl+Alt+` instead of the Mac's Option+Tab.",
+                "Windows of apps running as administrator can be listed but may refuse to come to the front.",
+                "Windows on other virtual desktops are not listed.",
+            ],
+        },
+        ModuleId::CalendarClock => &Info {
+            tagline: "A clock with a calendar and world clocks in the taskbar corner.",
+            features: &[
+                f!("Your Clock", "Date, weekday and time the way you like them, with seconds if you want, in the icon's tooltip."),
+                f!("Month at a Glance", "Click the icon for a month calendar; move between months and jump back to today."),
+                f!("World Clocks", "The time in the cities you add, with how far ahead or behind they are."),
+            ],
+            tips: &[t!("", "Click the icon", "Open the calendar"), t!("", "Hover the icon", "Read the clock")],
+            note: "No administrator rights needed and nothing to allow. It only reads the PC's clock; nothing is sent anywhere.",
+            limits: &[
+                "Windows has no place for text in the taskbar corner, so the clock is the icon's tooltip and the icon shows today's date. The taskbar's own clock stays; hide its date in Settings ▸ Personalization ▸ Taskbar if you do not want two.",
+                "Your calendar events, the countdown to the next meeting and the Join button are not here: Windows has no calendar every app shares.",
+                "World clocks know the daylight-saving rules of the listed cities as they are today; a city that changes its rules needs an update of this app.",
+            ],
+        },
         ModuleId::MouseTune => &Info {
             tagline: "Sets up a wheel mouse your way: its own scroll direction, scroll speed, pointer speed and pointer precision.",
             features: &[
@@ -271,7 +307,7 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "Smooth scrolling, side-button actions and a middle-button action are not offered: Windows has no system setting for smooth wheel scrolling (apps do it themselves), side buttons already go back and forward in browsers and File Explorer, and there is no Mission Control to open.",
                 "Only wheel notches are reversed. A precision touchpad or a free-spinning wheel sends finer steps and keeps its own direction; change those in Windows' touchpad settings.",
                 "Windows apps running as administrator do not receive reversed wheel events from an app that is not.",
-                "Not checked on a physical mouse or touchpad yet: it has been tried only with simulated wheel events.",
+                "Not checked on a physical mouse or touchpad yet.",
             ],
         },
         ModuleId::DeviceControl => &Info {
@@ -302,6 +338,13 @@ mod tests {
         let all: Vec<_> = SNAP_GROUPS.iter().flat_map(|g| g.1.iter().copied()).collect();
         assert_eq!(all.len(), 24);
         for a in SnapAction::ALL { assert_eq!(all.iter().filter(|x| **x == a).count(), 1); }
+    }
+    #[test] fn every_gadget_has_a_page_text() {
+        for m in ModuleId::ALL { let i = info(m); assert!(!i.tagline.is_empty() && !i.features.is_empty() && !i.note.is_empty(), "{}", m.name()); }
+    }
+    #[test] fn calendar_clock_is_listed_with_a_show_action_and_no_default_key() {
+        let a = actions().into_iter().find(|a| a.id == "clock.show").unwrap();
+        assert_eq!((a.module, a.default), (ModuleId::CalendarClock, None));
     }
     #[test] fn defaults_do_not_clash_and_pass_the_policy() {
         let s = AppSettings::default();

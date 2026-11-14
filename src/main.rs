@@ -1,8 +1,10 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 #![allow(clippy::too_many_arguments)]
 mod app;
+mod appswitch;
 mod awake;
 mod capture;
+mod clock;
 mod clipboard;
 mod core;
 mod ctl;

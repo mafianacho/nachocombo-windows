@@ -1,4 +1,5 @@
 //! The settings file. Every field defaults on its own, so an older or partly broken file keeps everything else.
+use super::clock::ClockHours;
 use super::mouse::{Precision, Saved};
 use super::shortcut::*;
 use serde::{Deserialize, Serialize};
@@ -7,23 +8,25 @@ use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, MouseTune }
+pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock, MouseTune }
 
 impl ModuleId {
-    pub const ALL: [ModuleId; 11] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
-        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::MouseTune];
+    pub const ALL: [ModuleId; 13] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
+        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock, ModuleId::MouseTune];
     pub fn name(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "Tray Organizer", ModuleId::SystemMonitor => "System Monitor", ModuleId::WindowSnap => "Window Snap",
             ModuleId::FileShelf => "File Shelf", ModuleId::CaptureFloat => "Capture Float", ModuleId::FocusDim => "Focus Dim",
-            ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map", ModuleId::MouseTune => "Mouse Tune",
+            ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map", ModuleId::AppSwitch => "App Switch",
+            ModuleId::CalendarClock => "Calendar Clock", ModuleId::MouseTune => "Mouse Tune",
         }
     }
     pub fn key(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "tray", ModuleId::SystemMonitor => "monitor", ModuleId::WindowSnap => "snap",
             ModuleId::FileShelf => "shelf", ModuleId::CaptureFloat => "capture", ModuleId::FocusDim => "dim",
-            ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap", ModuleId::MouseTune => "mouse",
+            ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap", ModuleId::AppSwitch => "appswitch",
+            ModuleId::CalendarClock => "clock", ModuleId::MouseTune => "mouse",
         }
     }
     pub fn from_key(k: &str) -> Option<ModuleId> { Self::ALL.into_iter().find(|m| m.key() == k) }
@@ -92,6 +95,12 @@ pub struct Options {
     pub snap_restore_layouts: bool,
     /// File Shelf: Space in File Explorer previews the selected file.
     pub explorer_preview: bool,
+    /// Calendar Clock: what the clock shows, and the cities of the world clocks (time zone ids such as "Asia/Tokyo").
+    pub clock_date: bool,
+    pub clock_weekday: bool,
+    pub clock_seconds: bool,
+    pub clock_hours: ClockHours,
+    pub world_clocks: Vec<String>,
     /// Mouse Tune: a wheel mouse scrolls the other way (precision touchpads keep their own direction).
     pub mouse_reverse: bool,
     /// Mouse Tune: lines per wheel notch, as a factor of the user's own setting.
@@ -108,6 +117,7 @@ impl Default for Options {
             dim_scope: DimScope::FrontWindow, dim_other_displays: true, dim_fade_seconds: 0.25, public_ip_auto: false,
             awake_display: true, awake_apps: vec![], awake_battery_guard: 0, clip_max: 100, preferred_output: None, preferred_input: None,
             theme_schedule: false, light_minute: 7 * 60, dark_minute: 19 * 60, snap_restore_layouts: true, explorer_preview: true,
+            clock_date: true, clock_weekday: true, clock_seconds: false, clock_hours: ClockHours::System, world_clocks: vec![],
             mouse_reverse: true, mouse_speed: 1.0, mouse_pointer: 0, mouse_precision: Precision::Keep }
     }
 }
@@ -127,6 +137,7 @@ impl Options {
         self.clip_max = self.clip_max.clamp(10, 1000);
         self.light_minute = self.light_minute.rem_euclid(1440);
         self.dark_minute = self.dark_minute.rem_euclid(1440);
+        self.world_clocks.truncate(super::clock::MAX_WORLD_CLOCKS);
         self.mouse_speed = if self.mouse_speed.is_finite() { self.mouse_speed.clamp(0.25, 4.0) } else { 1.0 };
         self.mouse_pointer = self.mouse_pointer.clamp(0, 20);
         self.dim_fade_seconds = if self.dim_fade_seconds.is_finite() { self.dim_fade_seconds.clamp(0.0, 5.0) } else { 0.25 };
@@ -224,6 +235,36 @@ mod tests {
         assert_eq!(s.options.snap_gap, 8);
         assert!(s.options.window_motion);
         assert_eq!(s.launch_window, LaunchWindow::WhenNeeded);
+    }
+    #[test] fn a_settings_file_from_before_calendar_clock_still_loads() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true,"keepAwake":false},"options":{"snapGap":8,"awakeApps":["zoom.exe"]}}"#).unwrap();
+        assert!(s.is_on(ModuleId::FocusDim));
+        assert!(!s.is_on(ModuleId::CalendarClock), "a new gadget is off until it is turned on");
+        assert_eq!(s.options.snap_gap, 8);
+        assert_eq!(s.options.awake_apps, vec!["zoom.exe".to_string()]);
+        let o = s.options;
+        assert!(o.clock_date && o.clock_weekday && !o.clock_seconds);
+        assert_eq!(o.clock_hours, ClockHours::System);
+        assert!(o.world_clocks.is_empty());
+    }
+    #[test] fn clock_options_roundtrip_and_survive_a_bad_value() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"calendarClock":true},"options":{"clockHours":"twentyFour","clockSeconds":true,"worldClocks":["Asia/Tokyo"]}}"#).unwrap();
+        assert!(s.is_on(ModuleId::CalendarClock));
+        assert_eq!((s.options.clock_hours, s.options.clock_seconds, s.options.world_clocks.clone()), (ClockHours::TwentyFour, true, vec!["Asia/Tokyo".to_string()]));
+        let again: AppSettings = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        assert_eq!(again, s);
+        // A value this version does not know falls back instead of throwing the whole file away.
+        let odd: AppSettings = serde_json::from_str(r#"{"dimIntensity":0.7,"options":{"clockHours":"bogus"}}"#).unwrap();
+        assert_eq!(odd.dim_intensity, 0.7);
+        assert_eq!(odd.options.clock_hours, ClockHours::Unknown);
+    }
+    #[test] fn too_many_world_clocks_are_trimmed_on_load() {
+        let dir = std::env::temp_dir().join(format!("nacho-clocks-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("s.json");
+        std::fs::write(&path, r#"{"options":{"worldClocks":["UTC","UTC","UTC","UTC","UTC","UTC","UTC","UTC"]}}"#).unwrap();
+        assert_eq!(AppSettings::load(&path).options.world_clocks.len(), super::super::clock::MAX_WORLD_CLOCKS);
+        std::fs::remove_dir_all(dir).unwrap();
     }
     #[test] fn roundtrip_and_broken_file() {
         let dir = std::env::temp_dir().join(format!("nacho-test-{}", std::process::id()));
