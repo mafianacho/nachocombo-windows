@@ -44,13 +44,21 @@ impl SettingsWindow {
 fn page_key(p: Page) -> String { match p { Page::Home => "home".into(), Page::Combos => "combos".into(), Page::General => "general".into(), Page::Gadget(m) => m.key().into() } }
 fn page_from(k: &str) -> Option<Page> { match k { "home" => Some(Page::Home), "combos" => Some(Page::Combos), "general" => Some(Page::General), k => ModuleId::from_key(k).map(Page::Gadget) } }
 
+/// Stops recording a shortcut. Recording an app's shortcut releases every app shortcut so the keys reach this
+/// window; whatever ends the recording (another page or tab, closing the window) has to give them back.
+fn end_capture() {
+    let s = &mut app().settings_window;
+    let was_app = s.capture_for.as_deref().is_some_and(|c| c.starts_with("app:"));
+    s.capture_for = None;
+    if was_app { later(|| app().sync_hotkeys()); }
+}
+
 pub fn go(p: Page) {
     let a = app();
     let s = &mut a.settings_window;
     s.page = Some(p);
-    let was_app = s.capture_for.as_deref().is_some_and(|c| c.starts_with("app:"));
-    s.capture_for = None;
-    if was_app { later(|| app().sync_hotkeys()); }
+    end_capture();
+    let s = &mut a.settings_window;
     s.shortcut_issue = None;
     // A gadget that is on opens on Settings, one that is off on Overview.
     if let Page::Gadget(m) = p { s.tab = Some(if a.settings.is_on(m) { Tab::Settings } else { Tab::Overview }); }
@@ -79,6 +87,7 @@ pub fn open(m: Option<ModuleId>) {
         a.settings.window_size = Some((r.right as f64 / s, r.bottom as f64 / s));
         a.save();
         a.settings_window.win = None;
+        end_capture();
     }));
     win.set_msg(Box::new(|_, msg, wp, lp| {
         // While a key field listens, every key combination goes to it, including ones with Alt.
@@ -365,7 +374,7 @@ fn gadget_page(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
     let cur = match tab { Tab::Overview => 0, Tab::Settings => 1, Tab::Shortcuts => 2 };
     if let Some(i) = ui.segments("tabs", &tabs, Some(cur), Rect::new(x, y, 330.0, 34.0), false) {
         app().settings_window.tab = Some([Tab::Overview, Tab::Settings, Tab::Shortcuts][i]);
-        app().settings_window.capture_for = None;
+        end_capture();
         ui.st.again = true;
     }
     y += 54.0;
