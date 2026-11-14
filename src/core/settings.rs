@@ -7,16 +7,16 @@ use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, CalendarClock }
+pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock }
 
 impl ModuleId {
-    pub const ALL: [ModuleId; 11] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
-        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::CalendarClock];
+    pub const ALL: [ModuleId; 12] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
+        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock];
     pub fn name(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "Tray Organizer", ModuleId::SystemMonitor => "System Monitor", ModuleId::WindowSnap => "Window Snap",
             ModuleId::FileShelf => "File Shelf", ModuleId::CaptureFloat => "Capture Float", ModuleId::FocusDim => "Focus Dim",
-            ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map",
+            ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map", ModuleId::AppSwitch => "App Switch",
             ModuleId::CalendarClock => "Calendar Clock",
         }
     }
@@ -24,7 +24,7 @@ impl ModuleId {
         match self {
             ModuleId::TrayOrganizer => "tray", ModuleId::SystemMonitor => "monitor", ModuleId::WindowSnap => "snap",
             ModuleId::FileShelf => "shelf", ModuleId::CaptureFloat => "capture", ModuleId::FocusDim => "dim",
-            ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap",
+            ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap", ModuleId::AppSwitch => "appswitch",
             ModuleId::CalendarClock => "clock",
         }
     }

@@ -121,6 +121,7 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::Clipboard => (rgb(0x7FD3FF), rgb(0x1F7BE0), white),
         ModuleId::DeviceControl => (rgb(0x6FE7DD), rgb(0x0E8A93), white),
         ModuleId::DiskMap => (rgb(0x3F2E20), rgb(0x1E1610), NACHO),
+        ModuleId::AppSwitch => (rgb(0xB9C4FF), rgb(0x3C4FC4), white),
         ModuleId::CalendarClock => (rgb(0xFF9F9A), rgb(0xD9382F), white),
     }
 }
@@ -293,6 +294,7 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::TrayOrganizer => if a.settings.tray_collapsed { "Icons folded away".into() } else { "Icons shown".into() },
             ModuleId::KeepAwake => if a.awake.active() { a.awake.minutes_left().map_or("Awake".into(), |m| format!("Awake · {m} min left")) } else { "Sleeps as usual".into() },
             ModuleId::Clipboard => format!("{} · {} item{}", shortcut_of("clipboard.show"), a.clipboard.items.len(), if a.clipboard.items.len() == 1 { "" } else { "s" }),
+            ModuleId::AppSwitch => format!("{} · Switch windows", shortcut_of("appswitch.next")),
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
             ModuleId::CalendarClock => a.clock.status(),
             ModuleId::DeviceControl => {
@@ -585,6 +587,9 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 let bw = ui.button_width("Clear History", true);
                 if ui.button("clearclips", "Clear History", x + w - 18.0 - bw, y + 11.0, Btn::Secondary, true) { a.clipboard.items.retain(|c| c.pinned); }
                 y += 46.0;
+            }
+            ModuleId::AppSwitch => {
+                y += ui.label("App Switch has no options of its own: change its shortcuts on the Shortcuts tab.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;
             }
             ModuleId::CalendarClock => {
                 let (h, ny) = check(ui, "cdate", "Show the date", o.clock_date, x, y, w);

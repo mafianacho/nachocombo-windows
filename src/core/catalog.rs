@@ -52,6 +52,9 @@ pub fn actions() -> Vec<Action> {
     add("device.brighter", DeviceControl, "Brighten External Displays", None);
     add("device.dimmer", DeviceControl, "Darken External Displays", None);
     add("diskmap.open", DiskMap, "Open Disk Map", None);
+    add("appswitch.next", AppSwitch, "Switch Windows", Some(super::appswitch::NEXT_DEFAULT));
+    add("appswitch.previous", AppSwitch, "Switch Windows Backward", Some(super::appswitch::PREVIOUS_DEFAULT));
+    add("appswitch.hideOthers", AppSwitch, "Hide Other Windows", None);
     add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
@@ -254,6 +257,23 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "Files that live only in the cloud (OneDrive placeholders) take no space on this disk and are left out.",
                 "Moving to the Recycle Bin frees the space only once the Recycle Bin is emptied.",
                 "A full scan of a large drive takes about a minute; the map stays for ten minutes after you close it.",
+            ],
+        },
+        ModuleId::AppSwitch => &Info {
+            tagline: "Goes through every window, not only apps, with a shortcut you hold and let go of.",
+            features: &[
+                f!("Window Switcher", "Hold Ctrl+Alt and press ` to go through every window; let go to switch to the one you stopped on."),
+                f!("Backward Too", "Add Shift to go the other way round the list."),
+                f!("Minimized Windows Too", "Minimized windows are listed after the open ones and come back when you pick them."),
+                f!("Pick with the Pointer", "Click a window in the switcher to go straight to it."),
+                f!("Hide Other Windows", "One shortcut minimizes every window except the front app's."),
+            ],
+            tips: &[t!("Ctrl+Alt+`", "", "Next window"), t!("Ctrl+Alt+Shift+`", "", "Previous window"), t!("", "Let go of Ctrl+Alt", "Switch to it"), t!("Esc", "", "Cancel")],
+            note: "No administrator rights needed. Windows' own Alt+Tab keeps working; this has shortcuts of its own, which you can change on the Shortcuts tab.",
+            limits: &[
+                "Windows keeps Alt+Tab for itself, so the default is Ctrl+Alt+` instead of the Mac's Option+Tab.",
+                "Windows of apps running as administrator can be listed but may refuse to come to the front.",
+                "Windows on other virtual desktops are not listed.",
             ],
         },
         ModuleId::CalendarClock => &Info {
