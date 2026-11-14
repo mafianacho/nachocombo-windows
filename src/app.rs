@@ -4,7 +4,7 @@ use crate::core::combos::{self, Combo, Snapshot};
 use crate::core::layout::SnapAction;
 use crate::core::settings::*;
 use crate::core::shortcut::*;
-use crate::{appswitch, awake, capture, clipboard, devices, dim, hooks, monitor, panel, pages, shelf, snap, tray, trayorg};
+use crate::{appswitch, awake, capture, clipboard, clock, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use windows::core::*;
@@ -39,6 +39,7 @@ pub const TIMER_THEME: usize = 9;
 pub const TIMER_LAYOUT: usize = 10;
 pub const TIMER_ONTOP: usize = 11;
 pub const TIMER_APPSWITCH: usize = 12;
+pub const TIMER_CLOCK: usize = 13;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State { Off, Running, Failed(String) }
@@ -64,6 +65,7 @@ pub struct App {
     pub clipboard: clipboard::ClipModule,
     pub devices: devices::Devices,
     pub appswitch: appswitch::AppSwitch,
+    pub clock: clock::Clock,
     pub settings_window: pages::SettingsWindow,
     pub panel: panel::Panel,
     pub undo: Option<(Snapshot, String)>,
@@ -147,6 +149,8 @@ impl App {
             ModuleId::DeviceControl => devices::start(),
             ModuleId::DiskMap => crate::diskmap::start(),
             ModuleId::AppSwitch => appswitch::start(),
+            ModuleId::CalendarClock => clock::start(),
+            ModuleId::MouseTune => mouse::start(),
         };
         self.states.insert(id, match r { Ok(()) => State::Running, Err(e) => State::Failed(e) });
         hooks::sync();
@@ -167,6 +171,8 @@ impl App {
             ModuleId::DeviceControl => devices::stop(),
             ModuleId::DiskMap => crate::diskmap::stop(),
             ModuleId::AppSwitch => appswitch::stop(),
+            ModuleId::CalendarClock => clock::stop(),
+            ModuleId::MouseTune => mouse::stop(),
         }
         self.states.insert(id, State::Off);
         hooks::sync();
@@ -257,6 +263,8 @@ impl App {
             "appswitch.next" => appswitch::cycle(true),
             "appswitch.previous" => appswitch::cycle(false),
             "appswitch.hideOthers" => appswitch::hide_others(),
+            "clock.show" => clock::show(),
+            "mouse.reverse" => mouse::toggle_reverse(),
             _ => {}
         }
     }
@@ -289,6 +297,8 @@ impl App {
     pub fn apply_options(&mut self) {
         dim::options_changed();
         monitor::options_changed();
+        clock::options_changed();
+        mouse::options_changed();
         hooks::sync();
         self.changed();
     }
@@ -317,6 +327,8 @@ impl App {
             "appShortcuts": self.hotkey_ids.iter().filter(|i| i.starts_with("app:")).count(),
             "appShortcutsFailed": self.hotkey_clashes.iter().filter(|i| i.starts_with("app:")).collect::<Vec<_>>(),
             "diskmap": crate::diskmap::diagnostics(),
+            "clock": self.clock.diagnostics(),
+            "mouse": mouse::diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
             "panel": self.panel.is_open(),
@@ -358,6 +370,7 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
                 TIMER_AWAKE => awake::tick(),
                 TIMER_PASTE => clipboard::on_paste_timer(),
                 TIMER_THEME => devices::theme_tick(),
+                TIMER_CLOCK => clock::tick(),
                 TIMER_LAYOUT => snap::layout_tick(),
                 TIMER_APPSWITCH => appswitch::on_timer(),
                 TIMER_COMBO_UNDO => { let _ = KillTimer(Some(hwnd), TIMER_COMBO_UNDO); a.undo = None; a.changed(); }
@@ -395,11 +408,12 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         crate::i18n::set_language(settings.language.as_deref());
         let boxed = Box::leak(Box::new(App { settings, dir, states: BTreeMap::new(), main, debug_ctl, later: vec![], hotkey_ids: vec![], hotkey_clashes: BTreeSet::new(),
             tray: tray::Tray::default(), snap: Default::default(), dim: Default::default(), organizer: Default::default(), shelf: Default::default(), capture: Default::default(),
-            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), settings_window: Default::default(), panel: Default::default(), undo: None }));
+            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), settings_window: Default::default(), panel: Default::default(), undo: None }));
         APP.with(|c| c.set(boxed));
         let a = app();
         crate::window::register_class();
         tray::create_main();
+        mouse::recover();
         for id in ModuleId::ALL { if a.settings.is_on(id) { a.start(id); } }
         a.sync_hotkeys();
         a.write_state();
