@@ -2,6 +2,7 @@
 pub mod alerts;
 pub mod appswitch;
 pub mod catalog;
+pub mod clock;
 pub mod combos;
 pub mod format;
 pub mod layout;

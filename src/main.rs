@@ -4,6 +4,7 @@ mod app;
 mod appswitch;
 mod awake;
 mod capture;
+mod clock;
 mod clipboard;
 mod core;
 mod ctl;
