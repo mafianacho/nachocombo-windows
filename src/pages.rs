@@ -123,6 +123,7 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::DiskMap => (rgb(0x3F2E20), rgb(0x1E1610), NACHO),
         ModuleId::AppSwitch => (rgb(0xB9C4FF), rgb(0x3C4FC4), white),
         ModuleId::CalendarClock => (rgb(0xFF9F9A), rgb(0xD9382F), white),
+        ModuleId::MouseTune => (rgb(0xFF9A8A), rgb(0xC8321F), white),
     }
 }
 
@@ -297,6 +298,7 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::AppSwitch => format!("{} · Switch windows", shortcut_of("appswitch.next")),
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
             ModuleId::CalendarClock => a.clock.status(),
+            ModuleId::MouseTune => if a.settings.options.mouse_reverse { "Wheel reversed".into() } else { "Wheel as Windows has it".into() },
             ModuleId::DeviceControl => {
                 let out = a.devices.outputs.iter().find(|d| d.default).map_or("No output".to_string(), |d| d.name.clone());
                 if a.devices.mic_muted { format!("Mic muted · {out}") } else { out }
@@ -632,6 +634,29 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                     y += ui.label("That is the most the calendar shows. Remove one to add another.", sans(12), x + 30.0, y, w - 60.0, th.ink2) + 6.0;
                 }
                 y += 8.0;
+            }
+            ModuleId::MouseTune => {
+                let (h, ny) = check(ui, "reverse", "Reverse the wheel (a precision touchpad stays as it is)", o.mouse_reverse, x, y, w);
+                if h { o.mouse_reverse = !o.mouse_reverse; }
+                y = ny;
+                sep(ui, y);
+                let speeds: Vec<(f64, String)> = crate::core::mouse::SPEED_CHOICES.iter().map(|s| (*s, format!("{s}×"))).collect();
+                let refs: Vec<(f64, &str)> = speeds.iter().map(|o| (o.0, o.1.as_str())).collect();
+                let (r, ny) = choice(ui, "mspeed", "Scroll Speed", &refs, o.mouse_speed, x, y, w);
+                if let Some(v) = r { o.mouse_speed = v; }
+                y = ny;
+                sep(ui, y);
+                let pointers: Vec<(i32, String)> = crate::core::mouse::POINTER_CHOICES.iter().map(|s| (*s, if *s == 0 { "As Windows has it".to_string() } else { s.to_string() })).collect();
+                let refs: Vec<(i32, &str)> = pointers.iter().map(|o| (o.0, o.1.as_str())).collect();
+                let (r, ny) = choice(ui, "mpointer", "Pointer Speed", &refs, o.mouse_pointer, x, y, w);
+                if let Some(v) = r { o.mouse_pointer = v; }
+                y = ny;
+                sep(ui, y);
+                use crate::core::mouse::Precision;
+                let (r, ny) = choice(ui, "mprecision", "Pointer Precision", &[(Precision::Keep, "As Windows has it"), (Precision::On, "On"), (Precision::Off, "Off")], o.mouse_precision, x, y, w);
+                if let Some(v) = r { o.mouse_precision = v; }
+                y = ny;
+                y += ui.label("Your own pointer and scroll settings come back when you switch this off or quit.", sans(12), x + 18.0, y + 6.0, w - 36.0, th.ink2) + 14.0;
             }
             ModuleId::DiskMap => {
                 y += ui.label("Disk Map has no options: it scans when you open it.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;

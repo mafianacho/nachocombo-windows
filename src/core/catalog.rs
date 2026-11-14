@@ -57,6 +57,7 @@ pub fn actions() -> Vec<Action> {
     add("appswitch.hideOthers", AppSwitch, "Hide Other Windows", None);
     add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
+    add("mouse.reverse", MouseTune, "Reverse Mouse Scrolling On / Off", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
     for item in MonitorItem::ALL {
         add(&format!("monitor.{}", item.name().to_lowercase()), SystemMonitor, &format!("Open {} Panel", item.name()), None);
@@ -289,6 +290,24 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "Windows has no place for text in the taskbar corner, so the clock is the icon's tooltip and the icon shows today's date. The taskbar's own clock stays; hide its date in Settings ▸ Personalization ▸ Taskbar if you do not want two.",
                 "Your calendar events, the countdown to the next meeting and the Join button are not here: Windows has no calendar every app shares.",
                 "World clocks know the daylight-saving rules of the listed cities as they are today; a city that changes its rules needs an update of this app.",
+            ],
+        },
+        ModuleId::MouseTune => &Info {
+            tagline: "Sets up a wheel mouse your way: its own scroll direction, scroll speed, pointer speed and pointer precision.",
+            features: &[
+                f!("Own Scroll Direction", "Reverse the wheel of a mouse while a precision touchpad keeps the direction Windows gives it."),
+                f!("Scroll Speed", "Half to three times as many lines per notch as your Windows setting."),
+                f!("Pointer Speed", "Pick a pointer speed from here, or leave it as Windows has it."),
+                f!("Pointer Precision", "Turn Enhance pointer precision on or off, or leave it alone."),
+                f!("Your Values Come Back", "Switch the gadget off, quit the app, or restart after a crash: the values you had before return, unless you changed them yourself meanwhile."),
+            ],
+            tips: &[t!("", "Tray panel", "Reverse the wheel with one click")],
+            note: "No administrator rights needed. Pointer speed, scroll lines and precision are the per-user settings of Settings ▸ Bluetooth & devices ▸ Mouse; they last until you sign out even if the app is killed, and the app puts them back as it stops.",
+            limits: &[
+                "Smooth scrolling, side-button actions and a middle-button action are not offered: Windows has no system setting for smooth wheel scrolling (apps do it themselves), side buttons already go back and forward in browsers and File Explorer, and there is no Mission Control to open.",
+                "Only wheel notches are reversed. A precision touchpad or a free-spinning wheel sends finer steps and keeps its own direction; change those in Windows' touchpad settings.",
+                "Windows apps running as administrator do not receive reversed wheel events from an app that is not.",
+                "Not checked on a physical mouse or touchpad yet.",
             ],
         },
         ModuleId::DeviceControl => &Info {

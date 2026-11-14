@@ -14,6 +14,10 @@ static MOTION: AtomicBool = AtomicBool::new(false);
 static SHAKE: AtomicBool = AtomicBool::new(false);
 static ANY_DRAG: AtomicBool = AtomicBool::new(false);
 static PEEK: AtomicBool = AtomicBool::new(false);
+static REVERSE: AtomicBool = AtomicBool::new(false);
+static FLIPS: AtomicU32 = AtomicU32::new(0);
+/// Marks the wheel events this app sends itself, so its own hook lets them through.
+const MARKER: usize = 0x4E43_4D54;
 static MAIN: AtomicIsize = AtomicIsize::new(0);
 static THREAD: AtomicU32 = AtomicU32::new(0);
 
@@ -22,6 +26,8 @@ struct Motion { hwnd: isize, resize: bool, start: POINT, frame: RECT, corner: (b
 
 struct HookState { motion: Option<Motion>, left_down: bool, shake: Shake, drag_posted: bool, last_check: u32 }
 static STATE: Mutex<Option<HookState>> = Mutex::new(None);
+
+pub fn wheel_flips() -> u32 { FLIPS.load(Relaxed) }
 
 pub fn active() -> bool { THREAD.load(Relaxed) != 0 }
 
@@ -34,12 +40,14 @@ pub fn sync() {
     let shake = shelf_on && o.shelf_trigger == ShelfTrigger::Shake;
     let any = shelf_on && o.shelf_trigger == ShelfTrigger::AnyDrag;
     let peek = shelf_on && o.explorer_preview;
+    let reverse = a.state(ModuleId::MouseTune) == State::Running && o.mouse_reverse;
+    REVERSE.store(reverse, Relaxed);
     PEEK.store(peek, Relaxed);
     MOTION.store(motion, Relaxed);
     SHAKE.store(shake, Relaxed);
     ANY_DRAG.store(any, Relaxed);
     MAIN.store(a.main.0 as isize, Relaxed);
-    let need = motion || shake || any || peek;
+    let need = motion || shake || any || peek || reverse;
     let running = THREAD.load(Relaxed);
     if need && running == 0 {
         std::thread::spawn(thread_main);
@@ -100,6 +108,13 @@ unsafe extern "system" fn mouse_proc(code: i32, wp: WPARAM, lp: LPARAM) -> LRESU
     if code < 0 { return CallNextHookEx(None, code, wp, lp); }
     let info = &*(lp.0 as *const MSLLHOOKSTRUCT);
     let msg = wp.0 as u32;
+    if (msg == WM_MOUSEWHEEL || msg == WM_MOUSEHWHEEL) && REVERSE.load(Relaxed) && info.dwExtraInfo != MARKER {
+        let delta = (info.mouseData >> 16) as i16 as i32;
+        if crate::core::mouse::is_notch(delta) && send_wheel(msg == WM_MOUSEHWHEEL, crate::core::mouse::wheel_delta(delta, true)) {
+            FLIPS.fetch_add(1, Relaxed);
+            return LRESULT(1);
+        }
+    }
     // Injected events pass through untouched except for tests of the gadget itself, which inject on purpose.
     let mut guard = STATE.lock().unwrap();
     let Some(st) = guard.as_mut() else { return CallNextHookEx(None, code, wp, lp) };
@@ -161,6 +176,13 @@ unsafe extern "system" fn mouse_proc(code: i32, wp: WPARAM, lp: LPARAM) -> LRESU
     drop(guard);
     if swallow { return LRESULT(1); }
     CallNextHookEx(None, code, wp, lp)
+}
+
+/// The wheel step again, the other way round, marked as ours. False when Windows did not take it, so the original goes on.
+unsafe fn send_wheel(horizontal: bool, delta: i32) -> bool {
+    let input = INPUT { r#type: INPUT_MOUSE, Anonymous: INPUT_0 { mi: MOUSEINPUT {
+        dx: 0, dy: 0, mouseData: delta as u32, dwFlags: if horizontal { MOUSEEVENTF_HWHEEL } else { MOUSEEVENTF_WHEEL }, time: 0, dwExtraInfo: MARKER } } };
+    SendInput(&[input], std::mem::size_of::<INPUT>() as i32) == 1
 }
 
 /// Windows has no "a drag is in progress" signal, but its drag helper shows this window during shell-style drags.
