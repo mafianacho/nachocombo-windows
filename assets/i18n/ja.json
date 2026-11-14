@@ -838,5 +838,10 @@
   "No administrator rights needed. Windows' own Alt+Tab keeps working; this has shortcuts of its own, which you can change on the Shortcuts tab.": "管理者権限は不要です。WindowsのAlt+Tabはそのまま使え、このガジェットは専用のショートカットを使います（ショートカットタブで変更可）。",
   "Windows keeps Alt+Tab for itself, so the default is Ctrl+Alt+` instead of the Mac's Option+Tab.": "WindowsはAlt+Tabを自身で使うため、既定はMacのOption+Tabではなく Ctrl+Alt+` です。",
   "Windows of apps running as administrator can be listed but may refuse to come to the front.": "管理者として実行中のアプリのウィンドウは一覧に出ますが、前面に出ないことがあります。",
-  "Windows on other virtual desktops are not listed.": "他の仮想デスクトップのウィンドウは一覧に出ません。"
+  "Windows on other virtual desktops are not listed.": "他の仮想デスクトップのウィンドウは一覧に出ません。",
+  "Hide an app when its shortcut is pressed while it is in front": "前面にあるアプリのショートカットを押したら隠す",
+  "App shortcuts": "アプリのショートカット",
+  "Give any program a shortcut: it opens it, brings it to the front, or hides it when it is already in front.": "プログラムごとにショートカットを割り当てられます。開く、前面に出す、すでに前面なら隠す、のいずれかです。",
+  "Add Program…": "プログラムを追加…",
+  "is not installed": "がインストールされていません"
 }

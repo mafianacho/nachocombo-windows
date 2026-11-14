@@ -194,6 +194,11 @@ impl App {
             }
         }
         for (m, s) in &self.settings.tool_shortcuts { want.push((format!("open.{}", m.key()), *s)); }
+        // App shortcuts wait while one is being recorded, so the keys reach the settings window.
+        let recording = self.settings_window.capture_for.as_deref().is_some_and(|c| c.starts_with("app:"));
+        if self.state(ModuleId::AppSwitch) == State::Running && !recording {
+            for h in &self.settings.options.app_shortcuts { if let Some(s) = h.shortcut { want.push((crate::core::appswitch::app_id(&h.path), s)); } }
+        }
         for (id, s) in want {
             let hid = self.hotkey_ids.len() as i32 + 1;
             let ok = unsafe { RegisterHotKey(Some(self.main), hid, HOT_KEY_MODIFIERS(s.mods) | MOD_NOREPEAT, s.key) }.is_ok();
@@ -215,6 +220,10 @@ impl App {
 
     pub fn run_action(&mut self, id: &str) {
         if let Some(a) = id.strip_prefix("snap.") { if let Some(act) = SnapAction::from_id(a) { snap::run(act); } return; }
+        if id.starts_with("app:") {
+            if let Some(h) = self.settings.options.app_shortcuts.iter().find(|h| crate::core::appswitch::app_id(&h.path) == id).cloned() { appswitch::open_or_toggle(&h.path); }
+            return;
+        }
         if let Some(m) = id.strip_prefix("open.") { if let Some(m) = ModuleId::from_key(m) { panel::open_tool(m); } return; }
         if let Some(m) = id.strip_prefix("monitor.") {
             if let Some(i) = MonitorItem::ALL.into_iter().find(|i| i.name().to_lowercase() == m) { monitor::open_panel(i); }
@@ -305,6 +314,8 @@ impl App {
             "clipboard": self.clipboard.diagnostics(),
             "devices": self.devices.diagnostics(),
             "appswitch": self.appswitch.diagnostics(),
+            "appShortcuts": self.hotkey_ids.iter().filter(|i| i.starts_with("app:")).count(),
+            "appShortcutsFailed": self.hotkey_clashes.iter().filter(|i| i.starts_with("app:")).collect::<Vec<_>>(),
             "diskmap": crate::diskmap::diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),

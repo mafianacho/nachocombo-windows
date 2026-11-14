@@ -61,19 +61,14 @@ unsafe extern "system" fn each(hwnd: HWND, lp: LPARAM) -> BOOL {
     BOOL(1)
 }
 
-fn exe_name(pid: u32) -> String {
+fn exe_path(pid: u32) -> String {
     unsafe {
         let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return String::new() };
-        let mut buf = [0u16; 520];
+        let mut buf = [0u16; 1040];
         let mut n = buf.len() as u32;
         let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut n).is_ok();
         let _ = CloseHandle(h);
-        if !ok { return String::new(); }
-        let path = String::from_utf16_lossy(&buf[..n as usize]);
-        let file = path.rsplit(['\\', '/']).next().unwrap_or("");
-        let stem = file.rsplit_once('.').map_or(file, |(s, _)| s);
-        let mut chars = stem.chars();
-        chars.next().map(|c| c.to_uppercase().collect::<String>() + chars.as_str()).unwrap_or_default()
+        if ok { String::from_utf16_lossy(&buf[..n as usize]) } else { String::new() }
     }
 }
 
@@ -103,15 +98,27 @@ fn describe(hwnd: HWND) -> Option<RawWindow> {
     }
 }
 
-/// Every window the switcher would list, front to back.
-pub fn windows_now() -> Vec<Item> {
+fn raw_windows() -> Vec<RawWindow> {
     let mut c = Collect { list: vec![] };
     unsafe { let _ = EnumWindows(Some(each), LPARAM(&mut c as *mut _ as isize)); }
-    let own = std::process::id();
-    // Looking up the program's name is the slow part, so only the windows that will be listed pay for it.
-    let mut items = logic::list(&c.list, own);
+    c.list
+}
+
+/// Every switchable window, front to back, with no cap: what Hide Other Windows and the app shortcuts look through.
+pub fn windows_all() -> Vec<Item> { name_apps(logic::list_all(&raw_windows(), std::process::id())) }
+
+/// The windows the switcher shows (at most `MAX_WINDOWS`).
+pub fn windows_now() -> Vec<Item> {
+    name_apps(logic::list(&raw_windows(), std::process::id()))
+}
+
+/// Looking up the program's name is the slow part, so only windows that are kept pay for it.
+fn name_apps(mut items: Vec<Item>) -> Vec<Item> {
     let mut names: std::collections::BTreeMap<u32, String> = Default::default();
-    for i in &mut items { i.app = names.entry(i.pid).or_insert_with(|| exe_name(i.pid)).clone(); if i.app.is_empty() { i.app = i.title.clone(); } }
+    for i in &mut items {
+        i.app = names.entry(i.pid).or_insert_with(|| logic::app_name(&exe_path(i.pid))).clone();
+        if i.app.is_empty() { i.app = i.title.clone(); }
+    }
     items
 }
 
@@ -131,6 +138,37 @@ fn raise(id: isize, minimized: bool) {
         let _ = SetForegroundWindow(h);
         if joined { let _ = AttachThreadInput(mine, theirs, false); }
     }
+}
+
+// MARK: app shortcuts
+
+/// An app's shortcut: starts it, brings its window forward, or hides it when it is already in front.
+pub fn open_or_toggle(path: &str) {
+    let a = app();
+    if a.state(ModuleId::AppSwitch) != State::Running { return; }
+    let items = windows_all();
+    let mine: Vec<&Item> = items.iter().filter(|i| logic::same_path(&exe_path(i.pid), path)).collect();
+    let front_pid = unsafe { let mut pid = 0u32; GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut pid)); pid };
+    let in_front = front_pid != 0 && logic::same_path(&exe_path(front_pid), path);
+    let name = a.settings.options.app_shortcuts.iter().find(|h| logic::same_path(&h.path, path)).map_or_else(|| logic::app_name(path), |h| h.name.clone());
+    match logic::app_action(!mine.is_empty(), in_front, a.settings.options.app_hide_on_repeat) {
+        logic::AppAction::Hide => for i in mine.iter().filter(|i| !i.minimized) { unsafe { let _ = ShowWindowAsync(HWND(i.id as *mut _), SW_MINIMIZE); } },
+        logic::AppAction::Raise => if let Some(i) = mine.first() { raise(i.id, i.minimized); },
+        logic::AppAction::Launch => {
+            if !std::path::Path::new(path).is_file() { a.tray.balloon(&name, "is not installed"); return; }
+            unsafe { windows::Win32::UI::Shell::ShellExecuteW(None, w!("open"), &HSTRING::from(path), None, None, SW_SHOWNORMAL); }
+        }
+    }
+}
+
+/// Lets the user pick a program's .exe; None when they cancel.
+pub fn pick_exe() -> Option<String> {
+    use windows::Win32::UI::Controls::Dialogs::*;
+    let mut file = [0u16; 1040];
+    let filter: Vec<u16> = "Programs\0*.exe\0\0".encode_utf16().collect();
+    let mut ofn = OPENFILENAMEW { lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32, lpstrFilter: PCWSTR(filter.as_ptr()), lpstrFile: PWSTR(file.as_mut_ptr()), nMaxFile: file.len() as u32,
+        Flags: OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR, ..Default::default() };
+    if unsafe { GetOpenFileNameW(&mut ofn) }.as_bool() { Some(String::from_utf16_lossy(&file[..file.iter().position(|c| *c == 0).unwrap_or(0)])) } else { None }
 }
 
 // MARK: the list
@@ -216,7 +254,7 @@ pub fn hide_others() {
     if a.state(ModuleId::AppSwitch) != State::Running { return; }
     let front = unsafe { let mut pid = 0u32; GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut pid)); pid };
     if front == 0 { return; }
-    for id in logic::others_to_hide(&windows_now(), front) { unsafe { let _ = ShowWindowAsync(HWND(id as *mut _), SW_MINIMIZE); } }
+    for id in logic::others_to_hide(&windows_all(), front) { unsafe { let _ = ShowWindowAsync(HWND(id as *mut _), SW_MINIMIZE); } }
 }
 
 // MARK: drawing

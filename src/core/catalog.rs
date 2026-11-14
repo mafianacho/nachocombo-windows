@@ -84,6 +84,9 @@ impl AppSettings {
         for (m, s) in &self.tool_shortcuts {
             if format!("open.{}", m.key()) != except { v.push((format!("{} ▸ Open Controls", m.name()), *s)); }
         }
+        for h in &self.options.app_shortcuts {
+            if let Some(s) = h.shortcut { if super::appswitch::app_id(&h.path) != except { v.push((format!("{} ▸ {} (App Switch)", ModuleId::AppSwitch.name(), h.name), s)); } }
+        }
         v
     }
 }

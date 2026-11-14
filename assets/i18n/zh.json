@@ -838,5 +838,10 @@
   "No administrator rights needed. Windows' own Alt+Tab keeps working; this has shortcuts of its own, which you can change on the Shortcuts tab.": "无需管理员权限。Windows 自带的 Alt+Tab 照常可用；本小工具有自己的快捷键，可在“快捷键”页更改。",
   "Windows keeps Alt+Tab for itself, so the default is Ctrl+Alt+` instead of the Mac's Option+Tab.": "Windows 自己占用 Alt+Tab，所以默认是 Ctrl+Alt+`，而不是 Mac 的 Option+Tab。",
   "Windows of apps running as administrator can be listed but may refuse to come to the front.": "以管理员身份运行的应用窗口虽会列出，但可能无法切到最前。",
-  "Windows on other virtual desktops are not listed.": "其他虚拟桌面上的窗口不会列出。"
+  "Windows on other virtual desktops are not listed.": "其他虚拟桌面上的窗口不会列出。",
+  "Hide an app when its shortcut is pressed while it is in front": "应用在最前时按其快捷键即隐藏",
+  "App shortcuts": "应用快捷键",
+  "Give any program a shortcut: it opens it, brings it to the front, or hides it when it is already in front.": "可为任意程序指定快捷键：打开、切到最前，或在已在最前时隐藏。",
+  "Add Program…": "添加程序…",
+  "is not installed": "未安装"
 }

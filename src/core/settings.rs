@@ -55,6 +55,13 @@ pub enum SnapRepeat { CycleSizes, NextDisplay, Nothing }
 #[serde(rename_all = "camelCase")]
 pub enum LaunchWindow { Always, WhenNeeded, Never }
 
+/// A shortcut that opens (or brings forward, or hides) one program, named by its full exe path.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AppHotKey { pub path: String, pub name: String, pub shortcut: Option<Shortcut> }
+
+impl Default for AppHotKey { fn default() -> Self { AppHotKey { path: String::new(), name: String::new(), shortcut: None } } }
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Options {
@@ -91,6 +98,10 @@ pub struct Options {
     pub snap_restore_layouts: bool,
     /// File Shelf: Space in File Explorer previews the selected file.
     pub explorer_preview: bool,
+    /// App Switch: one shortcut per program.
+    pub app_shortcuts: Vec<AppHotKey>,
+    /// App Switch: pressing a program's shortcut while it is in front hides it.
+    pub app_hide_on_repeat: bool,
 }
 
 impl Default for Options {
@@ -99,7 +110,8 @@ impl Default for Options {
             window_motion: true, cpu_alert_percent: 90, alert_notifications: false, shelf_trigger: ShelfTrigger::Shake, capture_rounded_corners: true,
             dim_scope: DimScope::FrontWindow, dim_other_displays: true, dim_fade_seconds: 0.25, public_ip_auto: false,
             awake_display: true, awake_apps: vec![], awake_battery_guard: 0, clip_max: 100, preferred_output: None, preferred_input: None,
-            theme_schedule: false, light_minute: 7 * 60, dark_minute: 19 * 60, snap_restore_layouts: true, explorer_preview: true }
+            theme_schedule: false, light_minute: 7 * 60, dark_minute: 19 * 60, snap_restore_layouts: true, explorer_preview: true,
+            app_shortcuts: vec![], app_hide_on_repeat: true }
     }
 }
 

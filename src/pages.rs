@@ -47,7 +47,9 @@ pub fn go(p: Page) {
     let a = app();
     let s = &mut a.settings_window;
     s.page = Some(p);
+    let was_app = s.capture_for.as_deref().is_some_and(|c| c.starts_with("app:"));
     s.capture_for = None;
+    if was_app { later(|| app().sync_hotkeys()); }
     s.shortcut_issue = None;
     // A gadget that is on opens on Settings, one that is off on Overview.
     if let Page::Gadget(m) = p { s.tab = Some(if a.settings.is_on(m) { Tab::Settings } else { Tab::Overview }); }
@@ -586,7 +588,40 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 y += 46.0;
             }
             ModuleId::AppSwitch => {
-                y += ui.label("App Switch has no options of its own: change its shortcuts on the Shortcuts tab.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;
+                let (h, ny) = check(ui, "apphide", "Hide an app when its shortcut is pressed while it is in front", o.app_hide_on_repeat, x, y, w);
+                if h { o.app_hide_on_repeat = !o.app_hide_on_repeat; }
+                y = ny;
+                sep(ui, y);
+                ui.eyebrow("App shortcuts", x + 18.0, y + 12.0, w, th.ink2);
+                y += 34.0;
+                if let Some((id, msg)) = a.settings_window.shortcut_issue.clone() {
+                    if id.starts_with("app:") { y += ui.label(&msg, medium(13), x + 18.0, y, w - 36.0, th.salsa) + 8.0; }
+                }
+                if o.app_shortcuts.is_empty() {
+                    y += ui.label("Give any program a shortcut: it opens it, brings it to the front, or hides it when it is already in front.", sans(13), x + 18.0, y, w - 36.0, th.ink2) + 12.0;
+                }
+                let mut remove = None;
+                for (i, h) in o.app_shortcuts.iter().enumerate() {
+                    let id = crate::core::appswitch::app_id(&h.path);
+                    let clash = a.hotkey_clashes.contains(&id);
+                    ui.c.line_text(&h.name, sans(14), Rect::new(x + 18.0, y, w - 340.0, 40.0), if clash { th.nacho_ink } else { th.ink }, Align::Left);
+                    key_field(ui, &id, h.shortcut, None, x + w - 322.0, y + 5.0);
+                    if ui.button(&format!("apprm{i}"), "Remove", x + w - 94.0, y + 6.0, Btn::Secondary, true) { remove = Some(i); }
+                    y += 44.0;
+                }
+                if let Some(i) = remove {
+                    o.app_shortcuts.remove(i);
+                    a.settings_window.capture_for = None;
+                    later(|| app().sync_hotkeys());
+                }
+                if ui.button("addapp", "Add Program…", x + 18.0, y + 4.0, Btn::Secondary, true) {
+                    later(|| {
+                        if let Some(p) = crate::appswitch::pick_exe() {
+                            app().update(|s| { crate::core::appswitch::add_app(&mut s.options.app_shortcuts, &p); });
+                        }
+                    });
+                }
+                y += 46.0;
             }
             ModuleId::DiskMap => {
                 y += ui.label("Disk Map has no options: it scans when you open it.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;
@@ -723,7 +758,10 @@ fn key_field(ui: &mut Ui, id: &str, cur: Option<Shortcut>, default: Option<Short
         ui.keycaps(&parts, r.cx() - width / 2.0, r.y + 4.0);
     } else { ui.c.line_text("None", sans(13), r, th.ink2, Align::Center); }
     if resp.hover { ui.st.cursor_hand = true; }
-    if resp.clicked { app().settings_window.capture_for = Some(id.to_string()); app().settings_window.shortcut_issue = None; ui.st.capture_key = Some(hid); ui.st.again = true; }
+    if resp.clicked {
+        app().settings_window.capture_for = Some(id.to_string()); app().settings_window.shortcut_issue = None; ui.st.capture_key = Some(hid); ui.st.again = true;
+        if id.starts_with("app:") { later(|| app().sync_hotkeys()); }
+    }
     if !listening && ui.st.capture_key == Some(hid) { ui.st.capture_key = None; }
     if default.is_some() && cur != default {
         let rr = Rect::new(r.right() + 8.0, r.y + 3.0, 24.0, 24.0);
@@ -744,6 +782,7 @@ fn capture_key(vk: u32) {
     let mods = (if d(VK_MENU) { shortcut::ALT } else { 0 }) | (if d(VK_CONTROL) { shortcut::CTRL } else { 0 }) | (if d(VK_SHIFT) { shortcut::SHIFT } else { 0 }) | (if d(VK_LWIN) || d(VK_RWIN) { shortcut::WIN } else { 0 });
     let done = |a: &mut app::App| { a.settings_window.capture_for = None; a.settings_window.invalidate(); };
     if vk == 0x1B && mods == 0 { done(a); return; }
+    if id.starts_with("app:") { capture_app_key(vk, mods, id); return; }
     let tool = id.strip_prefix("open.").and_then(ModuleId::from_key);
     if vk == 0x08 && mods == 0 {
         match tool { Some(m) => { a.settings.tool_shortcuts.remove(&m); } None => { a.settings.action_shortcuts.insert(id.clone(), None); } }
@@ -773,6 +812,33 @@ fn capture_key(vk: u32) {
     match tool { Some(m) => { a.settings.tool_shortcuts.insert(m, s); } None => { a.settings.action_shortcuts.insert(id, Some(s)); } }
     a.save();
     a.sync_hotkeys();
+    done(a);
+    a.changed();
+}
+
+/// Records an app's shortcut: the same rules and "held by another app" check as any other.
+fn capture_app_key(vk: u32, mods: u32, id: String) {
+    let a = app();
+    let set = |a: &mut app::App, s: Option<Shortcut>| {
+        for h in a.settings.options.app_shortcuts.iter_mut() { if crate::core::appswitch::app_id(&h.path) == id { h.shortcut = s; } }
+    };
+    let done = |a: &mut app::App| { a.settings_window.capture_for = None; a.sync_hotkeys(); a.settings_window.invalidate(); };
+    if vk == 0x1B && mods == 0 { done(a); return; }
+    if vk == 0x08 && mods == 0 { set(a, None); a.save(); done(a); a.changed(); return; }
+    let s = Shortcut::new(vk, mods);
+    if let Some(issue) = shortcut::validate(s, &a.settings.taken_shortcuts(&id)) {
+        a.settings_window.shortcut_issue = Some((id, issue.message()));
+        done(a);
+        return;
+    }
+    // The app shortcuts were released while recording, so only another program can still hold these keys.
+    if !a.hotkey_free(s) {
+        a.settings_window.shortcut_issue = Some((id, format!("Another app already uses {}. The previous shortcut stays.", s.label())));
+        done(a);
+        return;
+    }
+    set(a, Some(s));
+    a.save();
     done(a);
     a.changed();
 }
