@@ -4,7 +4,7 @@ use crate::core::combos::{self, Combo, Snapshot};
 use crate::core::layout::SnapAction;
 use crate::core::settings::*;
 use crate::core::shortcut::*;
-use crate::{awake, capture, clipboard, devices, dim, hooks, monitor, panel, pages, shelf, snap, tray, trayorg};
+use crate::{awake, capture, clipboard, clock, devices, dim, hooks, monitor, panel, pages, shelf, snap, tray, trayorg};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use windows::core::*;
@@ -38,6 +38,7 @@ pub const TIMER_PASTE: usize = 8;
 pub const TIMER_THEME: usize = 9;
 pub const TIMER_LAYOUT: usize = 10;
 pub const TIMER_ONTOP: usize = 11;
+pub const TIMER_CLOCK: usize = 12;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State { Off, Running, Failed(String) }
@@ -62,6 +63,7 @@ pub struct App {
     pub awake: awake::Awake,
     pub clipboard: clipboard::ClipModule,
     pub devices: devices::Devices,
+    pub clock: clock::Clock,
     pub settings_window: pages::SettingsWindow,
     pub panel: panel::Panel,
     pub undo: Option<(Snapshot, String)>,
@@ -144,6 +146,7 @@ impl App {
             ModuleId::Clipboard => clipboard::start(),
             ModuleId::DeviceControl => devices::start(),
             ModuleId::DiskMap => crate::diskmap::start(),
+            ModuleId::CalendarClock => clock::start(),
         };
         self.states.insert(id, match r { Ok(()) => State::Running, Err(e) => State::Failed(e) });
         hooks::sync();
@@ -163,6 +166,7 @@ impl App {
             ModuleId::Clipboard => clipboard::stop(),
             ModuleId::DeviceControl => devices::stop(),
             ModuleId::DiskMap => crate::diskmap::stop(),
+            ModuleId::CalendarClock => clock::stop(),
         }
         self.states.insert(id, State::Off);
         hooks::sync();
@@ -241,6 +245,7 @@ impl App {
             "diskmap.open" => if self.state(ModuleId::DiskMap) == State::Running { crate::diskmap::open() },
             "device.theme" => if self.state(ModuleId::DeviceControl) == State::Running { devices::toggle_theme() },
             "window.onTop" => snap::toggle_on_top(),
+            "clock.show" => clock::show(),
             _ => {}
         }
     }
@@ -273,6 +278,7 @@ impl App {
     pub fn apply_options(&mut self) {
         dim::options_changed();
         monitor::options_changed();
+        clock::options_changed();
         hooks::sync();
         self.changed();
     }
@@ -298,6 +304,7 @@ impl App {
             "clipboard": self.clipboard.diagnostics(),
             "devices": self.devices.diagnostics(),
             "diskmap": crate::diskmap::diagnostics(),
+            "clock": self.clock.diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
             "panel": self.panel.is_open(),
@@ -338,6 +345,7 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
                 TIMER_AWAKE => awake::tick(),
                 TIMER_PASTE => clipboard::on_paste_timer(),
                 TIMER_THEME => devices::theme_tick(),
+                TIMER_CLOCK => clock::tick(),
                 TIMER_LAYOUT => snap::layout_tick(),
                 TIMER_COMBO_UNDO => { let _ = KillTimer(Some(hwnd), TIMER_COMBO_UNDO); a.undo = None; a.changed(); }
                 _ => {}
@@ -374,7 +382,7 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         crate::i18n::set_language(settings.language.as_deref());
         let boxed = Box::leak(Box::new(App { settings, dir, states: BTreeMap::new(), main, debug_ctl, later: vec![], hotkey_ids: vec![], hotkey_clashes: BTreeSet::new(),
             tray: tray::Tray::default(), snap: Default::default(), dim: Default::default(), organizer: Default::default(), shelf: Default::default(), capture: Default::default(),
-            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), settings_window: Default::default(), panel: Default::default(), undo: None }));
+            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), clock: Default::default(), settings_window: Default::default(), panel: Default::default(), undo: None }));
         APP.with(|c| c.set(boxed));
         let a = app();
         crate::window::register_class();

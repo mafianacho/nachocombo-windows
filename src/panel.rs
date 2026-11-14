@@ -245,6 +245,12 @@ pub fn controls(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
             y += 46.0;
         }
         ModuleId::DiskMap => { y = crate::diskmap::controls(ui, x, y, w); }
+        ModuleId::CalendarClock => {
+            if btn(ui, "calendar", "Show Calendar", &mut y, Btn::Primary) { later(|| { close(); crate::clock::show(); }); }
+            y += 46.0;
+            ui.label(&a.clock.status(), sans(12), x, y, w, th.ink2);
+            y += 24.0;
+        }
         ModuleId::KeepAwake => {
             let on = a.awake.manual;
             if btn(ui, "awake", if on { "Let It Sleep" } else { "Keep Awake" }, &mut y, Btn::Primary) { later(crate::awake::toggle); }

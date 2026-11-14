@@ -52,6 +52,7 @@ pub fn actions() -> Vec<Action> {
     add("device.brighter", DeviceControl, "Brighten External Displays", None);
     add("device.dimmer", DeviceControl, "Darken External Displays", None);
     add("diskmap.open", DiskMap, "Open Disk Map", None);
+    add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
     for item in MonitorItem::ALL {
@@ -255,6 +256,21 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "A full scan of a large drive takes about a minute; the map stays for ten minutes after you close it.",
             ],
         },
+        ModuleId::CalendarClock => &Info {
+            tagline: "A clock with a calendar and world clocks in the taskbar corner.",
+            features: &[
+                f!("Your Clock", "Date, weekday and time the way you like them, with seconds if you want, in the icon's tooltip."),
+                f!("Month at a Glance", "Click the icon for a month calendar; move between months and jump back to today."),
+                f!("World Clocks", "The time in the cities you add, with how far ahead or behind they are."),
+            ],
+            tips: &[t!("", "Click the icon", "Open the calendar"), t!("", "Hover the icon", "Read the clock")],
+            note: "No administrator rights needed and nothing to allow. It only reads the PC's clock; nothing is sent anywhere.",
+            limits: &[
+                "Windows has no place for text in the taskbar corner, so the clock is the icon's tooltip and the icon shows today's date. The taskbar's own clock stays; hide its date in Settings ▸ Personalization ▸ Taskbar if you do not want two.",
+                "Your calendar events, the countdown to the next meeting and the Join button are not here: Windows has no calendar every app shares.",
+                "World clocks know the daylight-saving rules of the listed cities as they are today; a city that changes its rules needs an update of this app.",
+            ],
+        },
         ModuleId::DeviceControl => &Info {
             tagline: "Switches sound devices, mutes the microphone and sets external display brightness.",
             features: &[
@@ -283,6 +299,13 @@ mod tests {
         let all: Vec<_> = SNAP_GROUPS.iter().flat_map(|g| g.1.iter().copied()).collect();
         assert_eq!(all.len(), 24);
         for a in SnapAction::ALL { assert_eq!(all.iter().filter(|x| **x == a).count(), 1); }
+    }
+    #[test] fn every_gadget_has_a_page_text() {
+        for m in ModuleId::ALL { let i = info(m); assert!(!i.tagline.is_empty() && !i.features.is_empty() && !i.note.is_empty(), "{}", m.name()); }
+    }
+    #[test] fn calendar_clock_is_listed_with_a_show_action_and_no_default_key() {
+        let a = actions().into_iter().find(|a| a.id == "clock.show").unwrap();
+        assert_eq!((a.module, a.default), (ModuleId::CalendarClock, None));
     }
     #[test] fn defaults_do_not_clash_and_pass_the_policy() {
         let s = AppSettings::default();
