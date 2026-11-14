@@ -245,6 +245,11 @@ pub fn controls(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
             y += 46.0;
         }
         ModuleId::DiskMap => { y = crate::diskmap::controls(ui, x, y, w); }
+        ModuleId::AppSwitch => {
+            if btn(ui, "swnext", "Switch Windows", &mut y, Btn::Primary) { later(|| crate::appswitch::cycle(true)); }
+            if btn(ui, "swhide", "Hide Other Windows", &mut y, Btn::Secondary) { later(crate::appswitch::hide_others); }
+            y += 46.0;
+        }
         ModuleId::KeepAwake => {
             let on = a.awake.manual;
             if btn(ui, "awake", if on { "Let It Sleep" } else { "Keep Awake" }, &mut y, Btn::Primary) { later(crate::awake::toggle); }

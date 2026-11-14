@@ -1,5 +1,6 @@
 //! Logic with no Windows calls, ported from `Sources/NachoComboCore`. Everything here is unit tested.
 pub mod alerts;
+pub mod appswitch;
 pub mod catalog;
 pub mod combos;
 pub mod format;
