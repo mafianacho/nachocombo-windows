@@ -18,6 +18,12 @@ pub struct ConnectionRow {
     pub needs_attention: Option<String>,
     pub account_label: Option<String>,
     pub scope_summary: String,
+    /// The service switch (`PATCH /connections/{id}` `enabled`). Absent = on.
+    pub enabled: bool,
+    /// Row version the server wants back as `expected_version` when the switch or the scope changes.
+    pub version: i64,
+    /// `granted_scope.level`: `read` | `read_write`, when the server says what is granted.
+    pub scope_level: Option<String>,
     /// Optional server-provided management link (http/https only, see [`SafeLink`]).
     pub link: Option<String>,
 }
@@ -50,6 +56,10 @@ pub struct ToolRow {
     pub kind: String,
     pub source: Option<String>,
     pub enabled: bool,
+    /// The user's own switch (`user_enabled`). Absent (an older server) = on.
+    pub user_enabled: bool,
+    /// A default tool Nacho needs in every chat (`locked`). Absent = false.
+    pub locked: bool,
 }
 
 impl ToolRow {
@@ -113,6 +123,9 @@ impl ConnectorDecoder {
                 needs_attention: o.str("needs_attention"),
                 account_label: o.str("account_label"),
                 scope_summary: o.str("scope_summary").unwrap_or_default(),
+                enabled: o.bool("enabled").unwrap_or(true),
+                version: o.get("version").and_then(Value::as_i64).unwrap_or(0),
+                scope_level: o.obj("granted_scope").and_then(|g| g.str("level")),
                 link: SafeLink::openable(o.str("link").or_else(|| o.str("manage_url")).as_deref()),
                 source,
             })
@@ -130,6 +143,8 @@ impl ConnectorDecoder {
                 kind: t.obj("config").and_then(|c| c.str("kind")).unwrap_or_else(|| "builtin".into()),
                 source: t.str("source"),
                 enabled: t.bool("enabled").unwrap_or(true),
+                user_enabled: t.bool("user_enabled").unwrap_or(true),
+                locked: t.bool("locked").unwrap_or(false),
                 name,
             })
         }).collect();

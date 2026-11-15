@@ -14,6 +14,7 @@ pub mod color_hex;
 pub mod commands;
 pub mod composer;
 pub mod connector_client;
+pub mod connections;
 pub mod connectors;
 pub mod crypto;
 pub mod design_tokens;
