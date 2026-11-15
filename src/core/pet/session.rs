@@ -136,6 +136,8 @@ struct Inner {
     refresh_tried: bool,
     next_pending_id: u64,
     opened: bool,
+    /// `shutdown` ran: the shell is tearing down. Nothing calls back, connects or opens the login page any more.
+    shut: bool,
     /// Tasks whose [시작]/[취소] request is out: a second press sends nothing.
     task_actions_in_flight: BTreeSet<String>,
     /// Plan-note tasks already looked up with `GET /tasks/{id}` (once each).
@@ -179,6 +181,7 @@ impl PetSession {
             refresh_tried: false,
             next_pending_id: 1,
             opened: false,
+            shut: false,
             task_actions_in_flight: BTreeSet::new(),
             task_lookups: BTreeSet::new(),
         };
@@ -211,7 +214,7 @@ impl PetSession {
     pub fn settings(&self) -> PetSettings { self.sync(|i| i.settings.clone()) }
 
     /// Called on the session thread after every change.
-    pub fn set_on_change(&self, f: Option<SessionChange>) { self.post(move |i| i.on_change = f) }
+    pub fn set_on_change(&self, f: Option<SessionChange>) { self.post(move |i| if !i.shut { i.on_change = f }) }
 
     /// The capabilities the connector declares (W3: what this PC really runs). None = the core's full list.
     pub fn set_connector_capabilities(&self, caps: Option<Vec<Value>>) {
@@ -257,7 +260,9 @@ impl PetSession {
         })
     }
 
-    /// Everything off: sockets closed, nothing scheduled. Tokens stay (signing out is separate).
+    /// Everything off: sockets closed, nothing scheduled. Tokens stay (signing out is separate). Final: the last state
+    /// goes out once, then the session never calls back, connects or opens the login page again (the shell is tearing its
+    /// windows down; late socket events, answers and queued calls are dropped).
     pub fn shutdown(&self) {
         self.sync(|i| {
             i.opened = false;
@@ -267,6 +272,8 @@ impl PetSession {
             i.state.selection_turns.clear();
             i.state.uploading = false;
             i.publish();
+            i.shut = true;
+            i.on_change = None;
         })
     }
 
@@ -494,6 +501,7 @@ impl Inner {
     }
 
     fn publish(&mut self) {
+        if self.shut { return; } // the last state went out with `shutdown`
         *self.mirror.lock().unwrap() = self.state.clone();
         if let Some(f) = self.on_change.clone() { f(&self.state); }
     }
@@ -544,7 +552,7 @@ impl Inner {
     // MARK: login
 
     fn sign_in(&mut self) {
-        if self.state.auth == PetAuthPhase::SigningIn { return; }
+        if self.shut || self.state.auth == PetAuthPhase::SigningIn { return; }
         if self.retry_refused_login() {
             // The credential store handed out the stored login this time: no login page.
             self.opened = true;
@@ -618,6 +626,7 @@ impl Inner {
     // MARK: chat
 
     fn connect_chat(&mut self) {
+        if self.shut { return; }
         let Some(endpoint) = self.settings.endpoint() else {
             self.state.notice = Some("서버 주소가 올바르지 않아요. 설정에서 확인해 주세요.".into());
             return;
@@ -875,7 +884,7 @@ impl Inner {
     // MARK: connector (window arrangement, gadget switches)
 
     fn ensure_connector(&mut self, agent_id: &str) {
-        if !self.settings.allow_combo_control { return; }
+        if self.shut || !self.settings.allow_combo_control { return; }
         let Some(executor) = self.deps.executor.as_ref().and_then(Weak::upgrade) else { return };
         let Some(endpoint) = self.settings.endpoint() else { return };
         if self.connector_agent.as_deref() == Some(agent_id) { return; } // running, being set up, or given up until the next reconnect
@@ -1695,6 +1704,42 @@ mod tests {
         assert!(env.connectors().iter().all(|t| closed(t)));
         assert_eq!(s.snapshot().connector, ConnectorPhase::Off);
         assert_eq!(s.snapshot().chat.phase, ConnectionPhase::Disconnected);
+    }
+
+    /// Not in the Swift suite (Windows quit crash): after `shutdown` the shell is tearing its windows down, so the
+    /// session never calls back again and never opens a socket again, whatever arrives late (a late socket event, a
+    /// queued `open`/`touch`/`reconnect`/`sign_in`). The stored login stays.
+    #[test]
+    fn nothing_calls_back_or_connects_after_shutdown() {
+        let env = Env::new(1_000.0);
+        let s = env.session(|_| {});
+        let calls = Arc::new(Mutex::new(0usize));
+        let c = calls.clone();
+        s.set_on_change(Some(Arc::new(move |_: &PetSessionState| *c.lock().unwrap() += 1)));
+        s.sign_in();
+        settle(&s);
+        let chat = env.chat(0);
+        chat.deliver(&ready("r"));
+        settle(&s);
+        assert!(!env.connectors().is_empty());
+        s.shutdown();
+        settle(&s);
+        let after_shutdown = *calls.lock().unwrap();
+        let sockets = env.net.transports.lock().unwrap().len();
+        chat.deliver(&ready("r"));
+        chat.drop_with(None);
+        s.open();
+        s.touch();
+        s.reconnect();
+        s.sign_in();
+        for i in 0..env.timers.len() { env.timers.fire(i); }
+        settle(&s);
+        assert_eq!(*calls.lock().unwrap(), after_shutdown, "no change reaches the shell after shutdown");
+        assert_eq!(env.net.transports.lock().unwrap().len(), sockets, "no socket opens after shutdown");
+        assert_eq!(s.snapshot().chat.phase, ConnectionPhase::Disconnected);
+        assert_eq!(s.snapshot().auth, PetAuthPhase::SignedIn, "quitting is not signing out");
+        assert!(env.secrets.keys().iter().any(|k| k.starts_with("tokens|")), "the stored login stays: {:?}", env.secrets.keys());
+        assert_eq!(env.browser.opened(), 1, "no login page after shutdown");
     }
 
     /// Not in the Swift suite: a restart over the app's store (bundle) is signed in without the login page.

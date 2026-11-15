@@ -81,6 +81,8 @@ fn main() {
             return;
         }
         app::run(dir, args.iter().any(|a| a == "--debug-ctl"));
+        // Every window is gone: Direct2D (and the Direct3D device under it) goes now, not at process exit.
+        gfx::shutdown();
         windows::Win32::System::Ole::OleUninitialize();
         drop(mutex);
     }
