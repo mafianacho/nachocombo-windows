@@ -3,6 +3,7 @@
 //! [`chat_client::WebSocketTransport`]), the token store and the windows; everything that decides is here and tested
 //! on any OS with `cargo test --lib`.
 pub mod auth;
+pub mod card_flow;
 pub mod card_rules;
 pub mod character_assets;
 pub mod chat_client;
@@ -11,6 +12,7 @@ pub mod chat_state;
 pub mod clock;
 pub mod color_hex;
 pub mod commands;
+pub mod composer;
 pub mod connector_client;
 pub mod connectors;
 pub mod crypto;
@@ -21,9 +23,11 @@ pub mod face;
 pub mod frames;
 pub mod http;
 pub mod json;
+pub mod login_browser;
 pub mod markdown;
 pub mod media;
 pub mod motion;
+pub mod placement;
 pub mod reconnect;
 pub mod secrets;
 pub mod selection;
@@ -34,4 +38,5 @@ pub mod settings;
 pub mod socket_transport;
 pub mod transcript;
 pub mod voice;
+pub mod wav;
 pub mod ws_framing;
