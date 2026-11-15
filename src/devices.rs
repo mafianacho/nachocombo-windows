@@ -79,7 +79,10 @@ impl Watcher_Impl {
     }
 }
 
-fn enumerator() -> Option<IMMDeviceEnumerator> { app().devices.enumerator.clone() }
+/// The gadget's enumerator, or a fresh one while the gadget is off (Nacho's `combo_set_system` works either way).
+fn enumerator() -> Option<IMMDeviceEnumerator> {
+    app().devices.enumerator.clone().or_else(|| unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok() })
+}
 
 unsafe fn list(e: &IMMDeviceEnumerator, flow: EDataFlow) -> Vec<Device> {
     let default = e.GetDefaultAudioEndpoint(flow, eMultimedia).ok().and_then(|d| d.GetId().ok()).map(|p| p.to_string().unwrap_or_default());
@@ -176,6 +179,19 @@ pub fn next_output() {
 pub fn set_volume(v: f32) {
     unsafe { if let Some(e) = endpoint_volume(eRender) { let _ = e.SetMasterVolumeLevelScalar(v.clamp(0.0, 1.0), std::ptr::null()); } }
     app().devices.volume = v.clamp(0.0, 1.0);
+}
+
+/// Mutes or unmutes the default sound output.
+pub fn set_muted(mute: bool) -> bool {
+    let ok = unsafe { endpoint_volume(eRender).is_some_and(|e| e.SetMute(mute, std::ptr::null()).is_ok()) };
+    if ok { app().devices.muted = mute; }
+    ok
+}
+
+/// Nacho's microphone switch: the same as the shortcut, only when it changes something.
+pub fn set_mic_muted(mute: bool) {
+    refresh();
+    if app().devices.mic_muted != mute { toggle_mic(); }
 }
 
 /// Mutes or unmutes every microphone, so a call app that picked another one is muted too.
@@ -297,7 +313,7 @@ pub fn theme_tick() {
 
 // ---------- displays ----------
 
-fn release_monitors() {
+pub fn release_monitors() {
     for m in app().devices.monitors.drain(..) {
         unsafe { let _ = DestroyPhysicalMonitor(HANDLE(m.handle as *mut _)); }
     }

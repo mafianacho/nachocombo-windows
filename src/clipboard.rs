@@ -387,6 +387,16 @@ pub fn paste_last_plain() {
     paste(i, true);
 }
 
+/// Puts item `i` on the clipboard again and first in the list (pins keep their place). false when it is gone.
+pub fn copy_again(i: usize) -> bool {
+    let a = app();
+    let Some(c) = a.clipboard.items.get(i).cloned() else { return false };
+    restore(&c, false);
+    if !c.pinned { let it = a.clipboard.items.remove(i); a.clipboard.items.insert(0, it); }
+    a.changed();
+    true
+}
+
 fn to_shelf(i: usize) {
     let Some(c) = app().clipboard.items.get(i).cloned() else { return };
     if app().state(ModuleId::FileShelf) != State::Running { app().tray.balloon("Clipboard History", "Switch File Shelf on to send items to it."); return; }

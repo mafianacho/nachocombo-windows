@@ -78,7 +78,7 @@ pub fn monitors() -> Vec<(HMONITOR, Rect, Rect)> {
     v
 }
 
-fn visible_frame(h: HWND) -> Option<Rect> {
+pub fn visible_frame(h: HWND) -> Option<Rect> {
     unsafe {
         let mut r = RECT::default();
         if DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, &mut r as *mut _ as *mut _, 16).is_ok() { return Some(rect(r)); }
@@ -88,7 +88,7 @@ fn visible_frame(h: HWND) -> Option<Rect> {
 }
 
 /// Moves so the *visible* frame lands on `t`. Returns false when Windows refused (usually an elevated window).
-fn place(h: HWND, t: Rect) -> bool {
+pub fn place(h: HWND, t: Rect) -> bool {
     unsafe {
         if IsZoomed(h).as_bool() || IsIconic(h).as_bool() { let _ = ShowWindow(h, SW_RESTORE); }
         let (Some(vis), mut outer) = (visible_frame(h), RECT::default()) else { return false };

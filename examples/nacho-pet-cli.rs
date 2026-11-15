@@ -7,14 +7,18 @@
 //!   nacho-pet-cli chat      --server … --store DIR "안녕 나초"
 //!   nacho-pet-cli ask-image --server … --store DIR capture.png "이거 뭐야?"     (Capture Float → pet)
 //!   nacho-pet-cli send-file --server … --store DIR notes.md "요약해 줘"        (File Shelf → pet)
-//!   nacho-pet-cli command   --server … --store DIR "창 왼쪽으로 붙여 줘"       (connector: window / gadget)
+//!   nacho-pet-cli command   --server … --store DIR [--trust FILE] [--deny] "창 왼쪽으로 붙여 줘"
+//!                                (connector, the Windows declaration; an approval card is approved, or denied)
+//!   nacho-pet-cli trust     --trust FILE clipboard on|off   ("always allow" for a gadget, stored in FILE)
 //!   nacho-pet-cli stop|queued|usage|history|recover|search|task|plan-start|plan-cancel|plan-change|remember|dictate|logout
 //! Secrets go to 0600 files in DIR (0700 on Unix); they are never printed.
 use nachocombo::core::pet::auth::{AuthProblem, PetAuthBrowser};
 use nachocombo::core::pet::chat_client::{thread_schedule, MakeTransport, WebSocketTransport};
 use nachocombo::core::pet::chat_state::{ConnectionPhase, TurnStatus};
 use nachocombo::core::pet::frames::ActivityKind;
-use nachocombo::core::pet::commands::{PetCommand, PetCommandOutcome, PetGadget};
+use nachocombo::core::pet::commands::{PetCommand, PetCommandOutcome, PetCommands, PetGadget};
+use nachocombo::core::pet::gadget_tools::{PetAwakeState, PetClipKind, PetClipRow, PetDataTools};
+use nachocombo::core::pet::trust::GadgetTrust;
 use nachocombo::core::pet::connector_client::{ConnectorBinding, ConnectorPhase, PetCommandExecuting};
 use nachocombo::core::pet::crypto;
 use nachocombo::core::pet::http::{HTTPCompletion, PetHTTPClient, PetHTTPRequest, PetHTTPResponse, PetNetError};
@@ -191,6 +195,30 @@ impl PetCommandExecuting for SimulatedPC {
                 out.gadgets = Some(g);
                 done(out)
             }
+            PetCommand::ClipboardList => {
+                stamp("pc: clipboard list");
+                done(PetDataTools::clipboard_list(&clips()))
+            }
+            PetCommand::ClipboardGetItem(r) => {
+                let rows = clips();
+                let keys: Vec<&[u8]> = rows.iter().map(|r| r.key.as_slice()).collect();
+                match PetDataTools::pick(&r, &keys, "clipboard item") {
+                    Ok(i) => {
+                        // The content goes to the server (approved); the log keeps its length only.
+                        stamp(&format!("pc: clipboard read item {} ({} characters)", i + 1, rows[i].text.chars().count()));
+                        done(PetDataTools::clipboard_content(i + 1, &rows[i]))
+                    }
+                    Err(o) => { stamp(&format!("pc: clipboard read refused ({})", o.message)); done(o) }
+                }
+            }
+            PetCommand::AwakeStart { minutes } => {
+                stamp(&format!("pc: keep awake {minutes} min"));
+                done(PetAwakeState { manual: true, seconds_left: (minutes > 0).then_some(minutes as u64 * 60), ..Default::default() }.outcome(Some("Started.")))
+            }
+            PetCommand::QuitApp(app) => {
+                stamp(&format!("pc: quit {app}"));
+                done(PetCommandOutcome::new(true, format!("Asked {app} to close.")))
+            }
             other => {
                 // The desktop actions (apps, several windows, system, workspaces) only print what Nacho asked for.
                 stamp(&format!("pc: {other:?}"));
@@ -198,6 +226,12 @@ impl PetCommandExecuting for SimulatedPC {
             }
         }
     }
+}
+
+/// The simulated clipboard history: a note and a link.
+fn clips() -> Vec<PetClipRow> {
+    [("회의실 비밀번호는 4321이에요", PetClipKind::Text), ("https://example.com/report", PetClipKind::Link)].iter()
+        .map(|(t, k)| PetClipRow { key: t.as_bytes().to_vec(), kind: *k, text: t.to_string(), bytes: 0, pinned: false }).collect()
 }
 
 /// Dev randomness (the CLI talks only to the loopback mock). The app takes PKCE randomness from BCryptGenRandom.
@@ -235,13 +269,25 @@ fn main() {
     if args.is_empty() { fail("usage: nacho-pet-cli login|restart|chat|ask-image|send-file|command|stop|queued|logout|history|recover|task|plan-start|plan-cancel|plan-change|remember|search|dictate|usage --server URL --store DIR …"); }
     let command: &'static str = Box::leak(args.remove(0).into_boxed_str());
     let (mut server, mut store_dir, mut rest) = (String::new(), String::new(), Vec::<String>::new());
+    let (mut trust_file, mut deny) = (String::new(), false);
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--server" if i + 1 < args.len() => { server = args[i + 1].clone(); i += 2; }
             "--store" if i + 1 < args.len() => { store_dir = args[i + 1].clone(); i += 2; }
+            "--trust" if i + 1 < args.len() => { trust_file = args[i + 1].clone(); i += 2; }
+            "--deny" => { deny = true; i += 1; }
             _ => { rest.push(args[i].clone()); i += 1; }
         }
+    }
+    // "Always allow" for the gadgets the Windows app declares (the same file the app keeps next to settings.json).
+    let trust = GadgetTrust::for_windows(false);
+    if !trust_file.is_empty() { trust.attach(std::path::Path::new(&trust_file)); }
+    if command == "trust" {
+        if trust_file.is_empty() || rest.len() < 2 { fail("trust --trust FILE <gadget> on|off"); }
+        let changed = trust.set_always_allowed(&rest[0], rest[1] == "on");
+        stamp(&format!("trust {} {} changed={changed} always_allowed={:?}", rest[0], rest[1], trust.always_allowed()));
+        std::process::exit(if trust.is_always_allowed(&rest[0]) == (rest[1] == "on") { 0 } else { 1 });
     }
     let endpoint = match ServerEndpoint::parse(&server) {
         Ok(e) if e.base.starts_with("http://") && ServerEndpoint::is_loopback(e.base.trim_start_matches("http://").rsplit_once(':').map(|(h, _)| h).unwrap_or("")) => e,
@@ -272,6 +318,12 @@ fn main() {
         schedule: thread_schedule(),
         connector_label: ConnectorBinding::LABEL_WINDOWS.into(),
     }));
+    if command == "command" {
+        let decl = PetCommands::windows_declaration(&trust.always_allowed(), &trust.disabled(), false);
+        let asking: Vec<&str> = decl.iter().filter(|c| c["approval"] == "required").filter_map(|c| c["name"].as_str()).collect();
+        stamp(&format!("declare {} capabilities, approval required: {}", decl.len(), asking.join(",")));
+        session.set_connector_capabilities(Some(decl));
+    }
     let (done_tx, done_rx) = mpsc::channel::<i32>();
     let finish = {
         let tx = Mutex::new(done_tx);
@@ -344,6 +396,7 @@ fn main() {
             }
             need_login();
             let (mut sent, mut stopped, mut queued, mut printed, mut last_phase, mut last_conn) = (false, false, false, 0usize, String::new(), String::new());
+            let mut answered_cards: BTreeSet<String> = BTreeSet::new();
             let mut first_turn = 0usize;
             let finish = finish.clone();
             start = Some(Box::new(|s: &PetSession| s.open()));
@@ -372,6 +425,13 @@ fn main() {
                     printed = chars.len();
                 }
                 if st.chat.activity == ActivityKind::Tool { if let Some(tool) = &st.chat.active_tool { stamp(&format!("activity tool {tool}")); } }
+                // The server's approval card for a desktop action: the user approves (or, with --deny, refuses).
+                for card in st.chat.pending_cards().into_iter().filter(|c| c.kind == "approval" && c.answerable_here()) {
+                    if !answered_cards.insert(card.id.clone()) { continue; }
+                    let action = if deny { "deny" } else { "approve" };
+                    stamp(&format!("card approval {:?} -> {action}", card.title));
+                    s.answer_card(&card.id, action, vec![], None, Some(Box::new(|r| stamp(&format!("answer {}", r.as_deref().unwrap_or("ok"))))));
+                }
                 if command == "stop" && !stopped && printed >= 24 {
                     stopped = true;
                     stamp("stop requested");

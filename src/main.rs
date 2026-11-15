@@ -21,6 +21,7 @@ mod mouse;
 mod pages;
 mod panel;
 mod peek;
+mod pet_exec;
 mod pet_win;
 mod shelf;
 mod snap;

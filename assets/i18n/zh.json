@@ -1046,5 +1046,8 @@
   "No administrator rights needed. The board reads the gadgets that are running and starts nothing itself; switching it off closes the window and stops its refresh timer.": "无需管理员权限。面板只读取正在运行的小工具，不会自行启动任何东西；关闭后窗口会关闭，刷新计时器也会停止。",
   "There is no Nacho Pet tile yet: the pet is not part of this Windows app so far.": "暂时没有 Nacho Pet 磁贴：宠物目前还不在这个 Windows 应用中。",
   "Windows lets no app read your calendar events, so the Calendar Clock tile shows the date and world clocks, not an event.": "Windows 不允许应用读取日历日程，因此日历时钟磁贴显示日期和世界时钟，而不是日程。",
-  "There is no Computer Use tile: Windows has no counterpart of that gadget.": "没有 Computer Use 磁贴：Windows 中没有对应的小工具。"
+  "There is no Computer Use tile: Windows has no counterpart of that gadget.": "没有 Computer Use 磁贴：Windows 中没有对应的小工具。",
+  "Always allow this gadget": "始终允许此小组件",
+  "Nacho may send this gadget's content (such as clipboard text) without an approval card each time. Off by default.": "Nacho 可以发送此小组件的内容(例如剪贴板文字),无需每次显示批准卡片。默认关闭。",
+  "Quitting an app always asks first.": "退出应用前总会先询问。"
 }

@@ -1046,5 +1046,8 @@
   "No administrator rights needed. The board reads the gadgets that are running and starts nothing itself; switching it off closes the window and stops its refresh timer.": "관리자 권한이 필요 없어요. 보드는 실행 중인 가젯의 상태를 읽기만 하고 아무것도 직접 켜지 않아요. 끄면 창이 닫히고 갱신 타이머도 멈춰요.",
   "There is no Nacho Pet tile yet: the pet is not part of this Windows app so far.": "나초 펫 타일은 아직 없어요. 펫은 아직 이 Windows 앱에 들어 있지 않아요.",
   "Windows lets no app read your calendar events, so the Calendar Clock tile shows the date and world clocks, not an event.": "Windows에서는 앱이 일정을 읽을 수 없어서, 달력 시계 타일은 일정 대신 날짜와 세계 시계를 보여요.",
-  "There is no Computer Use tile: Windows has no counterpart of that gadget.": "컴퓨터 사용 타일은 없어요. Windows에는 그 가젯에 해당하는 것이 없어요."
+  "There is no Computer Use tile: Windows has no counterpart of that gadget.": "컴퓨터 사용 타일은 없어요. Windows에는 그 가젯에 해당하는 것이 없어요.",
+  "Always allow this gadget": "이 가젯은 항상 허용",
+  "Nacho may send this gadget's content (such as clipboard text) without an approval card each time. Off by default.": "나초가 이 가젯의 내용(예: 클립보드 글)을 매번 승인 카드 없이 보낼 수 있어요. 기본은 꺼짐이에요.",
+  "Quitting an app always asks first.": "앱 종료는 항상 먼저 물어봐요."
 }
