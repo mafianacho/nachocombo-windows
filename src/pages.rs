@@ -1168,7 +1168,8 @@ fn general(ui: &mut Ui, ctx: &mut WindowCtx, x: f64, y: f64, w: f64) -> f64 {
         y
     }) + 24.0;
     ui.c.line_text(&format!("{PRODUCT} {}", env!("CARGO_PKG_VERSION")), medium(13), Rect::new(x, y, w, 20.0), th.ink2, Align::Left);
-    y += 30.0;
+    y += 24.0;
+    y += ui.label("The Nacho character pictures, the logo and the names Nacho Combo™, Nacho™ and Mafianacho™ are not open source (see TRADEMARKS.md).", sans(12), x, y, w, th.ink2) + 14.0;
     if ui.button("quitapp", "Quit NachoCombo", x, y, Btn::Secondary, false) { ctx.close = true; app::quit(); }
     y + 60.0
 }
