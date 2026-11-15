@@ -7,6 +7,7 @@ pub mod combos;
 pub mod format;
 pub mod layout;
 pub mod mouse;
+pub mod pet;
 pub mod series;
 pub mod settings;
 pub mod sha256;
