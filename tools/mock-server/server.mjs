@@ -10,7 +10,9 @@
 //     GET|POST /api/v1/chat/requests/{id}[/answer] (expected_version, 409s), GET /api/v1/tasks/{id},
 //     POST /api/v1/tasks/{id}/start|cancel (expected_estimate_id, 409 estimate_changed).
 //   - WS: /ws/chat (ready, turn_started, activity, text_delta, message, usage, turn_meta, done, error, pong, stop,
-//     client_msg_id idempotency, attachments) and /ws/connector (hello → ready, request/response, replaced).
+//     client_msg_id idempotency, attachments) and /ws/connector (hello → ready, request/response, replaced,
+//     capabilities re-declaration, ping/pong). A capability declared with "approval":"required" gets an approval card
+//     in the chat first (answered over /api/v1/chat/requests/{id}/answer); only `approve` reaches the PC.
 // Contract source (read only): nacho-server docs/ws-protocol.md, spec/media.tsp, docs/keycloak-nacho-gadget-app.md.
 // The model is NOT real: replies are canned. Tool use is simulated with keyword rules (see `planTool`) so the
 // connector round trip runs end to end; pictures are "seen" by reading the PNG header (width × height).
@@ -435,7 +437,11 @@ function handleConnector(socket) {
   log('ws', { event: 'connector_open' });
   frameLoop(socket, (txt) => {
     let m; try { m = JSON.parse(txt); } catch { return out({ type: 'error', code: 'bad_frame', message: 'json' }); }
-    log('connector-in', m.type === 'hello' ? { type: 'hello', token: m.token, capabilities: (m.capabilities || []).map((c) => c.name) } : m);
+    // Content a PC sent (clipboard text) is logged as its length only, like the apps' own logs.
+    const quiet = (r) => (r && typeof r.text === 'string' ? { ...r, text: `(${[...r.text].length} characters)` } : r);
+    log('connector-in', m.type === 'hello' ? { type: 'hello', token: m.token, capabilities: (m.capabilities || []).map((c) => (c.approval ? `${c.name}!${c.approval}` : c.name)) }
+      : m.type === 'capabilities' ? { type: 'capabilities', capabilities: (m.capabilities || []).map((c) => (c.approval ? `${c.name}!${c.approval}` : c.name)) }
+      : m.type === 'response' ? { ...m, result: quiet(m.result) } : m);
     if (!session) {
       if (m.type !== 'hello' || !bindings.has(m.token)) { out({ type: 'error', code: 'unauthorized', message: 'first frame must be {type:hello, token, capabilities}' }); return socket.end(); }
       clearTimeout(timer);
@@ -454,7 +460,34 @@ function handleConnector(socket) {
   socket.on('close', () => { clearTimeout(timer); if (connector === session) connector = null; log('ws', { event: 'connector_close' }); });
 }
 
-const callConnector = (capability, params) => new Promise((resolve) => {
+// Like nacho-server: a capability declared with "approval": "required" waits for the user's approval card first
+// (kind approval, action_type other: a connector action has no allow rules). Deny or dismiss: the PC is never asked.
+const askApproval = (capability, params) => new Promise((resolve) => {
+  const cardId = uuid();
+  const c = { id: cardId, request_id: cardId, user_id: USER, room_id: ROOM, kind: 'approval', status: 'pending', version: 1,
+              payload: { title: `PC에서 ${capability} 실행`, action_type: 'other', reversibility: 'cannot_cancel', capability, params_keys: Object.keys(params || {}) },
+              created_at: now(), expires_at: new Date(Date.now() + 60_000).toISOString() };
+  cards.set(cardId, c);
+  storeMsg({ role: 'assistant', text: '', content: { type: 'card', request_id: cardId, kind: 'approval' }, card: c });
+  log('connector', { event: 'approval_card', capability, card: cardId });
+  hub({ type: 'card_update', room_id: ROOM, request: c });
+  const t = setTimeout(() => { taskWaiters.delete(cardId); resolve('expired'); }, 30_000);
+  taskWaiters.set(cardId, (answered) => { clearTimeout(t); resolve(answered.answered_action === 'approve' ? 'approve' : answered.answered_action || 'dismiss'); });
+});
+
+const callConnector = async (capability, params) => {
+  const cap = connector && connector.capabilities.find((c) => c.name === capability);
+  if (!cap) return { error: 'connector_unavailable' };
+  if (cap.approval === 'required') {
+    const answer = await askApproval(capability, params);
+    log('connector', { event: 'approval_answer', capability, answer });
+    if (answer !== 'approve') return { error: `user_${answer === 'deny' ? 'denied' : answer}` };
+    if (!connector) return { error: 'connector_unavailable' };
+  }
+  return sendConnector(capability, params);
+};
+
+const sendConnector = (capability, params) => new Promise((resolve) => {
   if (!connector || !connector.capabilities.some((c) => c.name === capability)) return resolve({ error: 'connector_unavailable' });
   const id = uuid();
   const c = connector;
@@ -471,6 +504,15 @@ const GADGETS = [
 ];
 function planTool(text) {
   if (/가젯 ?목록|list gadgets/i.test(text)) return { name: 'combo_list_gadgets', params: {} };
+  const item = /클립보드 ?(\d+) ?번/.exec(text);
+  if (item && /읽|봐|read/i.test(text)) return { name: 'combo_clipboard_get_item', params: { index: Number(item[1]) } };
+  if (item && /다시 ?복사|copy again/i.test(text)) return { name: 'combo_clipboard_copy_again', params: { index: Number(item[1]) } };
+  if (/클립보드 ?(기록 ?)?목록|clipboard list/i.test(text)) return { name: 'combo_clipboard_list', params: {} };
+  const awake = /(\d+) ?분 ?(동안 )?(깨워|잠들지)/.exec(text);
+  if (awake) return { name: 'combo_awake_start', params: { minutes: Number(awake[1]) } };
+  const quit = /(\S+) ?(앱 )?종료/.exec(text);
+  if (quit) return { name: 'combo_quit_app', params: { app: quit[1] } };
+  if (/선반 ?비워|clear shelf/i.test(text)) return { name: 'combo_clear_shelf', params: {} };
   if (/창|window/i.test(text) && !/스냅|snap/i.test(text)) {
     if (/왼쪽|left/i.test(text)) return { name: 'combo_arrange_window', params: { position: 'left' } };
     if (/오른쪽|right/i.test(text)) return { name: 'combo_arrange_window', params: { position: 'right' } };
@@ -555,8 +597,9 @@ function handleChat(socket) {
       const callId = 'call_' + rand(6);
       out({ type: 'tool_call_started', room_id: ROOM, call_id: callId, name: tool.name, arguments: tool.params, client_id: clientId });
       const r = await callConnector(tool.name, tool.params);
-      out({ type: 'tool_call_finished', room_id: ROOM, call_id: callId, name: tool.name, preview: JSON.stringify(r).slice(0, 200), meta: { source: 'connector', is_error: !!r.error }, client_id: clientId });
-      log('tool', { name: tool.name, params: tool.params, result: r });
+      const shown = r.result && typeof r.result.text === 'string' ? { ...r, result: { ...r.result, text: '(redacted)' } } : r; // tests grep the logs for content
+      out({ type: 'tool_call_finished', room_id: ROOM, call_id: callId, name: tool.name, preview: JSON.stringify(shown).slice(0, 200), meta: { source: 'connector', is_error: !!r.error }, client_id: clientId });
+      log('tool', { name: tool.name, params: tool.params, result: r.result && typeof r.result.text === 'string' ? { ...r.result, text: '(redacted)' } : r });
       active = null;
       reply = r.error ? `(모의) ${tool.name} 을 쓰려 했는데 안 됐어요: ${r.error}` : `(모의) ${tool.name} 결과: ${r.result && r.result.message ? r.result.message : JSON.stringify(r.result)}`;
     } else if (items.length) {

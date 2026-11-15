@@ -61,7 +61,7 @@ unsafe extern "system" fn each(hwnd: HWND, lp: LPARAM) -> BOOL {
     BOOL(1)
 }
 
-fn exe_path(pid: u32) -> String {
+pub fn exe_path(pid: u32) -> String {
     unsafe {
         let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return String::new() };
         let mut buf = [0u16; 1040];
@@ -126,7 +126,7 @@ fn name_apps(mut items: Vec<Item>) -> Vec<Item> {
 
 /// Windows only lets the process that last got input take the front. Joining the input queue of the window that
 /// has it now is the usual, documented way to be allowed.
-fn raise(id: isize, minimized: bool) {
+pub fn raise(id: isize, minimized: bool) {
     unsafe {
         let h = HWND(id as *mut _);
         if !IsWindow(Some(h)).as_bool() { return; }

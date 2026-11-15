@@ -27,6 +27,7 @@ mod pet_cards;
 mod pet_chat;
 mod pet_theme;
 mod pet_ui;
+mod pet_exec;
 mod pet_win;
 mod shelf;
 mod snap;

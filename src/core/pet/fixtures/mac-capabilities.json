@@ -1,0 +1,633 @@
+{
+ "approval_when_always_allowed": {
+  "combo_arrange_window": null,
+  "combo_awake_start": null,
+  "combo_awake_status": null,
+  "combo_awake_stop": null,
+  "combo_capture_ask": null,
+  "combo_capture_list_pinned": null,
+  "combo_clear_shelf": "required",
+  "combo_clipboard_copy_again": null,
+  "combo_clipboard_get_item": null,
+  "combo_clipboard_list": null,
+  "combo_device_set_mic_muted": null,
+  "combo_device_set_volume": null,
+  "combo_device_status": null,
+  "combo_dim_pause": null,
+  "combo_dim_resume": null,
+  "combo_dim_status": null,
+  "combo_focus_app": null,
+  "combo_hide_app": null,
+  "combo_layout_windows": null,
+  "combo_list_apps": null,
+  "combo_list_gadgets": null,
+  "combo_list_windows": null,
+  "combo_open_app": null,
+  "combo_quit_app": "required",
+  "combo_set_dim_strength": null,
+  "combo_set_gadget": null,
+  "combo_set_system": null,
+  "combo_shelf_give": null,
+  "combo_shelf_list": null,
+  "combo_workspace_apply": null,
+  "combo_workspace_list": null,
+  "combo_workspace_save": null
+ },
+ "capabilities": [
+  {
+   "description": "맨 앞 창(또는 지정한 실행 중 앱의 창) 하나를 화면 왼쪽 반·오른쪽 반·최대화·네 귀퉁이·3분할 등으로 옮겨요. next-display·previous-display는 옆 디스플레이로 옮겨요. 손쉬운 사용 권한이 필요해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+      "maxLength": 100,
+      "type": "string"
+     },
+     "position": {
+      "description": "left=왼쪽 반, right=오른쪽 반, maximize=최대화, top-left=왼쪽 위 1/4, first-third=왼쪽 1/3 …",
+      "enum": [
+       "left",
+       "right",
+       "center-half",
+       "top-half",
+       "bottom-half",
+       "top-left",
+       "top-right",
+       "bottom-left",
+       "bottom-right",
+       "first-third",
+       "center-third",
+       "last-third",
+       "first-two-thirds",
+       "center-two-thirds",
+       "last-two-thirds",
+       "maximize",
+       "almost-maximize",
+       "maximize-height",
+       "center",
+       "smaller",
+       "larger",
+       "restore",
+       "next-display",
+       "previous-display"
+      ],
+      "type": "string"
+     }
+    },
+    "required": [
+     "position"
+    ],
+    "type": "object"
+   },
+   "name": "combo_arrange_window"
+  },
+  {
+   "description": "여러 앱의 창을 한 번에 이름 붙은 자리(반·4등분·3등분·최대화 등)로 배치해요. 항목마다 앱과 위치, 필요하면 디스플레이 번호를 줘요. 개수 제한은 없어요(한 번에 200개까지). 자유로운 좌표·바둑판은 window_place·window_tile을 써요. 손쉬운 사용 권한이 필요해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "items": {
+      "items": {
+       "additionalProperties": false,
+       "properties": {
+        "app": {
+         "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+         "maxLength": 100,
+         "type": "string"
+        },
+        "display": {
+         "description": "디스플레이 번호(combo_list_windows 기준, 왼쪽부터 1). 없으면 창이 있는 화면",
+         "maximum": 16,
+         "minimum": 1,
+         "type": "integer"
+        },
+        "position": {
+         "enum": [
+          "left",
+          "right",
+          "center-half",
+          "top-half",
+          "bottom-half",
+          "top-left",
+          "top-right",
+          "bottom-left",
+          "bottom-right",
+          "first-third",
+          "center-third",
+          "last-third",
+          "first-two-thirds",
+          "center-two-thirds",
+          "last-two-thirds",
+          "maximize",
+          "almost-maximize",
+          "maximize-height",
+          "center"
+         ],
+         "type": "string"
+        },
+        "window": {
+         "description": "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1",
+         "maximum": 20,
+         "minimum": 1,
+         "type": "integer"
+        }
+       },
+       "required": [
+        "app",
+        "position"
+       ],
+       "type": "object"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "type": "object"
+   },
+   "name": "combo_layout_windows"
+  },
+  {
+   "description": "맥의 디스플레이 목록(번호·크기)과 앱별 열린 창의 위치·크기·디스플레이 번호를 봐요(창 제목은 보내지 않아요). 여러 창을 배치하거나 다른 화면으로 옮기기 전에 지금 상태를 확인할 때 써요. 손쉬운 사용 권한이 필요해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_list_windows"
+  },
+  {
+   "description": "맥에서 지금 실행 중인 앱 목록(이름·번들 ID·맨 앞인지·숨김인지)을 봐요. installed=true면 설치된 앱 이름도 함께 봐요. 앱 이름이 확실하지 않을 때 열거나 전환하기 전에 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "installed": {
+      "description": "설치된 앱도 포함(기본 false)",
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   },
+   "name": "combo_list_apps"
+  },
+  {
+   "description": "맥에 설치된 앱을 열고 맨 앞으로 가져와요(예: \"사파리 열어 줘\", \"메모 켜 줘\"). 이미 실행 중이면 그 앱으로 전환해요. 앱 이름은 한국어 표시 이름·영문 이름·번들 ID 모두 돼요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+      "maxLength": 100,
+      "type": "string"
+     }
+    },
+    "required": [
+     "app"
+    ],
+    "type": "object"
+   },
+   "name": "combo_open_app"
+  },
+  {
+   "description": "이미 실행 중인 앱으로 전환해 맨 앞에 보여 줘요(숨겨져 있으면 다시 보이게). \"크롬으로 바꿔 줘\"처럼 앱 전환을 원할 때 써요. 실행 중이 아니면 combo_open_app을 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+      "maxLength": 100,
+      "type": "string"
+     }
+    },
+    "required": [
+     "app"
+    ],
+    "type": "object"
+   },
+   "name": "combo_focus_app"
+  },
+  {
+   "description": "실행 중인 앱의 창을 모두 숨겨요(⌘H와 같고 앱은 종료하지 않아요). \"슬랙 잠깐 가려 줘\"처럼 화면에서 치우고 싶을 때 써요. Finder·나초콤보는 숨기지 않아요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+      "maxLength": 100,
+      "type": "string"
+     }
+    },
+    "required": [
+     "app"
+    ],
+    "type": "object"
+   },
+   "name": "combo_hide_app"
+  },
+  {
+   "approval": "required",
+   "description": "실행 중인 앱을 종료해요(저장하지 않은 내용은 그 앱이 물어봐요). 사용자가 분명히 종료를 원할 때만 쓰고, 실행 전에 사용자 승인이 필요해요. Finder·나초콤보는 종료하지 않아요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+      "maxLength": 100,
+      "type": "string"
+     }
+    },
+    "required": [
+     "app"
+    ],
+    "type": "object"
+   },
+   "name": "combo_quit_app"
+  },
+  {
+   "description": "맥의 소리 크기(0~100), 내장 화면 밝기(0~100), 방해금지 켜기/끄기를 바꿔요. 바꿀 항목만 넣어요. 이 맥에서 지원하지 않는 항목(외장 모니터 밝기·방해금지 등)은 이유와 함께 실패로 알려 줘요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "brightness": {
+      "description": "내장 화면 밝기 %",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+     },
+     "dnd": {
+      "description": "방해금지 켜기(true)/끄기(false)",
+      "type": "boolean"
+     },
+     "volume": {
+      "description": "소리 크기 %",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "name": "combo_set_system"
+  },
+  {
+   "description": "나초콤보 가젯(창 배치·집중 디밍·잠자기 방지·파일 선반 등) 하나를 켜거나 꺼요. 가젯 이름은 gadget 목록에서 골라요. 권한이 더 필요한 가젯은 사용자가 나초콤보에서 직접 켜야 해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "gadget": {
+      "enum": [
+       "menuBar",
+       "systemMonitor",
+       "windowSnap",
+       "fileShelf",
+       "captureFloat",
+       "focusDim",
+       "keepAwake",
+       "clipboard",
+       "deviceControl",
+       "appSwitch",
+       "mouseTune",
+       "calendarClock",
+       "diskMap"
+      ],
+      "type": "string"
+     },
+     "on": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "gadget",
+     "on"
+    ],
+    "type": "object"
+   },
+   "name": "combo_set_gadget"
+  },
+  {
+   "description": "나초콤보 가젯 목록과 각각 켜져 있는지 봐요. 어떤 가젯이 있는지, 지금 켜져 있는지 확인할 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_list_gadgets"
+  },
+  {
+   "description": "집중 디밍(맨 앞 창만 밝게 두고 나머지 화면을 어둡게 하는 가젯)의 어둡기를 10~90%로 바꿔요. \"디밍 더 어둡게\"처럼 요청할 때 써요. 가젯이 꺼져 있으면 강도만 저장돼요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "percent": {
+      "maximum": 90,
+      "minimum": 10,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "percent"
+    ],
+    "type": "object"
+   },
+   "name": "combo_set_dim_strength"
+  },
+  {
+   "approval": "required",
+   "description": "파일 선반에 올려 둔 항목을 모두 비워요(원본 파일은 지우지 않아요). 매번 사용자 승인을 받아요. \"선반 비워 줘\"처럼 요청할 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_clear_shelf"
+  },
+  {
+   "description": "지금 맥 상태(실행 중인 앱, 창 위치, 가젯 켜짐 상태)를 이름을 붙여 작업 공간으로 저장해요(예: \"업무 모드\"). 같은 이름이 있으면 덮어써요. 손쉬운 사용 권한이 필요해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "name": {
+      "description": "작업 공간 이름, 예: 업무 모드",
+      "maxLength": 40,
+      "minLength": 1,
+      "type": "string"
+     }
+    },
+    "required": [
+     "name"
+    ],
+    "type": "object"
+   },
+   "name": "combo_workspace_save"
+  },
+  {
+   "description": "저장한 작업 공간을 불러와요: 빠진 앱을 열고, 창을 저장한 자리로 옮기고, 가젯을 저장한 대로 켜고 꺼요. 이미 열려 있는 다른 앱은 종료하지 않아요. 이름은 combo_workspace_list로 확인해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "name": {
+      "description": "작업 공간 이름, 예: 업무 모드",
+      "maxLength": 40,
+      "minLength": 1,
+      "type": "string"
+     }
+    },
+    "required": [
+     "name"
+    ],
+    "type": "object"
+   },
+   "name": "combo_workspace_apply"
+  },
+  {
+   "description": "저장된 작업 공간 이름과 각각의 앱·창 수, 저장 시각을 봐요. 어떤 작업 공간이 있는지 확인할 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_workspace_list"
+  },
+  {
+   "description": "지금 소리 출력 장치 이름·소리 크기와 마이크 음소거 여부를 봐요. 소리나 마이크를 바꾸기 전에 확인할 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_device_status"
+  },
+  {
+   "description": "지금 소리 출력의 크기(0~100)나 음소거(muted)를 바꿔요. 둘 중 하나 이상 넣어요. 장치를 바꾸거나 외장 모니터는 건드리지 않아요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "muted": {
+      "description": "음소거(true)/해제(false)",
+      "type": "boolean"
+     },
+     "volume": {
+      "description": "소리 크기 %",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "name": "combo_device_set_volume"
+  },
+  {
+   "description": "마이크를 음소거(true)하거나 켜요(false). 화상 회의 전후에 써요. 음소거 중에는 메뉴 막대에 빨간 마이크가 떠요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "muted": {
+      "description": "true=음소거, false=켜기",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "muted"
+    ],
+    "type": "object"
+   },
+   "name": "combo_device_set_mic_muted"
+  },
+  {
+   "description": "집중 디밍이 지금 화면을 어둡게 하는지(잠시 멈춤인지), 어둡기와 범위 설정을 봐요. 조절하기 전에 확인할 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_dim_status"
+  },
+  {
+   "description": "집중 디밍을 잠시 멈춰 화면을 원래 밝기로 보여 줘요(가젯은 켜진 채). 다시 어둡게 하려면 dim_resume을 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_dim_pause"
+  },
+  {
+   "description": "멈춰 둔 집중 디밍을 다시 시작해 맨 앞 창만 밝게 두고 나머지를 어둡게 해요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_dim_resume"
+  },
+  {
+   "description": "파일 선반에 올려 둔 항목 목록을 봐요: 번호·id·이름·종류(파일·그림·글·링크)·크기만 보여 주고 내용은 없어요. 선반에 무엇이 있는지 물을 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_shelf_list"
+  },
+  {
+   "approval": "required",
+   "description": "파일 선반의 N번 항목을 나초 대화의 다음 메시지에 첨부해요. 사용자가 보내기를 누르면 나초에게 가요. 파일이 맥 밖으로 나가므로 매번 승인을 받아요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "description": "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+      "maxLength": 8,
+      "minLength": 8,
+      "type": "string"
+     },
+     "index": {
+      "description": "목록의 번호(1부터)",
+      "maximum": 200,
+      "minimum": 1,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "index"
+    ],
+    "type": "object"
+   },
+   "name": "combo_shelf_give"
+  },
+  {
+   "description": "클립보드 기록 목록을 봐요: 번호·id·종류(글·링크·그림·파일)·길이·복사한 시각·고정 여부만 보여 주고 내용 미리보기는 없어요. 내용이 필요하면 번호로 get_item을 불러요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_clipboard_list"
+  },
+  {
+   "approval": "required",
+   "description": "클립보드 기록에서 N번 항목의 내용(글·링크·파일 경로)을 읽어요. 내용이 맥 밖으로 나가므로 매번 사용자 승인을 받아요. 사용자가 그 항목을 보라고 할 때만 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "description": "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+      "maxLength": 8,
+      "minLength": 8,
+      "type": "string"
+     },
+     "index": {
+      "description": "목록의 번호(1부터)",
+      "maximum": 200,
+      "minimum": 1,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "index"
+    ],
+    "type": "object"
+   },
+   "name": "combo_clipboard_get_item"
+  },
+  {
+   "description": "클립보드 기록의 N번 항목을 다시 복사해 지금 클립보드에 올려요(목록 맨 위로 와요). \"아까 복사한 거 다시 붙여 넣게 해 줘\"에 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "description": "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+      "maxLength": 8,
+      "minLength": 8,
+      "type": "string"
+     },
+     "index": {
+      "description": "목록의 번호(1부터)",
+      "maximum": 200,
+      "minimum": 1,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "index"
+    ],
+    "type": "object"
+   },
+   "name": "combo_clipboard_copy_again"
+  },
+  {
+   "approval": "required",
+   "description": "화면을 캡처해 나초 대화의 다음 메시지에 첨부해요. area는 사용자가 영역을 드래그하고, screen은 포인터가 있는 화면 전체예요. 화면 내용이 나가므로 매번 승인을 받아요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "mode": {
+      "description": "area=사용자가 드래그한 영역(기본), screen=포인터가 있는 화면 전체",
+      "enum": [
+       "area",
+       "screen"
+      ],
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "name": "combo_capture_ask"
+  },
+  {
+   "description": "화면에 떠 있는 고정 캡처 창의 개수와 크기(픽셀)를 봐요. 그림 내용은 보내지 않아요. 고정 캡처가 몇 개 열려 있는지 물을 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_capture_list_pinned"
+  },
+  {
+   "description": "잠자기 방지가 지금 맥을 깨워 두고 있는지, 남은 시간과 이유(수동·정한 앱·전원 규칙)를 봐요. 켜기 전에 확인할 때 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_awake_status"
+  },
+  {
+   "description": "맥이 잠들지 않게 지금 붙잡아요. minutes에 분(1~1440)을 넣으면 그 시간만, 0이거나 생략하면 끌 때까지 유지해요. 발표나 긴 작업 전에 써요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "minutes": {
+      "description": "유지할 분. 0=끌 때까지",
+      "maximum": 1440,
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "name": "combo_awake_start"
+  },
+  {
+   "description": "수동으로 붙잡은 깨어 있기를 풀어 맥이 평소처럼 잠들 수 있게 해요. 정한 앱·전원 규칙은 그대로 따라요.",
+   "input_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "name": "combo_awake_stop"
+  }
+ ],
+ "source": "nachocombo (macOS) main b794bfa, PetCommands.capabilities(allowQuit: true, alwaysAllowed: [], disabled: []) printed by a Swift program on Linux; only the names the Windows catalog knows are kept",
+ "trustable_gadgets": [
+  "capture",
+  "clipboard",
+  "computer",
+  "shelf"
+ ]
+}

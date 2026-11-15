@@ -378,6 +378,7 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
         WM_PEEK => { crate::peek::on_space(); LRESULT(0) }
         WM_PET => { crate::pet_ui::on_message(); LRESULT(0) }
         update::WM_UPDATE => { update::on_message(lp); LRESULT(0) }
+        crate::pet_exec::WM_PET_EXEC => { crate::pet_exec::on_message(); LRESULT(0) }
         crate::diskmap::WM_DISKMAP => { crate::diskmap::on_message(wp, lp); LRESULT(0) }
         clipboard::WM_CLIPBOARDUPDATE => { clipboard::on_update(); LRESULT(0) }
         WM_TIMER => {
@@ -445,6 +446,7 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         // A version that failed its first launches is replaced before anything starts.
         if update::at_launch() { let _ = DestroyWindow(main); return; }
         crate::window::register_class();
+        crate::pet_exec::init(main, &a.dir);
         tray::create_main();
         update::after_launch();
         mouse::recover();

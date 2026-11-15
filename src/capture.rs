@@ -40,6 +40,7 @@ impl Capture {
         serde_json::json!({ "floats": self.floats.len(), "locked": self.locked, "hidden": self.hidden, "taken": self.taken, "selecting": self.selecting.is_some(), "notice": self.notice })
     }
     pub fn float_count(&self) -> usize { self.floats.len() }
+    pub fn float_windows(&self) -> &[isize] { &self.floats }
     pub fn has_previous(&self) -> bool { self.previous.is_some() }
 }
 

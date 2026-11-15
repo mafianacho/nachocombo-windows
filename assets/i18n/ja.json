@@ -1077,5 +1077,8 @@
   "No administrator rights needed. The board reads the gadgets that are running and starts nothing itself; switching it off closes the window and stops its refresh timer.": "管理者権限は不要です。ボードは動作中のガジェットを読み取るだけで、何も自動では起動しません。オフにするとウィンドウが閉じ、更新タイマーも止まります。",
   "There is no Nacho Pet tile yet: the pet is not part of this Windows app so far.": "Nacho Petのタイルはまだありません。ペットはまだこのWindowsアプリに含まれていません。",
   "Windows lets no app read your calendar events, so the Calendar Clock tile shows the date and world clocks, not an event.": "Windowsではアプリが予定を読み取れないため、カレンダー時計のタイルは予定ではなく日付と世界時計を表示します。",
-  "There is no Computer Use tile: Windows has no counterpart of that gadget.": "Computer Useのタイルはありません。Windowsにはそのガジェットに相当するものがありません。"
+  "There is no Computer Use tile: Windows has no counterpart of that gadget.": "Computer Useのタイルはありません。Windowsにはそのガジェットに相当するものがありません。",
+  "Always allow this gadget": "このガジェットは常に許可",
+  "Nacho may send this gadget's content (such as clipboard text) without an approval card each time. Off by default.": "ナチョがこのガジェットの内容(クリップボードのテキストなど)を毎回の承認カードなしで送れます。既定はオフです。",
+  "Quitting an app always asks first.": "アプリの終了は常に先に確認します。"
 }

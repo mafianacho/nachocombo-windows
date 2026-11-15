@@ -10,7 +10,7 @@ use crate::core::pet::card_flow::{CardStep, PetCardFlow};
 use crate::core::pet::chat_client::{thread_schedule, MakeTransport, WebSocketTransport};
 use crate::core::pet::clock;
 use crate::core::pet::composer::DigitHold;
-use crate::core::pet::connector_client::ConnectorBinding;
+use crate::core::pet::connector_client::{ConnectorBinding, PetCommandExecuting};
 use crate::core::pet::design_tokens::pet_tokens::size as tok;
 use crate::core::pet::dictation::{DictationDenial, DictationState};
 use crate::core::pet::face::PetFace;
@@ -65,6 +65,8 @@ pub enum Event {
     Retry { text: String, voice: bool, attempt: u32 },
     CardAnswered { card_id: String, refusal: Option<String> },
     Flash(String),
+    /// The "always allow" switches changed: the connector declares what this PC can do again.
+    Capabilities(Vec<serde_json::Value>),
     /// The server took (or refused) the message the field held.
     SendDone(Option<String>),
     ArtChanged,
@@ -121,6 +123,9 @@ pub struct PetUi {
     gesture: PetHoldGesture,
     gate: PetAnimationGate,
     recorder: Option<Recorder>,
+    /// The session holds the executor weakly: it lives here.
+    executor: Option<Arc<dyn PetCommandExecuting>>,
+    trust_watch: Option<u64>,
     rec_mode: Option<(RecMode, String)>,
     drag_grab: Option<(i32, i32)>,
     last_x: i32,
@@ -189,7 +194,7 @@ fn unregister_protocol() {
     if ours { unsafe { let _ = RegDeleteTreeW(HKEY_CURRENT_USER, w!("Software\\Classes\\nachogadget")); } }
 }
 
-fn make_session(settings: PetSettings, browser: Arc<PetCallbackBrowser>) -> Arc<PetSession> {
+fn make_session(settings: PetSettings, browser: Arc<PetCallbackBrowser>, executor: &Arc<dyn PetCommandExecuting>) -> Arc<PetSession> {
     let secrets = Arc::new(PetSecretBundle::new(Arc::new(CredSecretStore::default())));
     let make_transport: MakeTransport = Arc::new(|| Box::new(WinHttpWebSocket::default()) as Box<dyn WebSocketTransport>);
     let s = Arc::new(PetSession::new(settings, PetSessionDeps {
@@ -197,13 +202,15 @@ fn make_session(settings: PetSettings, browser: Arc<PetCallbackBrowser>) -> Arc<
         secrets,
         browser: Some(browser as Arc<dyn PetAuthBrowser>),
         make_transport,
-        executor: None,
+        executor: Some(Arc::downgrade(executor)),
         random: Arc::new(crate::pet_win::os_random),
         now: Arc::new(clock::now),
         schedule: thread_schedule(),
         connector_label: ConnectorBinding::LABEL_WINDOWS.into(),
     }));
     s.set_on_change(Some(Arc::new(|st| push(Event::Session(Box::new(st.clone()))))));
+    // What this PC really runs (W3), declared when the connector opens and again whenever a switch changes.
+    s.set_connector_capabilities(Some(crate::pet_exec::declaration()));
     s
 }
 
@@ -219,9 +226,11 @@ pub fn start() -> std::result::Result<(), String> {
         Box::new(|url| push(Event::OpenUrl(url.to_string()))),
         Box::new(clock::now),
     ));
-    let session = make_session(settings.clone(), browser.clone());
+    let executor: Arc<dyn PetCommandExecuting> = Arc::new(crate::pet_exec::WindowsPetExecutor);
+    let session = make_session(settings.clone(), browser.clone(), &executor);
     let p = &mut a.pet;
-    *p = PetUi { started: true, state: session.snapshot(), settings, store: Some(store), browser: Some(browser), session: Some(session), ..Default::default() };
+    *p = PetUi { started: true, state: session.snapshot(), settings, store: Some(store), browser: Some(browser), session: Some(session), executor: Some(executor), ..Default::default() };
+    p.trust_watch = Some(crate::pet_exec::watch_declaration(Arc::new(|caps| push(Event::Capabilities(caps)))));
     p.motion = PetMotion::new(PetFace::Idle, now_ms(), reduce_motion(), (now_ms() as u32) | 1);
     p.gesture = PetHoldGesture::default();
     p.gate.window_visible = true;
@@ -250,6 +259,8 @@ pub fn stop() {
     // Closes the sockets; the stored login stays for the next time the pet is on.
     if let Some(s) = p.session.take() { s.shutdown(); }
     pet_art::stop_server_art();
+    if let Some(t) = p.trust_watch.take() { crate::pet_exec::trust().remove_observer(t); }
+    p.executor = None;
     p.started = false;
     p.browser = None;
     QUEUE.lock().unwrap().clear();
@@ -287,6 +298,7 @@ pub fn on_message() {
             Event::Retry { text, voice, attempt } => send_when_ready(text, voice, attempt),
             Event::CardAnswered { card_id, refusal } => card_answered(&card_id, refusal),
             Event::Flash(t) => flash_text(&t),
+            Event::Capabilities(caps) => { if let Some(s) = session() { s.set_connector_capabilities(Some(caps)); } }
             Event::SendDone(r) => {
                 let c = &mut app().pet.chat;
                 c.sending = false;
@@ -337,9 +349,9 @@ pub fn update_settings(change: impl FnOnce(&mut PetSettings)) {
     p.settings = next.clone();
     if let Some(s) = &p.store { let _ = s.save(&next); }
     if server_changed {
-        if let (Some(old), Some(b)) = (p.session.take(), p.browser.clone()) {
+        if let (Some(old), Some(b), Some(e)) = (p.session.take(), p.browser.clone(), p.executor.clone()) {
             old.shutdown();
-            let s = make_session(next, b);
+            let s = make_session(next, b, &e);
             p.state = s.snapshot();
             p.session = Some(s);
         }

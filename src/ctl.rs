@@ -30,7 +30,7 @@ pub fn run(a: &[String]) {
     let x = app();
     match arg(a, 0) {
         "set" => if let Some(m) = ModuleId::from_key(arg(a, 1)) { x.set_enabled(m, arg(a, 2) == "on"); },
-        "pet" => match arg(a, 1) {
+        "petui" => match arg(a, 1) {
             "chat" => crate::pet_ui::open_chat(),
             "close" => crate::pet_ui::close_chat(),
             "signin" => { crate::pet_ui::open_chat(); crate::pet_ui::sign_in(); }
@@ -97,6 +97,8 @@ pub fn run(a: &[String]) {
         "appswitch" => match arg(a, 1) { "next" => crate::appswitch::cycle(true), "previous" => crate::appswitch::cycle(false), "commit" => { let i = x.appswitch.diagnostics()["selected"].as_u64().unwrap_or(0) as usize; crate::appswitch::commit(i) }, "cancel" => crate::appswitch::cancel(), "hide" => crate::appswitch::hide_others(), _ => {} },
         "peek" => crate::app::later(crate::peek::on_space),
         "update" => crate::update::ctl(&a[1..]),
+        "trust" => { crate::pet_exec::trust().set_always_allowed(arg(a, 1), arg(a, 2) == "on"); }
+        "pet" => crate::pet_exec::ctl(&a[1..]),
         "quit" => crate::app::quit(),
         _ => {}
     }

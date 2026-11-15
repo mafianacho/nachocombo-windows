@@ -77,6 +77,30 @@ check "chat -> gadget list" $(( rc != 0 || $(cnt 'pc: list gadgets' "$OUT/cmd-li
 rc=$(run cmd-cu command --server "$S1" --store "$STORE" "컴퓨터 사용 켜 줘")
 check "chat -> Computer Use refused by the app (never reaches the PC)" $(( rc != 0 || $(cnt 'pc: gadget computerUse' "$OUT/cmd-cu.log") != 0 || $(cnt 'not allowed: Computer Use' "$OUT/server.jsonl") < 1 ))
 
+# Desktop actions (W3): the Windows declaration, approval cards, "always allow" per gadget.
+TRUST="$OUT/trust/gadget-trust.json"
+rc=$(run cmd-approve command --server "$S1" --store "$STORE" --trust "$TRUST" "클립보드 1번 읽어 줘")
+check "content_out: approval card first, approved -> PC reads clipboard item 1 -> result" $(( rc != 0 || $(cnt 'approval required: .*combo_clipboard_get_item' "$OUT/cmd-approve.log") != 1 || $(cnt 'card approval "PC에서 combo_clipboard_get_item 실행" -> approve' "$OUT/cmd-approve.log") != 1 || $(cnt 'pc: clipboard read item 1 (17 characters)' "$OUT/cmd-approve.log") != 1 || $(cnt '"event":"approval_card","capability":"combo_clipboard_get_item"' "$OUT/server.jsonl") != 1 || $(cnt 'combo_clipboard_get_item 결과: Clipboard item 1.' "$OUT/cmd-approve.log") < 1 ))
+rc=$(run cmd-deny command --server "$S1" --store "$STORE" --trust "$TRUST" --deny "클립보드 1번 읽어 줘")
+check "content_out: denied card -> the PC is never asked" $(( rc != 0 || $(cnt 'card approval .* -> deny' "$OUT/cmd-deny.log") != 1 || $(cnt 'pc: clipboard read' "$OUT/cmd-deny.log") != 0 || $(cnt '"answer":"deny"' "$OUT/server.jsonl") != 1 || $(cnt 'user_denied' "$OUT/cmd-deny.log") < 1 ))
+rc=$(run trust-on trust --trust "$TRUST" clipboard on)
+check "always allow: switched on for Clipboard History, stored in the macOS shape" $(( rc != 0 || $(cnt '"alwaysAllowed":\["clipboard"\],"version":1' "$TRUST") != 1 ))
+rc=$(run trust-bad trust --trust "$TRUST" awake on)
+check "always allow: a gadget without a content_out action has no switch" $(( rc == 0 || $(cnt '"alwaysAllowed":\["clipboard"\]' "$TRUST") != 1 ))
+rc=$(run cmd-trusted command --server "$S1" --store "$STORE" --trust "$TRUST" "클립보드 1번 읽어 줘")
+check "always allow (read back in a new run): declared without approval, no card, PC reads" $(( rc != 0 || $(cnt 'approval required: .*combo_clipboard_get_item' "$OUT/cmd-trusted.log") != 0 || $(cnt 'card approval' "$OUT/cmd-trusted.log") != 0 || $(cnt 'pc: clipboard read item 1' "$OUT/cmd-trusted.log") != 1 || $(cnt '"event":"approval_card","capability":"combo_clipboard_get_item"' "$OUT/server.jsonl") != 2 ))
+rc=$(run cmd-quit command --server "$S1" --store "$STORE" --trust "$TRUST" "메모장 종료해 줘")
+check "destructive (quit app): card even with always allow on" $(( rc != 0 || $(cnt 'card approval "PC에서 combo_quit_app 실행" -> approve' "$OUT/cmd-quit.log") != 1 || $(cnt 'pc: quit 메모장' "$OUT/cmd-quit.log") != 1 ))
+rc=$(run trust-off trust --trust "$TRUST" clipboard off)
+rc2=$(run cmd-untrusted command --server "$S1" --store "$STORE" --trust "$TRUST" "클립보드 1번 읽어 줘")
+check "always allow switched off and stored: the card is back" $(( rc != 0 || rc2 != 0 || $(cnt '"alwaysAllowed":\[\]' "$TRUST") != 1 || $(cnt 'card approval "PC에서 combo_clipboard_get_item 실행" -> approve' "$OUT/cmd-untrusted.log") != 1 ))
+rc=$(run cmd-awake command --server "$S1" --store "$STORE" --trust "$TRUST" "30분 동안 깨워 줘")
+check "change (Keep Awake for 30 min): runs at once, no card" $(( rc != 0 || $(cnt 'pc: keep awake 30 min' "$OUT/cmd-awake.log") != 1 || $(cnt 'card approval' "$OUT/cmd-awake.log") != 0 ))
+rc=$(run cmd-clear command --server "$S1" --store "$STORE" --trust "$TRUST" "선반 비워 줘")
+check "deleting action (empty the shelf) is not declared on Windows: never reaches the PC" $(( rc != 0 || $(cnt 'pc: ClearShelf' "$OUT/cmd-clear.log") != 0 || $(cnt 'connector_unavailable' "$OUT/cmd-clear.log") < 1 ))
+leak=$(cat "$OUT"/*.log "$OUT"/server*.jsonl 2>/dev/null | grep -c '4321' || true)
+check "clipboard content never lands in a log ($leak)" $(( leak ))
+
 rc=$(run usage usage --server "$S1" --store "$STORE")
 check "client config (no token) + GET /api/v1/me/usage shown" $(( rc != 0 || $(cnt 'config dictation=true max_sec=60' "$OUT/usage.log") != 1 || $(cnt 'usage 크레딧 180/200 · 가벼운 대화 3/50' "$OUT/usage.log") != 1 ))
 
@@ -90,7 +114,7 @@ rc=$(run search search --server "$S1" --store "$STORE")
 check "tool progress: tool_call_started/finished + interim line shown as progress, not as the answer" $(( rc != 0 || $(cnt 'tools search_web:ok' "$OUT/search.log") != 1 || $(cnt 'progress \["웹에서 찾아보고 있어요"\]' "$OUT/search.log") != 1 ))
 
 rc=$(run task task --server "$S1" --store "$STORE")
-check "task path: done{task_id}, hub task_update/interim, choice card answered (expected_version), task_result joins the turn" $(( rc != 0 || $(cnt 'card choice "어느 시간이 좋아요?"' "$OUT/task.log") != 1 || $(cnt 'task done answer="저녁 7시으로 예약했어요."' "$OUT/task.log") != 1 || $(cnt '"event":"answered","id"' "$OUT/server.jsonl") != 1 ))
+check "task path: done{task_id}, hub task_update/interim, choice card answered (expected_version), task_result joins the turn" $(( rc != 0 || $(cnt 'card choice "어느 시간이 좋아요?"' "$OUT/task.log") != 1 || $(cnt 'task done answer="저녁 7시으로 예약했어요."' "$OUT/task.log") != 1 || $(cnt '"event":"answered","id":"[^"]*","action":"choose"' "$OUT/server.jsonl") != 1 ))
 
 rc=$(run plan-start plan-start --server "$S1" --store "$STORE")
 check "plan task: planned + estimate shown, [시작] sends expected_estimate_id, task runs" $(( rc != 0 || $(cnt 'plan 시작 확인 필요 약 40~60크레딧' "$OUT/plan-start.log") != 1 || $(cnt 'started state=running' "$OUT/plan-start.log") != 1 || $(cnt '"event":"started"' "$OUT/server.jsonl") != 1 ))
