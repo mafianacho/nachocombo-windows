@@ -946,5 +946,8 @@
   "Go back to NachoCombo {}?": "NachoCombo {}(으)로 되돌릴까요?",
   "NachoCombo {} is removed and {} restarts in its place. Updates will not offer {} again; a newer version still comes.": "NachoCombo {0}을(를) 지우고 {1}(으)로 다시 시작해요. {0}은(는) 다시 권하지 않지만, 더 새 버전은 계속 알려 드려요.",
   "Update to {}…": "{}(으)로 업데이트…",
-  "NachoCombo cannot write to {}. Move NachoCombo.exe to a folder of your own (for example your user folder), or download new versions from the release page.": "NachoCombo가 {}에 쓸 수 없어요. NachoCombo.exe를 내 폴더(예: 사용자 폴더)로 옮기거나 릴리스 페이지에서 새 버전을 내려받으세요."
+  "NachoCombo cannot write to {}. Move NachoCombo.exe to a folder of your own (for example your user folder), or download new versions from the release page.": "NachoCombo가 {}에 쓸 수 없어요. NachoCombo.exe를 내 폴더(예: 사용자 폴더)로 옮기거나 릴리스 페이지에서 새 버전을 내려받으세요.",
+  "Always allow this gadget": "이 가젯은 항상 허용",
+  "Nacho may send this gadget's content (such as clipboard text) without an approval card each time. Off by default.": "나초가 이 가젯의 내용(예: 클립보드 글)을 매번 승인 카드 없이 보낼 수 있어요. 기본은 꺼짐이에요.",
+  "Quitting an app always asks first.": "앱 종료는 항상 먼저 물어봐요."
 }

@@ -946,5 +946,8 @@
   "Go back to NachoCombo {}?": "NachoCombo {} に戻しますか?",
   "NachoCombo {} is removed and {} restarts in its place. Updates will not offer {} again; a newer version still comes.": "NachoCombo {0} を削除し、代わりに {1} で再起動します。{0} は今後表示しませんが、より新しいバージョンはお知らせします。",
   "Update to {}…": "{} にアップデート…",
-  "NachoCombo cannot write to {}. Move NachoCombo.exe to a folder of your own (for example your user folder), or download new versions from the release page.": "NachoCombo は {} に書き込めません。NachoCombo.exe を自分のフォルダー (ユーザーフォルダーなど) に移すか、リリースページから新しいバージョンをダウンロードしてください。"
+  "NachoCombo cannot write to {}. Move NachoCombo.exe to a folder of your own (for example your user folder), or download new versions from the release page.": "NachoCombo は {} に書き込めません。NachoCombo.exe を自分のフォルダー (ユーザーフォルダーなど) に移すか、リリースページから新しいバージョンをダウンロードしてください。",
+  "Always allow this gadget": "このガジェットは常に許可",
+  "Nacho may send this gadget's content (such as clipboard text) without an approval card each time. Off by default.": "ナチョがこのガジェットの内容(クリップボードのテキストなど)を毎回の承認カードなしで送れます。既定はオフです。",
+  "Quitting an app always asks first.": "アプリの終了は常に先に確認します。"
 }

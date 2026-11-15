@@ -946,5 +946,8 @@
   "Go back to NachoCombo {}?": "要回到 NachoCombo {} 吗?",
   "NachoCombo {} is removed and {} restarts in its place. Updates will not offer {} again; a newer version still comes.": "将移除 NachoCombo {0} 并以 {1} 重新启动。不会再提示 {0}，但仍会提示更新的版本。",
   "Update to {}…": "更新到 {}…",
-  "NachoCombo cannot write to {}. Move NachoCombo.exe to a folder of your own (for example your user folder), or download new versions from the release page.": "NachoCombo 无法写入 {}。请将 NachoCombo.exe 移到你自己的文件夹(例如用户文件夹)，或从发布页面下载新版本。"
+  "NachoCombo cannot write to {}. Move NachoCombo.exe to a folder of your own (for example your user folder), or download new versions from the release page.": "NachoCombo 无法写入 {}。请将 NachoCombo.exe 移到你自己的文件夹(例如用户文件夹)，或从发布页面下载新版本。",
+  "Always allow this gadget": "始终允许此小组件",
+  "Nacho may send this gadget's content (such as clipboard text) without an approval card each time. Off by default.": "Nacho 可以发送此小组件的内容(例如剪贴板文字),无需每次显示批准卡片。默认关闭。",
+  "Quitting an app always asks first.": "退出应用前总会先询问。"
 }

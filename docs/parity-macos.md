@@ -85,9 +85,9 @@ NachoCombo for Windows가 [Nacho Combo for macOS](https://github.com/mafianacho/
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
 | 커넥터 바인딩 | `POST /api/v1/agents/{id}/connector-binding {kind:"nacho_combo", label}` → `nct_…` 토큰을 비밀 저장소에 보관 | 부분 — W1 core 이식됨(`server_api.rs`, `secrets.rs`, `connector_client.rs`), UI 연결은 W2 | 토큰은 자격 증명 관리자 묶음에 함께 저장. 라벨은 `Nacho Combo (Windows)`, `kind`는 같음 | W1 → W2 |
-| 커넥터 연결 | `/ws/connector`, 첫 `hello` 프레임에 토큰과 `capabilities`(이름, 한국어 설명, `input_schema`, 위험한 것은 `"approval":"required"`). "항상 허용"이나 끈 기능이 바뀌면 `capabilities` 프레임으로 다시 알림. 서버 `request` → 앱 `response`. 30초 핑, 채팅과 같은 재연결, `error{replaced}`면 멈추고 다시 연결 안 함 | 부분 — W1 core 이식됨(`connector_client.rs`, `commands.rs`, 연결 탭 모델 `connectors.rs`), 동작 실행(셸)은 W3 | 기능 이름·입력 스키마는 맥과 같게 둠. Windows에서 의미 없는 기능은 선언하지 않음 | W1 → W3 |
-| 나초 제어 끄기 | 설정 탭 "이 Mac의 앱·창·가젯을 나초가 쓰게 하기"(`allowComboControl`)로 전부 끔. 나초는 컴퓨터 사용 가젯과 자기 자신을 켜고 끄지 못하고, 권한이 남은 가젯은 켜지 않음 | 부분 — W1 core 이식됨(`settings.rs`의 `allow_combo_control`, `session.rs`·`commands.rs`의 거절 규칙), 설정 화면은 W2·실행은 W3 | 같은 스위치. 컴퓨터 사용은 Windows에 아직 없음 | W3 |
-| 작업 공간 저장소 | 실행 중인 앱·창 위치·가젯을 이름 붙여 `workspaces.json`에 저장(20개, 이름 40자). 불러오면 없는 앱을 열고 어떤 앱도 끄지 않음 | 부분 — W1 core 이식됨(`desktop.rs`의 작업 공간 모델·규칙), 앱·창 읽기와 적용은 W3 | 앱을 번들 ID 대신 exe 경로로 기록하므로 맥 파일과 호환되지 않음 | W3 |
+| 커넥터 연결 | `/ws/connector`, 첫 `hello` 프레임에 토큰과 `capabilities`(이름, 한국어 설명, `input_schema`, 위험한 것은 `"approval":"required"`). "항상 허용"이나 끈 기능이 바뀌면 `capabilities` 프레임으로 다시 알림. 서버 `request` → 앱 `response`. 30초 핑, 채팅과 같은 재연결, `error{replaced}`면 멈추고 다시 연결 안 함 | 있음 — core(W1·W3) + 실행기(W3, `pet_exec.rs`). 펫 세션에 붙이는 것은 W2 | 기능 이름·입력 스키마는 맥 선언과 같음(`fixtures/mac-capabilities.json` 비교 시험). 다시 알릴 때 핑 장벽, 그 사이 온 요청은 `approval_revoked`로 거절(맥과 같음). Windows에서 의미 없는 기능·삭제형 기능은 선언하지 않음(아래 표) | W1 → W3 |
+| 나초 제어 끄기 | 설정 탭 "이 Mac의 앱·창·가젯을 나초가 쓰게 하기"(`allowComboControl`)로 전부 끔. 나초는 컴퓨터 사용 가젯과 자기 자신을 켜고 끄지 못하고, 권한이 남은 가젯은 켜지 않음 | 부분 — core·실행기 있음(끄면 커넥터를 열지 않음), 설정 화면은 W2 | 같은 스위치. 컴퓨터 사용은 Windows에 아직 없음 | W2·W3 |
+| 작업 공간 저장소 | 실행 중인 앱·창 위치·가젯을 이름 붙여 `workspaces.json`에 저장(20개, 이름 40자). 불러오면 없는 앱을 열고 어떤 앱도 끄지 않음 | 있음 — core(`desktop.rs`, `desktop_runner.rs`) + 실행기(W3) | `bundleID` 자리에 exe 전체 경로를 기록(없는 앱을 다시 열려고)하므로 맥 파일과 호환되지 않음. 같은 이름 규칙·20개 한도 | W3 |
 
 `Sources/NachoComboCore/Pet/PetCommands.swift`의 기능(처음 커넥터 계약의 16개, hello 순서). 승인 열은 맥 `main`의 선언
 기준입니다(맥은 레지스트리 `GadgetToolRegistry`에서 위험도로 정함: read·change는 승인 없음, content_out·input_inject는
@@ -96,32 +96,51 @@ NachoCombo for Windows가 [Nacho Combo for macOS](https://github.com/mafianacho/
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
-| `combo_arrange_window` | 앞 창(또는 지정 앱의 창)을 Window Snap 위치로 배치 | 없음(가젯 기능은 있음) — 의미 있음 | Window Snap 24개 위치를 그대로 씀. 관리자 권한 앱의 창은 못 옮김 | W3 |
-| `combo_layout_windows` | 여러 창을 화면별로 한 번에 배치(위치마다 디스플레이 번호) | 없음 — 의미 있음 | 같은 스키마. 디스플레이 번호는 왼쪽부터 | W3 |
-| `combo_list_windows` | 디스플레이 목록(번호·크기)과 앱별 열린 창의 위치·크기·디스플레이 번호. 창 제목은 보내지 않음(read, 승인 없음) | 없음 — 의미 있음 | 같은 규칙: 창 제목은 보내지 않음(보내면 PC 내용이 나가므로 호출마다 승인이 필요해짐) | W3 |
-| `combo_list_apps` | 실행 중인 앱, `installed:true`면 설치된 앱 목록 | 없음 — 의미 있음 | 설치된 앱은 시작 메뉴 바로 가기·앱 목록에서 읽어야 함(번들 목록 같은 단일 출처 없음) | W3 |
-| `combo_open_app` | 앱 열기(한국어·영어 이름 또는 번들 ID) | 없음 — 의미 있음 | 번들 ID 대신 exe 이름·경로. 한국어 이름은 시작 메뉴 표시 이름으로 맞춤 | W3 |
-| `combo_focus_app` | 앱을 앞으로 | 없음 — 의미 있음 | Windows의 포그라운드 잠금 때문에 앞으로 못 가져오는 경우가 있음(App Switch와 같은 방식 사용) | W3 |
-| `combo_hide_app` | 앱 숨기기(Finder·나초콤보 제외) | 없음 — 부분적으로 의미 있음 | Windows에는 앱 숨기기가 없어 그 앱의 창을 최소화. 탐색기·나초콤보 보호 | W3 |
-| `combo_quit_app` | 앱에 종료 요청(저장 안 한 작업은 앱이 물음). `approval:"required"` | 없음 — 의미 있음, 승인 필수 | 창에 닫기 요청(WM_CLOSE)으로. 강제 종료는 하지 않음. 탐색기·나초콤보 보호 | W3 |
-| `combo_set_system` | 소리 크기 0–100, 내장 화면 밝기 0–100, 방해금지 | 부분 — 의미 있음(방해금지 제외) | 소리: Core Audio. 밝기: 노트북 내장 화면은 WMI로 가능(외부 모니터는 맥처럼 제외). 방해금지: Windows 집중 지원/방해 금지에 공개 API가 없어 **불가**(맥도 macOS 12+에서 불가라 이유를 돌려줌, 같은 방식) | W3 |
-| `combo_set_gadget` | 가젯 켜기/끄기(펫·컴퓨터 사용 제외, 권한이 남은 가젯은 안 켬) | 없음 — 의미 있음 | 코어(`commands.rs`)는 맥과 같은 camelCase ID(`windowSnap` …)와 표시 이름을 받음. 맥 `menuBar`는 Windows에서 `trayOrganizer`라 따로 대응해야 하는지 확인 필요 | W3 |
-| `combo_list_gadgets` | 가젯 목록과 켜짐 상태 | 없음 — 의미 있음 | 위와 같은 ID 대응 | W3 |
-| `combo_set_dim_strength` | Focus Dim 강도 10–90% | 없음 — 의미 있음 | 같음 | W3 |
-| `combo_clear_shelf` | File Shelf 비우기. 맥 `main`에서는 destructive라 늘 승인 | 없음 — 의미 있음, 승인 필수 | 같음 | W3 |
-| `combo_workspace_save` | 지금 앱·창·가젯을 작업 공간으로 저장 | 없음 — 의미 있음 | 위 "작업 공간 저장소" 참고 | W3 |
-| `combo_workspace_apply` | 작업 공간 불러오기(없는 앱 열기, 아무것도 안 끔) | 없음 — 의미 있음 | 같음 | W3 |
-| `combo_workspace_list` | 저장된 작업 공간 목록 | 없음 — 의미 있음 | 같음 | W3 |
+| `combo_arrange_window` | 앞 창(또는 지정 앱의 창)을 Window Snap 위치로 배치 | 있음 — 선언·실행(W3) | Window Snap 위치를 그대로 씀. "앞 창"은 나초콤보 자신(펫 대화창)을 뺀 맨 앞 창. 관리자 권한 앱의 창은 못 옮김(이유와 함께 실패) | W3 |
+| `combo_layout_windows` | 여러 창을 화면별로 한 번에 배치(위치마다 디스플레이 번호) | 있음 — 선언·실행(W3) | 같은 스키마. 디스플레이 번호는 왼쪽부터(`desktop_runner.rs`가 계산, 셸은 옮기기만) | W3 |
+| `combo_list_windows` | 디스플레이 목록(번호·크기)과 앱별 열린 창의 위치·크기·디스플레이 번호. 창 제목은 보내지 않음(read, 승인 없음) | 있음 — 선언·실행(W3) | 같은 규칙: 창 제목은 보내지 않음. Windows는 창마다 `minimized`를 더 알려 줌. 60개까지 | W3 |
+| `combo_list_apps` | 실행 중인 앱, `installed:true`면 설치된 앱 목록 | 있음 — 선언·실행(W3) | 실행 중인 앱은 창이 있는 프로그램(`bundle_id` 자리에 exe 이름), `hidden`은 "창이 모두 최소화됨". 설치된 앱은 시작 메뉴 바로 가기(이 사용자·모든 사용자, 제거 프로그램 제외) 이름, 300개까지. 스토어(UWP) 앱은 바로 가기가 없어 빠짐 | W3 |
+| `combo_open_app` | 앱 열기(한국어·영어 이름 또는 번들 ID) | 있음 — 선언·실행(W3) | 이름은 시작 메뉴 바로 가기 이름(한국어 표시 이름)·exe 이름. 이미 실행 중이면 그 창을 앞으로 | W3 |
+| `combo_focus_app` | 앱을 앞으로 | 있음 — 선언·실행(W3) | App Switch와 같은 방식(입력 큐 연결 후 SetForegroundWindow). 포그라운드 잠금 때문에 작업 표시줄만 깜박일 수 있음 | W3 |
+| `combo_hide_app` | 앱 숨기기(Finder·나초콤보 제외) | 있음 — 선언·실행(W3) | Windows에는 앱 숨기기가 없어 그 앱의 창을 모두 최소화. 탐색기·나초콤보 보호 | W3 |
+| `combo_quit_app` | 앱에 종료 요청(저장 안 한 작업은 앱이 물음). `approval:"required"` | 있음 — 선언·실행(W3), 늘 승인 | 창에 닫기 요청(WM_CLOSE)으로. 강제 종료는 하지 않음. 탐색기·나초콤보 보호. 맥은 3초 뒤 종료됐는지 확인하지만 Windows는 요청만 알림 | W3 |
+| `combo_set_system` | 소리 크기 0–100, 내장 화면 밝기 0–100, 방해금지 | 부분 — 선언·실행(W3) | 소리: Core Audio(기기 제어 가젯이 꺼져 있어도 됨). 밝기: **기기 제어 가젯과 같은 DDC/CI 모니터만**(맥은 내장 화면만). 노트북 내장 화면(WMI)은 아직 없어 이유와 함께 실패. 방해금지: 공개 API가 없어 이유와 함께 실패(맥도 같은 방식) | W3 |
+| `combo_set_gadget` | 가젯 켜기/끄기(펫·컴퓨터 사용 제외, 권한이 남은 가젯은 안 켬) | 있음 — 선언·실행(W3) | 같은 camelCase ID와 표시 이름. 목록(enum)은 Windows 가젯 13개. 맥 `menuBar`는 `trayOrganizer`로 받아 줌(별칭) | W3 |
+| `combo_list_gadgets` | 가젯 목록과 켜짐 상태 | 있음 — 선언·실행(W3) | 상태는 `on`/`off`/`failed` | W3 |
+| `combo_set_dim_strength` | Focus Dim 강도 10–90% | 있음 — 선언·실행(W3) | 같음(꺼져 있으면 강도만 저장) | W3 |
+| `combo_clear_shelf` | File Shelf 비우기. 맥 `main`에서는 destructive라 늘 승인 | **선언 안 함**(W3 결정) | 삭제형 행동이라 넣지 않음(선반이 만든 복사본을 버림). core 목록·스키마는 맥과 같게 남겨 두고 Windows 선언에서만 뺌. 요청이 와도 "선언하지 않음"으로 거절 | W3 |
+| `combo_workspace_save` | 지금 앱·창·가젯을 작업 공간으로 저장 | 있음 — 선언·실행(W3) | 위 "작업 공간 저장소" 참고. 최소화된 창은 저장하지 않음 | W3 |
+| `combo_workspace_apply` | 작업 공간 불러오기(없는 앱 열기, 아무것도 안 끔) | 있음 — 선언·실행(W3) | 같음. 저장할 때 없던 디스플레이의 창은 첫 디스플레이 안으로 당김 | W3 |
+| `combo_workspace_list` | 저장된 작업 공간 목록 | 있음 — 선언·실행(W3) | 같음 | W3 |
 
-맥 `main`은 위 16개 뒤에 가젯별 도구(`Sources/NachoComboCore/Gadgets/Tools/*`)도 커넥터로 선언합니다. Windows에서는 W5에서
-다룹니다.
+맥 `main`은 위 16개 뒤에 가젯별 도구(`Sources/NachoComboCore/Gadgets/Tools/*`)도 커넥터로 선언합니다(맥 `b794bfa` 기준 75개).
+W3에서 기존 Windows 가젯으로 바로 되는 것만 같은 이름·같은 입력 스키마로 옮겼습니다(`gadget_tools.rs`). Windows 선언은
+처음 계약 15개(+`combo_clear_shelf` 제외) + 가젯 도구 14개 = 29개이고, 맥 hello 순서를 따릅니다.
+
+**개인정보 규칙(W3).** PC의 내용(클립보드 글, 화면 캡처, 파일 자체)을 서버로 보내는 행동(content_out)은 hello에
+`"approval":"required"`로 선언해 나초서버가 매번 승인 카드를 띄웁니다. 가젯별 "이 가젯은 항상 허용"을 켜면 그 가젯의
+content_out 행동만 승인 없이 선언합니다. 기본 꺼짐, `gadget-trust.json`(설정 파일 옆, 맥과 같은 모양
+`{"version":1,"alwaysAllowed":[…]}`)에 저장, 끄면 저장되고 바로 다시 선언합니다(핑 장벽, 그 사이 온 요청은
+`approval_revoked`). destructive(앱 종료)는 항상 허용과 상관없이 늘 승인. 목록 행동은 내용 없이 번호·종류·크기만
+보내므로 승인 없음. 결과의 내용은 로그에 남기지 않습니다(길이만). 가젯이 꺼져 있으면 `gadget_off`(이유·힌트·한국어 안내)로
+답합니다(맥 `requiresGadgetOn`과 같음, 처음 계약 15개는 꺼져 있어도 동작).
+
+| 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
+|---|---|---|---|---|
+| 깨어 있기 도구 | `combo_awake_status` / `start {minutes 0–1440}` / `stop` | 있음 — 선언·실행(W3) | 상태의 `reason`은 manual·app·battery_guard·none. 맥의 `keep_display`·`power_only`·`battery_floor_percent`는 Windows 가젯 설정 이름이 달라 아직 보내지 않음 | W3 |
+| 기기 도구 | `combo_device_status` / `set_volume {volume, muted}` / `set_mic_muted {muted}` | 있음 — 선언·실행(W3) | 마이크 음소거는 기기 제어 가젯의 단축키와 같이 이 PC의 모든 마이크에 적용 | W3 |
+| 흐리게 도구 | `combo_dim_status` / `pause` / `resume` | 있음 — 선언·실행(W3) | 상태는 `paused`·`strength_percent`만(맥의 범위 설정은 Windows 옵션 이름이 달라 W5) | W3 |
+| 클립보드 도구 | `combo_clipboard_list`(read, 내용 없음) / `get_item {index, id}`(**content_out**, 4000자까지) / `copy_again`(change) | 있음 — 선언·실행(W3) | id는 내용의 SHA-256 앞 8자리(Windows 클립보드 기록에는 UUID가 없음). 복사 시각이 없어 `copied_at`을 보내지 않음. 그림은 `not_text` | W3 |
+| 선반·캡처 목록 | `combo_shelf_list`, `combo_capture_list_pinned`(read) | 있음 — 선언·실행(W3) | 선반의 글·링크는 이름 대신 `text snippet`·`web link`(맥과 같음). 캡처 크기는 떠 있는 창의 픽셀 크기 | W3 |
+| 나초에게 넘기기 | `combo_shelf_give {index, id}`, `combo_capture_ask {mode}`(**content_out**, 다음 채팅 메시지에 첨부) | 부분 — core(이름·스키마·위험·승인 규칙·시험)만, **선언 안 함** | 다음 메시지 첨부는 펫 대화창(W2)이 있어야 함. W2가 붙으면 `windows_declaration(.., chat_handoff=true)`로 선언(선반·캡처에도 "항상 허용" 스위치가 생김) | W2 → W3 |
+| 삭제형 도구 | `combo_clipboard_clear`(destructive), `combo_shelf_forget`, `combo_capture_close_all`, `combo_clear_shelf` | **넣지 않음**(W3 결정) | 이 이슈 규칙: 삭제형 행동은 넣지 않는다 | — |
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
 | 창 도구 | `window_displays`, `window_place`, `window_tile`, `window_split`, `window_ratio`, `window_move_display`, `window_arrange_apps`, `window_undo` | 없음 — 의미 있음 | — | W5 |
 | 앱 도구 | `appswitch_settings` / `set_settings`(반복 시 숨김) | 없음 — 의미 있음 | — | W5 |
-| 데이터 가젯 도구 | 클립보드(`list`, `get_item` content_out, `copy_again`, `clear` destructive), 선반(`list`, `give` content_out, `forget`), 캡처(`ask` content_out, `list_pinned`, `close_all`), 모니터 `stats`, 디스크(`top_items`, `scan`) | 없음 — 의미 있음 | 내용이 나가는 도구는 호출마다 승인 카드 | W5 |
-| 상태·설정 도구 | 깨어 있기(`status`, `start`, `stop`), 기기(`status`, `set_volume`, `set_mic_muted`), 흐리게(`status`, `pause`, `resume`), 마우스(`status`, `set`), 달력(`status`, `set`), 메뉴 막대(`status`, `list_items`, `tidy`, `set_collapsed`, `show_hidden`) | 없음 — 대부분 의미 있음 | 메뉴 막대 도구는 Tray Organizer에 맞게 다시 정의해야 함(항목 위치·늘 숨김 구역이 없음). 마우스 `set`은 Windows 옵션(포인터 속도 등)이 달라 스키마 차이 확인 필요 | W5 |
+| 데이터 가젯 도구(나머지) | 모니터 `stats`, 디스크(`top_items`, `scan`) | 없음 — 의미 있음 | 클립보드·선반·캡처는 W3(위 표) | W5 |
+| 상태·설정 도구(나머지) | 마우스(`status`, `set`), 달력(`status`, `set`), 메뉴 막대(`status`, `list_items`, `tidy`, `set_collapsed`, `show_hidden`) | 없음 — 대부분 의미 있음 | 메뉴 막대 도구는 Tray Organizer에 맞게 다시 정의해야 함(항목 위치·늘 숨김 구역이 없음). 마우스 `set`은 Windows 옵션(포인터 속도 등)이 달라 스키마 차이 확인 필요 | W5 |
 | 바탕 화면 정리 | `desktop_tidy_plan`, `tidy_apply`(늘 승인), `tidy_undo`(늘 승인), `tidy_history`, `arrange_suggest`, `arrange_apply`(늘 승인): 바탕 화면 파일을 `정리됨/<분류>/`로 옮기고 되돌림 | 없음 — 의미 있음 | 바탕 화면 경로는 OneDrive 백업이면 달라짐(알려진 폴더 API로 찾아야 함) | W5 |
 | 가젯 안내 | `combo_gadget_guide`(가젯 설명·할 수 있는 일·한계) | 없음 | 안내 문구를 Windows 동작에 맞게 다시 써야 함 | W5 |
 | 컴퓨터 사용 도구(나초용) | 화면 캡처(content_out), 디스플레이 목록, 마우스·키 입력(input_inject), 클립보드 읽기 등 일부를 커넥터에도 선언 | 없음 | 컴퓨터 사용 MCP가 생긴 뒤. 화면·입력은 호출마다 승인 | W5 |
