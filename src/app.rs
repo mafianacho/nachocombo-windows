@@ -4,7 +4,7 @@ use crate::core::combos::{self, Combo, Snapshot};
 use crate::core::layout::SnapAction;
 use crate::core::settings::*;
 use crate::core::shortcut::*;
-use crate::{appswitch, awake, board, capture, clipboard, clock, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg};
+use crate::{appswitch, awake, board, capture, clipboard, clock, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg, update};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use windows::core::*;
@@ -40,7 +40,9 @@ pub const TIMER_LAYOUT: usize = 10;
 pub const TIMER_ONTOP: usize = 11;
 pub const TIMER_APPSWITCH: usize = 12;
 pub const TIMER_CLOCK: usize = 13;
-pub const TIMER_BOARD: usize = 14;
+pub const TIMER_UPDATE_HEALTHY: usize = 14;
+pub const TIMER_UPDATE_CHECK: usize = 15;
+pub const TIMER_BOARD: usize = 16;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State { Off, Running, Failed(String) }
@@ -70,6 +72,7 @@ pub struct App {
     pub board: board::Board,
     pub settings_window: pages::SettingsWindow,
     pub panel: panel::Panel,
+    pub updater: update::Updater,
     pub undo: Option<(Snapshot, String)>,
 }
 
@@ -183,6 +186,7 @@ impl App {
     }
 
     pub fn shutdown(&mut self) {
+        update::on_quit();
         for id in ModuleId::ALL { self.stop(id); }
         self.unregister_hotkeys();
         self.tray.remove_all();
@@ -338,6 +342,7 @@ impl App {
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
             "panel": self.panel.is_open(),
+            "update": update::diagnostics(),
         });
         let _ = std::fs::write(self.dir.join("state.json"), serde_json::to_vec_pretty(&v).unwrap_or_default());
     }
@@ -364,6 +369,7 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
         WM_PUBLIC_IP => { monitor::on_public_ip(lp.0 as *mut String); LRESULT(0) }
         WM_DEVICES => { devices::on_change(wp.0 == 1); LRESULT(0) }
         WM_PEEK => { crate::peek::on_space(); LRESULT(0) }
+        update::WM_UPDATE => { update::on_message(lp); LRESULT(0) }
         crate::diskmap::WM_DISKMAP => { crate::diskmap::on_message(wp, lp); LRESULT(0) }
         clipboard::WM_CLIPBOARDUPDATE => { clipboard::on_update(); LRESULT(0) }
         WM_TIMER => {
@@ -380,6 +386,8 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
                 TIMER_BOARD => board::tick(),
                 TIMER_LAYOUT => snap::layout_tick(),
                 TIMER_APPSWITCH => appswitch::on_timer(),
+                TIMER_UPDATE_HEALTHY => update::mark_healthy(),
+                TIMER_UPDATE_CHECK => update::check_if_due(),
                 TIMER_COMBO_UNDO => { let _ = KillTimer(Some(hwnd), TIMER_COMBO_UNDO); a.undo = None; a.changed(); }
                 _ => {}
             }
@@ -415,11 +423,14 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         crate::i18n::set_language(settings.language.as_deref());
         let boxed = Box::leak(Box::new(App { settings, dir, states: BTreeMap::new(), main, debug_ctl, later: vec![], hotkey_ids: vec![], hotkey_clashes: BTreeSet::new(),
             tray: tray::Tray::default(), snap: Default::default(), dim: Default::default(), organizer: Default::default(), shelf: Default::default(), capture: Default::default(),
-            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), board: Default::default(), settings_window: Default::default(), panel: Default::default(), undo: None }));
+            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), board: Default::default(), settings_window: Default::default(), panel: Default::default(), updater: Default::default(), undo: None }));
         APP.with(|c| c.set(boxed));
         let a = app();
+        // A version that failed its first launches is replaced before anything starts.
+        if update::at_launch() { let _ = DestroyWindow(main); return; }
         crate::window::register_class();
         tray::create_main();
+        update::after_launch();
         mouse::recover();
         for id in ModuleId::ALL { if a.settings.is_on(id) { a.start(id); } }
         a.sync_hotkeys();

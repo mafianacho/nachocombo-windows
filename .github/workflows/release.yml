@@ -40,7 +40,8 @@ jobs:
         shell: pwsh
         run: |
           # Panic messages carry source paths; keep the runner's folders out of the shipped exe.
-          $env:RUSTFLAGS = "--remap-path-prefix=$env:USERPROFILE\.cargo=cargo --remap-path-prefix=$PWD=src"
+          # RUSTFLAGS replaces the rustflags in .cargo/config.toml, so the static C runtime is asked for again here.
+          $env:RUSTFLAGS = "-C target-feature=+crt-static --remap-path-prefix=$env:USERPROFILE\.cargo=cargo --remap-path-prefix=$PWD=src"
           cargo build --release --locked
       - name: Verify the executable
         env:
@@ -50,6 +51,8 @@ jobs:
           $info = (Get-Item target/release/NachoCombo.exe).VersionInfo
           if ($info.ProductVersion -ne $env:VERSION) { throw "version resource says $($info.ProductVersion)" }
           if (Select-String -Path target/release/NachoCombo.exe -Pattern 'C:\\Users\\|D:\\a\\' -SimpleMatch:$false -Quiet) { throw "build-machine path embedded in the exe" }
+          # A clean Windows has no VC++ runtime: the exe must not import it.
+          if (Select-String -Path target/release/NachoCombo.exe -Pattern 'vcruntime140' -SimpleMatch -Quiet) { throw "the exe needs VCRUNTIME140.dll" }
       - name: Package (zip, SHA256SUMS)
         env:
           VERSION: ${{ steps.ver.outputs.version }}

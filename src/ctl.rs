@@ -86,6 +86,7 @@ pub fn run(a: &[String]) {
         "diskmap" => if arg(a, 1) == "open" { crate::app::later(crate::diskmap::open) },
         "appswitch" => match arg(a, 1) { "next" => crate::appswitch::cycle(true), "previous" => crate::appswitch::cycle(false), "commit" => { let i = x.appswitch.diagnostics()["selected"].as_u64().unwrap_or(0) as usize; crate::appswitch::commit(i) }, "cancel" => crate::appswitch::cancel(), "hide" => crate::appswitch::hide_others(), _ => {} },
         "peek" => crate::app::later(crate::peek::on_space),
+        "update" => crate::update::ctl(&a[1..]),
         "quit" => crate::app::quit(),
         _ => {}
     }

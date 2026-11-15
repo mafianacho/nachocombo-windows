@@ -1162,6 +1162,7 @@ fn general(ui: &mut Ui, ctx: &mut WindowCtx, x: f64, y: f64, w: f64) -> f64 {
         if ui.button("folder", "Show in File Explorer", x + w - 18.0 - bw, y + 11.0, Btn::Secondary, true) { let d = a.dir.clone(); later(move || app::open_url(&d.to_string_lossy())); }
         y + 46.0
     }) + 24.0;
+    y = updates_card(ui, x, y, w) + 24.0;
     y = card(ui, "danger", x, y, w, |ui, y| {
         ui.c.line_text("Reset All Settings", sans(14), Rect::new(x + 18.0, y, w * 0.5, 46.0), th.ink, Align::Left);
         let confirm = a.settings_window.confirm_reset;
@@ -1181,6 +1182,68 @@ fn general(ui: &mut Ui, ctx: &mut WindowCtx, x: f64, y: f64, w: f64) -> f64 {
     if ui.button("quitapp", "Quit NachoCombo", x, y, Btn::Secondary, false) { ctx.close = true; app::quit(); }
     y + 60.0
 }
+
+/// General ▸ Updates: Check Now, what was found, Update… / Go Back, and the automatic check.
+fn updates_card(ui: &mut Ui, x: f64, y: f64, w: f64) -> f64 {
+    use crate::update::{self, Status};
+    let th = ui.th;
+    let a = app();
+    let version = env!("CARGO_PKG_VERSION");
+    card(ui, "updates", x, y, w, |ui, y| {
+        ui.c.line_text("Updates", sans(14), Rect::new(x + 18.0, y, w * 0.5, 46.0), th.ink, Align::Left);
+        let busy = matches!(a.updater.status, Status::Checking | Status::Downloading(_) | Status::Restarting);
+        let bw = ui.button_width("Check Now", true);
+        if ui.button("updcheck", "Check Now", x + w - 18.0 - bw, y + 11.0, Btn::Secondary, true) && !busy { later(|| update::check(true)); }
+        let mut y = y + 46.0;
+        let text = |ui: &mut Ui, s: &str, c, y: f64| y + ui.label(s, sans(13), x + 18.0, y, w - 36.0, c) + 10.0;
+        let page_button = |ui: &mut Ui, y: f64| -> f64 {
+            if ui.button("updpage", "Open Release Page", x + 18.0, y, Btn::Secondary, true) { later(|| app::open_url(&update::release_page())); }
+            y + 36.0
+        };
+        match a.updater.status.clone() {
+            Status::Idle => y = text(ui, &format!("This is NachoCombo {version}."), th.ink2, y),
+            Status::Checking => y = text(ui, "Looking for a new version…", th.ink2, y),
+            Status::UpToDate => y = text(ui, &format!("NachoCombo {version} is the newest version."), th.ink2, y),
+            Status::Available { version: v, summary } => {
+                y = text(ui, &format!("NachoCombo {v} is available. You have {version}."), th.ink, y);
+                if !summary.is_empty() { y = text(ui, &summary, th.ink2, y); }
+                let label = "Update…";
+                if ui.button("updinstall", label, x + 18.0, y, Btn::Primary, true) { later(update::confirm_and_install); }
+                let rw = ui.button_width(label, true);
+                if ui.button("updnotes", "Release Notes", x + 18.0 + rw + 10.0, y, Btn::Secondary, true) { later(|| app::open_url(&update::release_page())); }
+                y += 36.0;
+            }
+            Status::Downloading(s) => y = text(ui, &s, th.ink2, y),
+            Status::Restarting => y = text(ui, "Restarting…", th.ink2, y),
+            Status::Failed(e) => { y = text(ui, &e, th.salsa, y); y = page_button(ui, y); }
+        }
+        if let Some(p) = a.updater.replace_problem.clone() {
+            if !matches!(a.updater.status, Status::Failed(_)) { y = text(ui, &p, th.salsa, y); y = page_button(ui, y); }
+        }
+        divider(ui, x, y, w);
+        let (hit, ny) = check(ui, "updauto", "Look for updates automatically (nothing is installed without asking)", a.settings.options.update_check, x, y, w);
+        if hit { a.update(|s| s.options.update_check = !s.options.update_check); later(update::check_if_due); }
+        y = ny;
+        if a.settings.options.update_check {
+            divider(ui, x, y, w);
+            let (r, ny) = choice(ui, "updevery", "How Often", &[(6u32, "6 Hours"), (24, "Every Day"), (168, "Every Week")], a.settings.options.update_interval_hours, x, y, w);
+            if let Some(v) = r { a.update(|s| s.options.update_interval_hours = v); }
+            y = ny;
+        }
+        if let Some(prev) = a.updater.previous.clone() {
+            divider(ui, x, y, w);
+            ui.c.line_text(&format!("Previous version {prev} is kept"), sans(14), Rect::new(x + 18.0, y, w * 0.6, 46.0), th.ink, Align::Left);
+            let label = format!("Go Back to {prev}");
+            let bw = ui.button_width(&label, true);
+            if ui.button("updback", &label, x + w - 18.0 - bw, y + 11.0, Btn::Secondary, true) && !busy { later(update::confirm_rollback); }
+            y += 46.0;
+        }
+        y
+    })
+}
+
+/// The settings window, to own a dialog.
+pub fn window() -> Option<HWND> { app().settings_window.win.map(|h| HWND(h as *mut _)) }
 
 // ---------- ctl ----------
 

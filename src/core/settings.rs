@@ -119,6 +119,11 @@ pub struct Options {
     pub app_shortcuts: Vec<AppHotKey>,
     /// App Switch: pressing a program's shortcut while it is in front hides it.
     pub app_hide_on_repeat: bool,
+    /// General ▸ Updates: look for a new release on GitHub by itself (off until the user turns it on). Finding one
+    /// only tells the user; nothing is downloaded or replaced until they confirm.
+    pub update_check: bool,
+    /// Hours between those checks: one of `update::INTERVAL_CHOICES`.
+    pub update_interval_hours: u32,
 }
 
 impl Default for Options {
@@ -130,7 +135,7 @@ impl Default for Options {
             theme_schedule: false, light_minute: 7 * 60, dark_minute: 19 * 60, snap_restore_layouts: true, explorer_preview: true,
             clock_date: true, clock_weekday: true, clock_seconds: false, clock_hours: ClockHours::System, world_clocks: vec![],
             mouse_reverse: true, mouse_speed: 1.0, mouse_pointer: 0, mouse_precision: Precision::Keep,
-            app_shortcuts: vec![], app_hide_on_repeat: true }
+            app_shortcuts: vec![], app_hide_on_repeat: true, update_check: false, update_interval_hours: 6 }
     }
 }
 
@@ -153,6 +158,7 @@ impl Options {
         self.mouse_speed = if self.mouse_speed.is_finite() { self.mouse_speed.clamp(0.25, 4.0) } else { 1.0 };
         self.mouse_pointer = self.mouse_pointer.clamp(0, 20);
         self.dim_fade_seconds = if self.dim_fade_seconds.is_finite() { self.dim_fade_seconds.clamp(0.0, 5.0) } else { 0.25 };
+        if !super::update::INTERVAL_CHOICES.contains(&self.update_interval_hours) { self.update_interval_hours = 6; }
         self
     }
 }
@@ -333,6 +339,21 @@ mod tests {
         s.mouse_saved = Some(Saved { original: sys, applied: crate::core::mouse::Sys { wheel_lines: 6, ..sys } });
         s.save(&path).unwrap();
         assert_eq!(AppSettings::load(&path).mouse_saved, s.mouse_saved);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test] fn updates_are_not_checked_until_asked_and_an_odd_interval_falls_back() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true},"options":{"snapGap":8}}"#).unwrap();
+        assert!(!s.options.update_check, "an older file does not start talking to GitHub");
+        assert_eq!(s.options.update_interval_hours, 6);
+        assert!(s.is_on(ModuleId::FocusDim));
+        let dir = std::env::temp_dir().join(format!("nacho-upd-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("s.json");
+        std::fs::write(&path, r#"{"options":{"updateCheck":true,"updateIntervalHours":5}}"#).unwrap();
+        let s = AppSettings::load(&path);
+        assert_eq!((s.options.update_check, s.options.update_interval_hours), (true, 6));
+        std::fs::write(&path, r#"{"options":{"updateCheck":true,"updateIntervalHours":168}}"#).unwrap();
+        assert_eq!(AppSettings::load(&path).options.update_interval_hours, 168);
         std::fs::remove_dir_all(dir).unwrap();
     }
     #[test] fn out_of_range_values_are_clamped() {
