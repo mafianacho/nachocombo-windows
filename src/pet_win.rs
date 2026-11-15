@@ -5,6 +5,7 @@
 use crate::core::pet::chat_client::{TransportEvent, TransportHandler, WebSocketTransport};
 use crate::core::pet::http::{HTTPCompletion, PetHTTPClient, PetHTTPRequest, PetHTTPResponse, PetNetError};
 use crate::core::pet::reconnect::TransportFailure;
+use crate::core::pet::secrets::{PetSecretLookup, PetSecretStore, PetSecretUnavailable};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use windows::core::{HSTRING, PCWSTR, PWSTR};
@@ -129,6 +130,22 @@ impl CredSecretStore {
         };
         for i in (0..parts.max(1)).rev() { Self::delete_one(&self.target(key, i)); }
     }
+}
+
+/// The core's store contract. The app wraps it in `PetSecretBundle` (one item for every pet secret, read once per
+/// launch), so a restart reads the stored login back without a new sign-in.
+impl PetSecretStore for CredSecretStore {
+    fn lookup(&self, key: &str) -> PetSecretLookup {
+        match self.read(key) {
+            CredRead::Found(d, _) => PetSecretLookup::Found(d),
+            CredRead::Missing => PetSecretLookup::Missing,
+            CredRead::Failed(code) => PetSecretLookup::Unavailable(code),
+        }
+    }
+    fn write(&self, key: &str, value: &[u8]) -> Result<(), PetSecretUnavailable> {
+        CredSecretStore::write(self, key, value).map_err(|status| PetSecretUnavailable { status })
+    }
+    fn delete(&self, key: &str) { CredSecretStore::delete(self, key) }
 }
 
 // ---------- HTTP ----------
