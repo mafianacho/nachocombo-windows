@@ -122,7 +122,7 @@ mod tests {
         let v = serde_json::to_value(&s).unwrap();
         assert_eq!(v["enabledGroups"], json!({"screen": true, "shell": false, "fileAccess": true}));
         assert_eq!(McpSettings::from_value(&v), s);
-        assert_eq!(McpSettings::from_value(&json!({"computerEnabled": 1})).computer_enabled, false);
+        assert!(!McpSettings::from_value(&json!({"computerEnabled": 1})).computer_enabled);
     }
 
     #[test]

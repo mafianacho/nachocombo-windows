@@ -6,6 +6,10 @@
 //!   port, or quitting) closes the listening socket, every open connection and the server's threads.
 //! - What the connection threads read (settings, which gadgets run, "always allow") is a snapshot the UI thread
 //!   refreshes on every change ([`sync`]); they never touch the app's state.
+//! - The port is bound with `SO_EXCLUSIVEADDRUSE` ([`exclusive_listener`]): another program cannot bind the same
+//!   address alongside and take connections (and keys) meant for Nacho Combo. A port that is taken fails the switch.
+//! - `computer-use-keys.json` gets a protected DACL for the current user only before any hash is written into it
+//!   ([`owner_only`]); if that fails, nothing is written.
 //! - An approval waits on the pet's chat as a local card (`core::pet::mcp_card`), never on nacho-server. Without Nacho
 //!   Pet the call is refused (`approval_unavailable`); unanswered for 60 s it is refused (`approval_timeout`).
 use crate::app::{app, State};
@@ -44,7 +48,8 @@ static ISSUED: Mutex<Option<IssuedKey>> = Mutex::new(None);
 
 pub fn keys() -> &'static Arc<KeyStore> {
     KEYS.get_or_init(|| {
-        Arc::new(KeyStore::new(Some(KeyStore::path_in(&app().dir)), Arc::new(crate::pet_win::os_random), crate::core::mcp::limits::system_clock()))
+        Arc::new(KeyStore::new(Some(KeyStore::path_in(&app().dir)), Arc::new(crate::pet_win::os_random), crate::core::mcp::limits::system_clock())
+            .with_protection(Arc::new(owner_only)))
     })
 }
 
@@ -67,7 +72,7 @@ pub fn sync() {
     let Some(port) = want else { return };
     // A port another program holds is tried again on the next change.
     let service = Arc::new(service());
-    match McpServer::start(service.clone(), port) {
+    match McpServer::start_with(service.clone(), port, exclusive_listener) {
         Ok(s) => { rt.server = Some(s); rt.service = Some(service); rt.port = port; }
         Err(e) => rt.problem = Some(e),
     }
@@ -92,6 +97,67 @@ fn service() -> McpService {
         module_on: Arc::new(|m| SNAP.lock().unwrap().as_ref().is_some_and(|s| s.running.contains(&m))),
     };
     McpService::new(sources, keys().clone(), Arc::new(crate::pet_exec::WindowsPetExecutor), Arc::new(PetApprover), crate::core::mcp::limits::system_clock())
+}
+
+/// `127.0.0.1:<port>` with `SO_EXCLUSIVEADDRUSE` set before the bind, so no other socket can share the address
+/// (Windows otherwise lets a second socket bind it with `SO_REUSEADDR`). The socket is not inherited by child processes.
+fn exclusive_listener(port: u16) -> std::io::Result<std::net::TcpListener> {
+    use std::os::windows::io::FromRawSocket;
+    use windows::Win32::Networking::WinSock::*;
+    unsafe {
+        let mut data = WSADATA::default();
+        if WSAStartup(0x0202, &mut data) != 0 { return Err(std::io::Error::last_os_error()); }
+        let s = WSASocketW(AF_INET.0 as i32, SOCK_STREAM.0, IPPROTO_TCP.0, None, 0, WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT)
+            .map_err(|e| std::io::Error::from_raw_os_error(e.code().0 & 0xFFFF))?;
+        let fail = |s: SOCKET| { let e = std::io::Error::from_raw_os_error(WSAGetLastError().0); closesocket(s); e };
+        let on: i32 = 1;
+        if setsockopt(s, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, Some(&on.to_ne_bytes())) != 0 { return Err(fail(s)); }
+        let addr = SOCKADDR_IN {
+            sin_family: AF_INET,
+            sin_port: port.to_be(),
+            sin_addr: IN_ADDR { S_un: IN_ADDR_0 { S_addr: u32::from_ne_bytes([127, 0, 0, 1]) } },
+            sin_zero: [0; 8],
+        };
+        if bind(s, &addr as *const SOCKADDR_IN as *const SOCKADDR, std::mem::size_of::<SOCKADDR_IN>() as i32) != 0 { return Err(fail(s)); }
+        if listen(s, 64) != 0 { return Err(fail(s)); }
+        Ok(std::net::TcpListener::from_raw_socket(s.0 as u64))
+    }
+}
+
+/// A protected DACL with one entry: full access for the current user. Nothing is inherited from the folder.
+fn owner_only(path: &std::path::Path) -> std::io::Result<()> {
+    use windows::core::HSTRING;
+    use windows::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows::Win32::Security::*;
+    use windows::Win32::Storage::FileSystem::FILE_ALL_ACCESS;
+    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    let os = |e: windows::core::Error| std::io::Error::other(e.message());
+    unsafe {
+        let mut token = HANDLE::default();
+        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(os)?;
+        let mut len = 0u32;
+        let _ = GetTokenInformation(token, TokenUser, None, 0, &mut len);
+        // u64 storage keeps the TOKEN_USER aligned.
+        let mut buf = vec![0u64; (len as usize).div_ceil(8).max(1)];
+        let got = GetTokenInformation(token, TokenUser, Some(buf.as_mut_ptr() as *mut _), len, &mut len);
+        let _ = CloseHandle(token);
+        got.map_err(os)?;
+        let sid = (*(buf.as_ptr() as *const TOKEN_USER)).User.Sid;
+        // ACL header + one ACCESS_ALLOWED_ACE (its SidStart u32 overlaps the SID).
+        let acl_len = std::mem::size_of::<ACL>() + std::mem::size_of::<ACCESS_ALLOWED_ACE>() + GetLengthSid(sid) as usize - 4;
+        let mut acl_buf = vec![0u64; acl_len.div_ceil(8)];
+        let acl = acl_buf.as_mut_ptr() as *mut ACL;
+        InitializeAcl(acl, acl_len as u32, ACL_REVISION).map_err(os)?;
+        AddAccessAllowedAce(acl, ACL_REVISION, FILE_ALL_ACCESS.0, sid).map_err(os)?;
+        let mut sd = SECURITY_DESCRIPTOR::default();
+        let psd = PSECURITY_DESCRIPTOR(&mut sd as *mut _ as *mut _);
+        InitializeSecurityDescriptor(psd, 1).map_err(os)?;
+        SetSecurityDescriptorDacl(psd, true, Some(acl), false).map_err(os)?;
+        if !SetFileSecurityW(&HSTRING::from(path.as_os_str()), DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, psd).as_bool() {
+            return Err(std::io::Error::last_os_error());
+        }
+        Ok(())
+    }
 }
 
 pub fn is_open() -> bool { RUNTIME.lock().unwrap().as_ref().is_some_and(|r| r.server.is_some()) }
