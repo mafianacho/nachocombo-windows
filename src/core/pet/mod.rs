@@ -11,6 +11,7 @@ pub mod http;
 pub mod json;
 pub mod media;
 pub mod reconnect;
+pub mod selection;
 pub mod server_models;
 pub mod settings;
 pub mod transcript;
