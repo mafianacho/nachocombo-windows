@@ -550,10 +550,19 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     let sig = signature(&items);
     let (scroll, content) = (ui.st.scroll.get(&log_id).copied().unwrap_or(0.0), ui.st.content.get(&log_id).copied().unwrap_or(0.0));
     let at_bottom = scroll >= content - view.h - 4.0;
-    if sig != a.pet.chat.sig {
-        if at_bottom || a.pet.chat.sig == 0 { ui.st.scroll.insert(log_id, 1.0e9); }
-        a.pet.chat.sig = sig;
-        ui.st.again = true;
+    {
+        let c = &mut a.pet.chat;
+        if sig != c.sig {
+            if at_bottom || c.sig == 0 { c.stick = true; }
+            c.sig = sig;
+        }
+        if c.stick {
+            // Stay at the end until the content stops growing (a card is measured one frame later).
+            ui.st.scroll.insert(log_id, 1.0e9);
+            if (content - c.last_content).abs() < 0.5 { c.stick = false; }
+            ui.st.again = true;
+        }
+        c.last_content = content;
     }
     let mut cx = Cx { pal: &pal, w: w - 2.0 * space::M, clicked: vec![], input_fill: None };
     ui.scroll("log", view, |ui, y0| {
@@ -727,7 +736,7 @@ fn sign_in_view(ui: &mut Ui, pal: &Pal, st: &crate::core::pet::session::PetSessi
         ui.c.text(e, sans(12), Rect::new(r.x + space::XL, y, inner, eh + 2.0), pal.danger, Align::Center);
         y += eh + space::M;
     }
-    let label = t(if signing { "Signing in in your browser…" } else { "Sign in with Nacho account" });
+    let label = t(if signing { "Waiting for your browser…" } else { "Sign in with Nacho account" });
     let bw = (ui.c.measure(&label, semi(13), 400.0).0 + 2.0 * space::L + 18.0).min(inner);
     let br = Rect::new(r.cx() - bw / 2.0, y, bw, tok::CONTROL + 4.0);
     let resp = ui.hit(ui.id("signin"), br, false);

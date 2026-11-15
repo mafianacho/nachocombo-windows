@@ -99,6 +99,9 @@ pub struct ChatView {
     pub tail_on_top: bool,
     pub tail_from_right: f64,
     pub sending: bool,
+    /// The log follows its end while new content is still being measured (a card is taller than one frame knows).
+    pub stick: bool,
+    pub last_content: f64,
 }
 
 #[derive(Default)]
@@ -209,7 +212,7 @@ pub fn start() -> std::result::Result<(), String> {
     if a.pet.started { return Ok(()); }
     MAIN.store(a.main.0 as isize, Ordering::Relaxed);
     clock::set_local_offset(crate::pet_win::local_utc_offset());
-    let store = PetSettingsStore::new(a.dir.join("pet-settings.json"));
+    let store = PetSettingsStore::new(a.dir.join("pet.json"));
     let settings = store.load();
     let browser = Arc::new(PetCallbackBrowser::new(
         Box::new(register_protocol),
@@ -742,6 +745,7 @@ pub fn reset_chat_size() { update_settings(|s| s.chat_size = None); crate::pet_c
 pub fn flash(parts: Vec<PetTextPart>) {
     let c = &mut app().pet.chat;
     c.flash = Some((parts, std::time::Instant::now()));
+    c.stick = true;
     if let Some(w) = &app().pet.pet { unsafe { SetTimer(Some(w.hwnd), T_FLASH, 7000, None); } }
     invalidate_chat();
 }

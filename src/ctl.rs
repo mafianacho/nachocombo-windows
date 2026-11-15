@@ -37,6 +37,7 @@ pub fn run(a: &[String]) {
             "signout" => crate::pet_ui::sign_out(),
             "say" => crate::pet_ui::send_when_ready(a[2..].join(" "), false, 0),
             "reset" => crate::pet_ui::reset_position(),
+            "attach" => crate::pet_ui::attach_file(std::path::Path::new(arg(a, 2))),
             _ => {}
         },
         "snap" => if let Some(s) = SnapAction::from_id(arg(a, 1)) { snap::run(s); },
