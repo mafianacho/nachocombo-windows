@@ -58,6 +58,7 @@ pub fn actions() -> Vec<Action> {
     add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
     add("pet.chat", NachoPet, "Open Nacho Chat", None);
+    add("board.show", WidgetBoard, "Show Widget Board", None);
     add("mouse.reverse", MouseTune, "Reverse Mouse Scrolling On / Off", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
     for item in MonitorItem::ALL {
@@ -329,6 +330,22 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "Only wheel notches are reversed. A precision touchpad or a free-spinning wheel sends finer steps and keeps its own direction; change those in Windows' touchpad settings.",
                 "Windows apps running as administrator do not receive reversed wheel events from an app that is not.",
                 "Not checked on a physical mouse or touchpad yet.",
+            ],
+        },
+        ModuleId::WidgetBoard => &Info {
+            tagline: "One window with a tile for every gadget: what it shows right now, and a way to rearrange them.",
+            features: &[
+                f!("A Tile per Gadget", "System Monitor rings, the Clipboard's latest copies, the Keep Awake countdown, volume and more, each live. A gadget that is off shows one line about what it does."),
+                f!("Three Sizes", "Small, wide or large per tile. The board fits 6, 4 or 2 columns to the window."),
+                f!("Edit the Board", "Drag tiles to reorder (or use the arrow keys), pick a size, hide a tile and bring it back from the list."),
+                f!("Your Own Order", "The board remembers its order and sizes. Editing it never turns a gadget on or off."),
+            ],
+            tips: &[t!("", "Panel button or shortcut", "Open the board"), t!("Esc", "", "Close the board")],
+            note: "No administrator rights needed. The board reads the gadgets that are running and starts nothing itself; switching it off closes the window and stops its refresh timer.",
+            limits: &[
+                "There is no Nacho Pet tile yet: the pet is not part of this Windows app so far.",
+                "Windows lets no app read your calendar events, so the Calendar Clock tile shows the date and world clocks, not an event.",
+                "There is no Computer Use tile: Windows has no counterpart of that gadget.",
             ],
         },
         ModuleId::DeviceControl => &Info {
