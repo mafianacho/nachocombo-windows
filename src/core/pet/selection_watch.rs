@@ -154,7 +154,7 @@ pub trait SelectionClipboard {
 }
 
 /// How long the app gets to answer Ctrl+C.
-pub const COPY_WAIT_STEPS: u32 = 10;
+pub const COPY_WAIT_STEPS: u32 = 40;
 pub const COPY_WAIT_MS: u32 = 25;
 
 /// Reads the selection by copying it, then gives the clipboard back exactly as it was. Nothing is sent when the
@@ -168,7 +168,8 @@ pub fn read_by_copy<C: SelectionClipboard>(c: &mut C) -> Option<String> {
         c.pause(COPY_WAIT_MS);
         if c.sequence() != before { changed = true; break; }
     }
-    if !changed { return None; }
+    // One more look: a slow app may have copied just as the wait ended. The clipboard is given back in that case too.
+    if !changed && c.sequence() == before { return None; }
     let text = c.text();
     c.restore(keep);
     text
@@ -351,6 +352,10 @@ mod tests {
         /// What Ctrl+C puts there (None: the app copies nothing).
         copies: Option<String>,
         pressed: u32,
+        /// The app answers Ctrl+C only after this many pauses.
+        slow: u32,
+        waited: u32,
+        armed: bool,
         refuses_snapshot: bool,
         restored: u32,
     }
@@ -363,9 +368,15 @@ mod tests {
         fn restore(&mut self, s: Self::Snapshot) { self.board = s; self.seq += 1; self.restored += 1; }
         fn press_copy(&mut self) {
             self.pressed += 1;
-            if let Some(t) = self.copies.clone() { self.board = Some(t); self.seq += 1; }
+            if self.slow == 0 { if let Some(t) = self.copies.clone() { self.board = Some(t); self.seq += 1; } } else { self.armed = true; }
         }
-        fn pause(&mut self, _ms: u32) {}
+        fn pause(&mut self, _ms: u32) {
+            self.waited += 1;
+            if self.armed && self.waited >= self.slow {
+                self.armed = false;
+                if let Some(t) = self.copies.clone() { self.board = Some(t); self.seq += 1; }
+            }
+        }
     }
 
     #[test]
@@ -374,6 +385,17 @@ mod tests {
         assert_eq!(read_by_copy(&mut c).as_deref(), Some("the selection"));
         assert_eq!(c.board.as_deref(), Some("my own copy"));
         assert_eq!(c.restored, 1);
+    }
+
+    #[test]
+    fn a_slow_app_is_waited_for_and_the_clipboard_still_comes_back() {
+        let mut c = Fake { board: Some("mine".into()), copies: Some("the selection".into()), slow: 30, ..Default::default() };
+        assert_eq!(read_by_copy(&mut c).as_deref(), Some("the selection"));
+        assert_eq!(c.board.as_deref(), Some("mine"));
+        // An app slower than the wait copies nothing in time: nothing is read, and nothing was touched.
+        let mut c = Fake { board: Some("mine".into()), copies: Some("x".into()), slow: 90, ..Default::default() };
+        assert_eq!(read_by_copy(&mut c), None);
+        assert_eq!(c.board.as_deref(), Some("mine"));
     }
 
     #[test]

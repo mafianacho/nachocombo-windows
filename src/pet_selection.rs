@@ -500,9 +500,10 @@ const CF_DIBV5: u32 = 17;
 const CF_UNICODETEXT: u32 = 13;
 
 fn open_clipboard() -> bool {
-    for _ in 0..10 {
+    // The app that just copied may still hold it for a moment.
+    for _ in 0..40 {
         if unsafe { OpenClipboard(None).is_ok() } { return true; }
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(25));
     }
     false
 }
