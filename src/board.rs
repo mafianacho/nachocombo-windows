@@ -392,7 +392,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
                 ui.c.circle(r.x + 50.0, r.y + 33.0, 3.5, dc);
                 ui.c.line_text(dot.text(), mono(10), Rect::new(r.x + 58.0, r.y + 25.0, (r.w - 58.0 - 52.0).max(20.0), 16.0), th.ink2, Align::Left);
                 // The switch is the user's own click; a small tile puts it on the state line so the name keeps its room.
-                let sy = if small { r.y + 24.0 } else { r.y + 10.0 };
+                let sy = if small { r.y + 27.0 } else { r.y + 10.0 };
                 if !edit_mode && ui.switch("on", r.right() - 52.0, sy, on || state != State::Off) { later(move || app().set_enabled(m, !(app().state(m) != State::Off))); }
 
                 // Body.
