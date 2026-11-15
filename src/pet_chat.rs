@@ -473,6 +473,8 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         let undo = |u: &str| session.as_ref().and_then(|s| s.can_undo_forget(u).then_some(10));
         let mut v = PetTranscript::items(&st, &undo, &crate::pet_selection::chat_state(), a.pet.flow.locals(), crate::core::pet::clock::now());
         if let Some(n) = notice_line() { v.push(n); }
+        // NachoCombo MCP calls waiting for the user (local cards, never sent to the server).
+        v.extend(crate::mcp::approval_items());
         v
     } else { vec![] };
     let active_card = PetTranscript::active_card_id(&items).and_then(|id| pet::card_by_id(&id));
@@ -520,6 +522,21 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     }
 
     if !signed_in {
+        // An MCP client's call can wait for the user without a Nacho account: its cards come first.
+        let cards = crate::mcp::approval_items();
+        if !cards.is_empty() {
+            let mut cx = Cx { pal: &pal, w: w - 2.0 * space::M, clicked: vec![], input_fill: None };
+            ui.scroll("mcpcards", Rect::new(0.0, y_top, w, body.bottom() - y_top), |ui, y0| {
+                let mut y = y0 + space::S;
+                for (i, item) in cards.iter().enumerate() {
+                    let hgt = ui.in_scope(i as u64, |ui| draw_item(ui, &mut cx, item, space::M, y));
+                    if hgt > 0.0 { y += hgt + space::S; }
+                }
+                y + space::XS
+            });
+            for url in std::mem::take(&mut cx.clicked) { let u = url.clone(); later(move || pet::on_link(&u)); }
+            return;
+        }
         sign_in_view(ui, &pal, &st, Rect::new(0.0, y_top, w, body.bottom() - y_top));
         return;
     }

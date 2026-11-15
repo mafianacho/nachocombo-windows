@@ -370,5 +370,17 @@
   "확정 ({}개)": "Confirm ({})",
   "적용하면 이 범위는 다시 묻지 않아요.": "Once applied, this scope won't ask again.",
   "하나를 고르면 그 범위는 다시 묻지 않아요.": "Pick one and that scope won't ask again.",
-  "“{}”라고 하셨어요. {}": "You said “{}”. {}"
+  "“{}”라고 하셨어요. {}": "You said “{}”. {}",
+  "이 PC의 내용이 MCP 앱으로 나가요": "Content from this PC goes to the MCP app",
+  "MCP 앱이 이 PC에서 입력해요": "The MCP app types or clicks on this PC",
+  "되돌릴 수 없는 동작이에요": "This cannot be undone",
+  "이 PC를 바꾸는 동작이에요": "This changes something on this PC",
+  "MCP 앱이 '{}' 도구를 쓰려고 해요": "An MCP app wants to use '{}'",
+  "허용": "Allow",
+  "60초 안에 답하지 않으면 거절돼요": "Declined if not answered within 60 seconds",
+  "가젯: {}": "Gadget: {}",
+  "키: {}": "Key: {}",
+  "클립보드 항목 읽기": "Read a clipboard item",
+  "선반 항목 넘기기": "Hand over a shelf item",
+  "캡처해서 보내기": "Capture and send"
 }

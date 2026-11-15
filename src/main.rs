@@ -13,6 +13,7 @@ mod dim;
 mod diskmap;
 mod gfx;
 mod hooks;
+mod mcp;
 mod i18n;
 mod monitor;
 mod monitor_data;

@@ -27,6 +27,7 @@ pub mod http;
 pub mod json;
 pub mod login_browser;
 pub mod markdown;
+pub mod mcp_card;
 pub mod media;
 pub mod motion;
 pub mod placement;

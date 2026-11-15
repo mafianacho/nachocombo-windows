@@ -231,6 +231,9 @@ impl PetText {
             "combo_workspace_save" => "작업 공간 저장",
             "combo_workspace_apply" => "작업 공간 적용",
             "combo_workspace_list" => "작업 공간 목록",
+            "combo_clipboard_get_item" => "클립보드 항목 읽기",
+            "combo_shelf_give" => "선반 항목 넘기기",
+            "combo_capture_ask" => "캡처해서 보내기",
             _ => "도구",
         }
     }
@@ -685,6 +688,7 @@ impl PetTranscript {
             PetChatItem::Card(c)
                 if c.style != PetCardStyle::Elsewhere
                     && !c.id.starts_with(Self::PLAN_CARD_PREFIX)
+                    && !c.id.starts_with(super::mcp_card::McpCards::PREFIX)
                     && (c.status_waits || c.options.iter().any(|o| o.link.is_some())) =>
             {
                 Some(c.id.clone())
