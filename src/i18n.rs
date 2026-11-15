@@ -109,4 +109,65 @@ mod tests {
     #[test] fn every_language_file_is_valid_json() {
         for (l, _) in LANGS { let _: HashMap<String, String> = serde_json::from_str(source(l)).expect(l); }
     }
+    /// Every sentence the Widget Board can say is translated, in each language: a missing key would show English.
+    #[test] fn the_widget_board_speaks_every_language() {
+        use crate::core::bento::*;
+        use crate::core::settings::ModuleId;
+        let mut said: Vec<String> = vec![];
+        for m in board_modules() {
+            said.push(off_line(m).into());
+            for s in BentoSize::ALL { said.push(size_text(m, s).into()); }
+        }
+        let now = 1_794_400_000.0;
+        let bodies = [build::monitor(true, Some(1.0), Some(2.0), Some(0.5), Some(1.0), Some(1.0)), build::window_snap(true, Some("Ctrl+Alt+Left"), 3), build::window_snap(true, None, 1),
+            build::keep_awake(true, true, true, Some(now + 600.0), Some(now - 600.0), None, 30, now), build::keep_awake(true, true, true, None, None, None, 30, now), build::keep_awake(true, true, false, None, None, None, 30, now),
+            build::keep_awake(true, false, false, None, None, None, 30, now), build::keep_awake(true, false, false, None, None, None, 0, now),
+            build::clipboard(true, &[], now, 8), build::clipboard(true, &[(RowKind::Image, "x".into(), Some(now - 5.0)), (RowKind::Text, "x".into(), Some(now - 120.0)), (RowKind::Text, "x".into(), Some(now - 7200.0)), (RowKind::Text, "x".into(), Some(now - 100_000.0)), (RowKind::Text, "x".into(), Some(now - 900_000.0))], now, 8),
+            build::capture(true, 0, None), build::capture(true, 2, None), build::focus_dim(true, 0.5, false), build::focus_dim(true, 0.5, true), build::devices(true, None, Some(50), None), build::devices(true, Some(0.5), None, Some("x")),
+            build::calendar(true, 0, 1, &[]), build::disk(Some(1), Some(10), &[]), build::disk(Some(5), Some(10), &[("a".into(), 1)]), build::shelf(true, &[]), build::tray(true, true, false), build::tray(true, false, false), build::tray(true, true, true),
+            build::app_switch(true, Some("Alt+Tab"), 2), build::app_switch(true, None, 1), build::mouse(1.5, true), build::mouse(1.0, false)];
+        let mut add = |t: &str| said.extend(fmt::sentences(t).into_iter().map(String::from));
+        for b in &bodies {
+            match b {
+                BentoBody::Basic { line } => add(line),
+                BentoBody::Gauges { rings, side } => { rings.iter().for_each(|r| add(&r.label)); side.iter().filter(|l| !l.value.is_empty() || l.label.len() > 1).for_each(|l| add(&l.label)); }
+                BentoBody::Layouts { caption, .. } => { if let Some(c) = caption { add(c) } }
+                BentoBody::Timer { big, caption, .. } => { if big.chars().any(|c| c.is_alphabetic()) { add(big) } add(caption) }
+                BentoBody::List { rows, empty } => { add(empty); rows.iter().for_each(|r| { add(&r.text); if let Some(d) = &r.detail { add(d) } }) }
+                BentoBody::Stack { caption, .. } => add(caption),
+                BentoBody::Level { low, high, caption, .. } => { add(low); add(high); add(caption) }
+                BentoBody::Sliders { sliders, rows } => { sliders.iter().for_each(|s| add(&s.label)); rows.iter().for_each(|r| { add(&r.label); add(&r.value) }) }
+                BentoBody::Calendar { weekday, note, .. } => { add(weekday); if let Some(n) = note { add(n) } }
+                BentoBody::Usage { caption, segments, .. } => { add(caption); segments.iter().for_each(|s| add(&s.label)) }
+                BentoBody::Slots { drop, .. } => add(drop),
+                BentoBody::Strip { caption } => add(caption),
+            }
+        }
+        for d in [BentoDot::Off, BentoDot::On, BentoDot::Error] { said.push(d.text().into()); }
+        for wd in 0..7 { said.push(fmt::weekday(wd).into()); }
+        for secs in [30.0, 300.0, 2.0 * 3600.0, 5400.0] { said.push(fmt::remaining(secs)); said.push(fmt::duration(secs)); }
+        let info = crate::core::catalog::info(ModuleId::WidgetBoard);
+        said.push(info.tagline.into());
+        said.push(info.note.into());
+        for f in info.features { said.push(f.title.into()); said.push(f.detail.into()); }
+        for t in info.tips { if !t.gesture.is_empty() { said.push(t.gesture.into()); } said.push(t.title.into()); }
+        for l in info.limits { said.push((*l).into()); }
+        // What the user or Windows names (a copy, a folder, a device) is theirs and stays as it is.
+        let own_words = ["CPU", "x", "a"];
+        for lang in ["ko", "ja", "zh"] {
+            set_language(Some(lang));
+            for s in &said {
+                if own_words.contains(&s.as_str()) || !s.chars().any(|c| c.is_alphabetic()) { continue; }
+                assert_ne!(t(s), s.as_str(), "{lang}: not translated: {s}");
+            }
+        }
+        set_language(Some("ko"));
+        assert_eq!(t("14 min"), "14분");
+        assert_eq!(t("1 h 30 min"), "1시간 30분");
+        assert_eq!(t("Ctrl+Alt+Left and 3 more"), "Ctrl+Alt+Left 외 단축키 3개");
+        assert_eq!(t("App shortcuts: 2"), "앱 단축키 2개");
+        assert_eq!(t("Floats open: 1"), "떠 있는 캡처 1장");
+        assert_eq!(t("Dims the other windows by 50%"), "다른 창을 50% 어둡게");
+        set_language(None);
+    }
 }

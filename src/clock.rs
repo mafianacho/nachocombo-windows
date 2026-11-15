@@ -54,6 +54,16 @@ fn now() -> Now {
     Now { local, utc, offset }
 }
 
+/// Today's weekday (0 = Sunday) and day of the month, for the Widget Board's tile.
+pub fn today() -> (usize, u32) { let n = now(); (n.local.weekday() as usize, n.local.day) }
+
+/// The first `n` world clocks as (city, time), in the same form as the tooltip.
+pub fn world_lines(n: usize) -> Vec<(String, String)> {
+    let (nw, l, sys) = (now(), lang(), system_24());
+    let o = &app().settings.options;
+    o.world_clocks.iter().filter_map(|id| zone_offset(id, nw.utc).map(|off| (city(id), time_text(&l, &Civil::from_unix(nw.utc + off), false, o.clock_hours.is_24(sys))))).take(n).collect()
+}
+
 /// UTC now as seconds since 1970, for the settings page's offsets.
 pub fn utc_now() -> i64 { now().utc }
 
