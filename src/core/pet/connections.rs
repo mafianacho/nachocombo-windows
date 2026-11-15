@@ -236,6 +236,33 @@ pub fn action_label(name: &str) -> Option<&'static str> {
         "combo_awake_status" => "잠자기 방지 상태를 봐요",
         "combo_awake_start" => "PC가 잠들지 않게 해요",
         "combo_awake_stop" => "잠자기 방지를 풀어요",
+        "combo_window_displays" => "연결된 화면의 배치와 크기를 봐요",
+        "combo_window_place" => "창 하나를 화면의 칸에 맞춰 놓아요",
+        "combo_window_tile" => "여러 창을 바둑판처럼 나눠 놓아요",
+        "combo_window_split" => "창 둘을 화면 반반씩 나눠 놓아요",
+        "combo_window_ratio" => "두 창의 화면 비율을 바꿔요",
+        "combo_window_move_display" => "창을 다른 화면으로 옮겨요",
+        "combo_window_arrange_apps" => "앱의 창들을 한꺼번에 정리해요",
+        "combo_window_undo" => "마지막 창 배치를 되돌려요",
+        "combo_appswitch_settings" => "앱 전환 설정을 봐요",
+        "combo_appswitch_set_settings" => "앱 전환 설정을 바꿔요",
+        "combo_menubar_status" => "트레이 정리의 상태를 봐요",
+        "combo_menubar_list_items" => "트레이 아이콘 목록을 봐요",
+        "combo_menubar_tidy" => "트레이 아이콘을 정리해요",
+        "combo_menubar_set_collapsed" => "트레이를 접거나 펼쳐요",
+        "combo_monitor_stats" => "CPU·메모리·디스크 같은 시스템 상태를 봐요",
+        "combo_disk_top_items" => "디스크에서 큰 폴더와 파일을 봐요",
+        "combo_disk_scan" => "드라이브를 훑어 용량을 조사해요",
+        "combo_mouse_status" => "마우스 조정 상태를 봐요",
+        "combo_mouse_set" => "마우스 조정 설정을 바꿔요",
+        "combo_calendar_status" => "달력 시계 설정을 봐요",
+        "combo_calendar_set" => "달력 시계 설정을 바꿔요",
+        "combo_desktop_tidy_plan" => "바탕 화면 정리 계획을 세워요(옮기지는 않아요)",
+        "combo_desktop_tidy_apply" => "바탕 화면 파일을 분류 폴더로 옮겨요",
+        "combo_desktop_tidy_undo" => "바탕 화면 정리를 되돌려요",
+        "combo_desktop_tidy_history" => "바탕 화면 정리 기록을 봐요",
+        "combo_desktop_arrange_suggest" => "바탕 화면 아이콘 배치를 제안해요",
+        "combo_desktop_arrange_apply" => "바탕 화면 아이콘을 제안대로 놓아요",
         _ => return None,
     })
 }
@@ -807,16 +834,24 @@ mod tests {
     #[test]
     fn an_action_without_a_label_shows_the_first_sentence_of_its_description() {
         assert!(action_label("combo_unheard_of").is_none());
-        // Every label belongs to a tool the registry knows (a stale label is a mistake).
-        let known: Vec<&str> = PetGadgetTools::declared(true).iter().map(|t| t.name).collect();
-        for name in ["combo_arrange_window", "combo_clipboard_get_item", "combo_awake_stop", "combo_shelf_give", "combo_capture_ask"] {
-            assert!(action_label(name).is_some() && known.contains(&name), "label for {name}");
+        // Every declared tool (but Nacho Combo's own) has a label, so none takes the description fallback, and every
+        // sentence the tab can draw is in the 4 language tables. The fallback stays for tools added later.
+        let declared = PetGadgetTools::declared(true);
+        let mut words: Vec<String> = vec![];
+        for t in declared.iter().filter(|t| t.gadget != "combo") {
+            let l = action_label(t.name).unwrap_or_else(|| panic!("{} has no label", t.name));
+            words.push(l.to_string());
+            for always in [false, true] { if let Some(r) = risk_text(t, always) { words.push(r.to_string()); } }
         }
-        // A tool without a label shows the first sentence of its description (no empty row).
-        let n = declared_names(false);
-        for (_, g) in GadgetSwitchState::listed() {
-            for a in actions_for(g, &BTreeSet::new(), &n) { assert!(!a.title.trim().is_empty(), "{} has a title", a.id); }
+        for (_, g) in GadgetSwitchState::listed() { words.push(always_allow_confirm(g).replace(PetGadgetTools::display_name(g), "{}")); }
+        for (lang, json) in [("en", include_str!("../../../assets/i18n/en.json")), ("ja", include_str!("../../../assets/i18n/ja.json")), ("zh", include_str!("../../../assets/i18n/zh.json"))] {
+            let table: std::collections::HashMap<String, String> = serde_json::from_str(json).unwrap();
+            for w in &words { assert!(table.get(w).is_some_and(|v| !v.is_empty()), "{lang}: not translated: {w}"); }
         }
+        // Labels name tools the registry knows.
+        let known: Vec<&str> = declared.iter().map(|t| t.name).collect();
+        for t in &known { let _ = action_label(t); }
+        assert!(action_label("combo_unheard_of").is_none());
         let d = first_sentence("지금 소리 출력 장치 이름·소리 크기를 봐요. 소리를 바꾸기 전에 확인할 때 써요.", 120);
         assert_eq!(d, "지금 소리 출력 장치 이름·소리 크기를 봐요.");
         assert_eq!(first_sentence("", 10), "");
