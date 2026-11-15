@@ -26,6 +26,7 @@ mod snap;
 mod tray;
 mod trayorg;
 mod ui;
+mod update;
 mod window;
 
 use nachocombo::core;
@@ -43,6 +44,8 @@ fn main() {
         .or_else(|| std::env::var_os("APPDATA").map(|d| std::path::PathBuf::from(d).join("NachoCombo")))
         .unwrap_or_else(|| ".".into());
     let _ = std::fs::create_dir_all(&dir);
+    // Started by an update or a rollback: the copy that started this one quits first.
+    if let Some(pid) = args.iter().position(|a| a == "--after-update").and_then(|i| args.get(i + 1)).and_then(|p| p.parse::<u32>().ok()) { update::wait_for(pid); }
     unsafe {
         let mutex = CreateMutexW(None, true, w!("Local\\NachoComboSingleInstance"));
         // Opening the app again brings the running copy's window back.
