@@ -1,6 +1,7 @@
 //! The settings window: sidebar, the gadget gallery, each gadget's page, Combos and General.
 use crate::app::{self, app, later, State};
 use crate::core::catalog::{self, SNAP_GROUPS};
+use crate::core::clock::{self, ClockHours};
 use crate::core::combos::{self, Combo};
 use crate::core::layout::Rect;
 use crate::core::settings::*;
@@ -43,11 +44,21 @@ impl SettingsWindow {
 fn page_key(p: Page) -> String { match p { Page::Home => "home".into(), Page::Combos => "combos".into(), Page::General => "general".into(), Page::Gadget(m) => m.key().into() } }
 fn page_from(k: &str) -> Option<Page> { match k { "home" => Some(Page::Home), "combos" => Some(Page::Combos), "general" => Some(Page::General), k => ModuleId::from_key(k).map(Page::Gadget) } }
 
+/// Stops recording a shortcut. Recording an app's shortcut releases every app shortcut so the keys reach this
+/// window; whatever ends the recording (another page or tab, closing the window) has to give them back.
+fn end_capture() {
+    let s = &mut app().settings_window;
+    let was_app = s.capture_for.as_deref().is_some_and(|c| c.starts_with("app:"));
+    s.capture_for = None;
+    if was_app { later(|| app().sync_hotkeys()); }
+}
+
 pub fn go(p: Page) {
     let a = app();
     let s = &mut a.settings_window;
     s.page = Some(p);
-    s.capture_for = None;
+    end_capture();
+    let s = &mut a.settings_window;
     s.shortcut_issue = None;
     // A gadget that is on opens on Settings, one that is off on Overview.
     if let Page::Gadget(m) = p { s.tab = Some(if a.settings.is_on(m) { Tab::Settings } else { Tab::Overview }); }
@@ -76,6 +87,7 @@ pub fn open(m: Option<ModuleId>) {
         a.settings.window_size = Some((r.right as f64 / s, r.bottom as f64 / s));
         a.save();
         a.settings_window.win = None;
+        end_capture();
     }));
     win.set_msg(Box::new(|_, msg, wp, lp| {
         // While a key field listens, every key combination goes to it, including ones with Alt.
@@ -120,6 +132,9 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::Clipboard => (rgb(0x7FD3FF), rgb(0x1F7BE0), white),
         ModuleId::DeviceControl => (rgb(0x6FE7DD), rgb(0x0E8A93), white),
         ModuleId::DiskMap => (rgb(0x3F2E20), rgb(0x1E1610), NACHO),
+        ModuleId::AppSwitch => (rgb(0xB9C4FF), rgb(0x3C4FC4), white),
+        ModuleId::CalendarClock => (rgb(0xFF9F9A), rgb(0xD9382F), white),
+        ModuleId::MouseTune => (rgb(0xFF9A8A), rgb(0xC8321F), white),
     }
 }
 
@@ -291,7 +306,10 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::TrayOrganizer => if a.settings.tray_collapsed { "Icons folded away".into() } else { "Icons shown".into() },
             ModuleId::KeepAwake => if a.awake.active() { a.awake.minutes_left().map_or("Awake".into(), |m| format!("Awake · {m} min left")) } else { "Sleeps as usual".into() },
             ModuleId::Clipboard => format!("{} · {} item{}", shortcut_of("clipboard.show"), a.clipboard.items.len(), if a.clipboard.items.len() == 1 { "" } else { "s" }),
+            ModuleId::AppSwitch => format!("{} · Switch windows", shortcut_of("appswitch.next")),
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
+            ModuleId::CalendarClock => a.clock.status(),
+            ModuleId::MouseTune => if a.settings.options.mouse_reverse { "Wheel reversed".into() } else { "Wheel as Windows has it".into() },
             ModuleId::DeviceControl => {
                 let out = a.devices.outputs.iter().find(|d| d.default).map_or("No output".to_string(), |d| d.name.clone());
                 if a.devices.mic_muted { format!("Mic muted · {out}") } else { out }
@@ -356,7 +374,7 @@ fn gadget_page(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
     let cur = match tab { Tab::Overview => 0, Tab::Settings => 1, Tab::Shortcuts => 2 };
     if let Some(i) = ui.segments("tabs", &tabs, Some(cur), Rect::new(x, y, 330.0, 34.0), false) {
         app().settings_window.tab = Some([Tab::Overview, Tab::Settings, Tab::Shortcuts][i]);
-        app().settings_window.capture_for = None;
+        end_capture();
         ui.st.again = true;
     }
     y += 54.0;
@@ -583,6 +601,107 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 if ui.button("clearclips", "Clear History", x + w - 18.0 - bw, y + 11.0, Btn::Secondary, true) { a.clipboard.items.retain(|c| c.pinned); }
                 y += 46.0;
             }
+            ModuleId::AppSwitch => {
+                let (h, ny) = check(ui, "apphide", "Hide an app when its shortcut is pressed while it is in front", o.app_hide_on_repeat, x, y, w);
+                if h { o.app_hide_on_repeat = !o.app_hide_on_repeat; }
+                y = ny;
+                sep(ui, y);
+                ui.eyebrow("App shortcuts", x + 18.0, y + 12.0, w, th.ink2);
+                y += 34.0;
+                if let Some((id, msg)) = a.settings_window.shortcut_issue.clone() {
+                    if id.starts_with("app:") { y += ui.label(&msg, medium(13), x + 18.0, y, w - 36.0, th.salsa) + 8.0; }
+                }
+                if o.app_shortcuts.is_empty() {
+                    y += ui.label("Give any program a shortcut: it opens it, brings it to the front, or hides it when it is already in front.", sans(13), x + 18.0, y, w - 36.0, th.ink2) + 12.0;
+                }
+                let mut remove = None;
+                for (i, h) in o.app_shortcuts.iter().enumerate() {
+                    let id = crate::core::appswitch::app_id(&h.path);
+                    let clash = a.hotkey_clashes.contains(&id);
+                    ui.c.line_text(&h.name, sans(14), Rect::new(x + 18.0, y, w - 340.0, 40.0), if clash { th.nacho_ink } else { th.ink }, Align::Left);
+                    key_field(ui, &id, h.shortcut, None, x + w - 322.0, y + 5.0);
+                    if ui.button(&format!("apprm{i}"), "Remove", x + w - 94.0, y + 6.0, Btn::Secondary, true) { remove = Some(i); }
+                    y += 44.0;
+                }
+                if let Some(i) = remove {
+                    o.app_shortcuts.remove(i);
+                    a.settings_window.capture_for = None;
+                    later(|| app().sync_hotkeys());
+                }
+                if ui.button("addapp", "Add Program…", x + 18.0, y + 4.0, Btn::Secondary, true) {
+                    later(|| {
+                        if let Some(p) = crate::appswitch::pick_exe() {
+                            app().update(|s| { crate::core::appswitch::add_app(&mut s.options.app_shortcuts, &p); });
+                        }
+                    });
+                }
+                y += 46.0;
+            }
+            ModuleId::CalendarClock => {
+                let (h, ny) = check(ui, "cdate", "Show the date", o.clock_date, x, y, w);
+                if h { o.clock_date = !o.clock_date; }
+                y = ny;
+                sep(ui, y);
+                let (h, ny) = check(ui, "cweekday", "Show the weekday", o.clock_weekday, x, y, w);
+                if h { o.clock_weekday = !o.clock_weekday; }
+                y = ny;
+                sep(ui, y);
+                let (h, ny) = check(ui, "cseconds", "Show seconds", o.clock_seconds, x, y, w);
+                if h { o.clock_seconds = !o.clock_seconds; }
+                y = ny;
+                sep(ui, y);
+                let (r, ny) = choice(ui, "chours", "Hours", &[(ClockHours::System, "Like Windows"), (ClockHours::Twelve, "12-Hour"), (ClockHours::TwentyFour, "24-Hour")], o.clock_hours, x, y, w);
+                if let Some(v) = r { o.clock_hours = v; }
+                y = ny;
+                sep(ui, y);
+                ui.c.line_text("World clocks", sans(14), Rect::new(x + 18.0, y, w - 36.0, 40.0), th.ink, Align::Left);
+                y += 40.0;
+                let now = crate::clock::utc_now();
+                for (i, id) in o.world_clocks.clone().iter().enumerate() {
+                    ui.c.line_text(&clock::city(id), medium(13), Rect::new(x + 30.0, y, 200.0, 30.0), th.ink, Align::Left);
+                    if let Some(off) = clock::zone_offset(id, now) { ui.c.line_text(&clock::offset_text(off - crate::clock::local_offset()), sans(12), Rect::new(x + 230.0, y, 100.0, 30.0), th.ink2, Align::Left); }
+                    if ui.button(&format!("rmc{i}"), "Remove", x + w - 100.0, y + 3.0, Btn::Secondary, true) { o.world_clocks.remove(i); }
+                    y += 32.0;
+                }
+                if o.world_clocks.len() < clock::MAX_WORLD_CLOCKS {
+                    let mut draft = a.clock.city_query.clone();
+                    ui.text_field("clockcity", Rect::new(x + 30.0, y, 240.0, 30.0), &mut draft, 40);
+                    a.clock.city_query = draft.clone();
+                    ui.c.line_text("Type a city, such as Tokyo", sans(12), Rect::new(x + 280.0, y, w - 300.0, 30.0), th.ink2, Align::Left);
+                    y += 36.0;
+                    for id in clock::search_cities(&draft, &o.world_clocks, 5) {
+                        ui.c.line_text(&format!("{}  ·  {}", clock::city(id), id.split('/').next().unwrap_or("")), sans(13), Rect::new(x + 30.0, y, w - 160.0, 30.0), th.ink, Align::Left);
+                        if ui.button(&format!("addc{id}"), "Add", x + w - 70.0, y + 3.0, Btn::Secondary, true) { o.world_clocks.push(id.to_string()); a.clock.city_query.clear(); }
+                        y += 32.0;
+                    }
+                } else {
+                    y += ui.label("That is the most the calendar shows. Remove one to add another.", sans(12), x + 30.0, y, w - 60.0, th.ink2) + 6.0;
+                }
+                y += 8.0;
+            }
+            ModuleId::MouseTune => {
+                let (h, ny) = check(ui, "reverse", "Reverse the wheel (a precision touchpad stays as it is)", o.mouse_reverse, x, y, w);
+                if h { o.mouse_reverse = !o.mouse_reverse; }
+                y = ny;
+                sep(ui, y);
+                let speeds: Vec<(f64, String)> = crate::core::mouse::SPEED_CHOICES.iter().map(|s| (*s, format!("{s}×"))).collect();
+                let refs: Vec<(f64, &str)> = speeds.iter().map(|o| (o.0, o.1.as_str())).collect();
+                let (r, ny) = choice(ui, "mspeed", "Scroll Speed", &refs, o.mouse_speed, x, y, w);
+                if let Some(v) = r { o.mouse_speed = v; }
+                y = ny;
+                sep(ui, y);
+                let pointers: Vec<(i32, String)> = crate::core::mouse::POINTER_CHOICES.iter().map(|s| (*s, if *s == 0 { "As Windows has it".to_string() } else { s.to_string() })).collect();
+                let refs: Vec<(i32, &str)> = pointers.iter().map(|o| (o.0, o.1.as_str())).collect();
+                let (r, ny) = choice(ui, "mpointer", "Pointer Speed", &refs, o.mouse_pointer, x, y, w);
+                if let Some(v) = r { o.mouse_pointer = v; }
+                y = ny;
+                sep(ui, y);
+                use crate::core::mouse::Precision;
+                let (r, ny) = choice(ui, "mprecision", "Pointer Precision", &[(Precision::Keep, "As Windows has it"), (Precision::On, "On"), (Precision::Off, "Off")], o.mouse_precision, x, y, w);
+                if let Some(v) = r { o.mouse_precision = v; }
+                y = ny;
+                y += ui.label("Your own pointer and scroll settings come back when you switch this off or quit.", sans(12), x + 18.0, y + 6.0, w - 36.0, th.ink2) + 14.0;
+            }
             ModuleId::DiskMap => {
                 y += ui.label("Disk Map has no options: it scans when you open it.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;
             }
@@ -718,7 +837,10 @@ fn key_field(ui: &mut Ui, id: &str, cur: Option<Shortcut>, default: Option<Short
         ui.keycaps(&parts, r.cx() - width / 2.0, r.y + 4.0);
     } else { ui.c.line_text("None", sans(13), r, th.ink2, Align::Center); }
     if resp.hover { ui.st.cursor_hand = true; }
-    if resp.clicked { app().settings_window.capture_for = Some(id.to_string()); app().settings_window.shortcut_issue = None; ui.st.capture_key = Some(hid); ui.st.again = true; }
+    if resp.clicked {
+        app().settings_window.capture_for = Some(id.to_string()); app().settings_window.shortcut_issue = None; ui.st.capture_key = Some(hid); ui.st.again = true;
+        if id.starts_with("app:") { later(|| app().sync_hotkeys()); }
+    }
     if !listening && ui.st.capture_key == Some(hid) { ui.st.capture_key = None; }
     if default.is_some() && cur != default {
         let rr = Rect::new(r.right() + 8.0, r.y + 3.0, 24.0, 24.0);
@@ -739,6 +861,7 @@ fn capture_key(vk: u32) {
     let mods = (if d(VK_MENU) { shortcut::ALT } else { 0 }) | (if d(VK_CONTROL) { shortcut::CTRL } else { 0 }) | (if d(VK_SHIFT) { shortcut::SHIFT } else { 0 }) | (if d(VK_LWIN) || d(VK_RWIN) { shortcut::WIN } else { 0 });
     let done = |a: &mut app::App| { a.settings_window.capture_for = None; a.settings_window.invalidate(); };
     if vk == 0x1B && mods == 0 { done(a); return; }
+    if id.starts_with("app:") { capture_app_key(vk, mods, id); return; }
     let tool = id.strip_prefix("open.").and_then(ModuleId::from_key);
     if vk == 0x08 && mods == 0 {
         match tool { Some(m) => { a.settings.tool_shortcuts.remove(&m); } None => { a.settings.action_shortcuts.insert(id.clone(), None); } }
@@ -768,6 +891,33 @@ fn capture_key(vk: u32) {
     match tool { Some(m) => { a.settings.tool_shortcuts.insert(m, s); } None => { a.settings.action_shortcuts.insert(id, Some(s)); } }
     a.save();
     a.sync_hotkeys();
+    done(a);
+    a.changed();
+}
+
+/// Records an app's shortcut: the same rules and "held by another app" check as any other.
+fn capture_app_key(vk: u32, mods: u32, id: String) {
+    let a = app();
+    let set = |a: &mut app::App, s: Option<Shortcut>| {
+        for h in a.settings.options.app_shortcuts.iter_mut() { if crate::core::appswitch::app_id(&h.path) == id { h.shortcut = s; } }
+    };
+    let done = |a: &mut app::App| { a.settings_window.capture_for = None; a.sync_hotkeys(); a.settings_window.invalidate(); };
+    if vk == 0x1B && mods == 0 { done(a); return; }
+    if vk == 0x08 && mods == 0 { set(a, None); a.save(); done(a); a.changed(); return; }
+    let s = Shortcut::new(vk, mods);
+    if let Some(issue) = shortcut::validate(s, &a.settings.taken_shortcuts(&id)) {
+        a.settings_window.shortcut_issue = Some((id, issue.message()));
+        done(a);
+        return;
+    }
+    // The app shortcuts were released while recording, so only another program can still hold these keys.
+    if !a.hotkey_free(s) {
+        a.settings_window.shortcut_issue = Some((id, format!("Another app already uses {}. The previous shortcut stays.", s.label())));
+        done(a);
+        return;
+    }
+    set(a, Some(s));
+    a.save();
     done(a);
     a.changed();
 }
@@ -1039,7 +1189,7 @@ pub fn ctl(a: &[String]) {
 /// `ctl snapshot settings|panel|monitor <file.png>`: the window's picture without capturing the screen.
 pub fn snapshot(which: &str, path: &std::path::Path) {
     let a = app();
-    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, _ => None };
+    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), _ => None };
     let Some(h) = h else { return };
     let ptr = unsafe { GetWindowLongPtrW(HWND(h as *mut _), GWLP_USERDATA) } as *mut UiWindow;
     if !ptr.is_null() { if let Err(e) = unsafe { &mut *ptr }.snapshot(path) { let _ = std::fs::write(a.dir.join("snapshot-error.txt"), format!("{e:?}")); } }

@@ -1,8 +1,10 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 #![allow(clippy::too_many_arguments)]
 mod app;
+mod appswitch;
 mod awake;
 mod capture;
+mod clock;
 mod clipboard;
 mod ctl;
 mod devices;
@@ -14,6 +16,7 @@ mod i18n;
 mod monitor;
 mod monitor_data;
 mod monitor_panels;
+mod mouse;
 mod pages;
 mod panel;
 mod peek;

@@ -195,6 +195,7 @@ pub fn on_message(wp: WPARAM, lp: LPARAM) {
             if uid == UID_MAIN { later(panel::toggle_list); }
             else if (UID_PIN..UID_PIN + ModuleId::ALL.len() as u32).contains(&uid) { let m = ModuleId::ALL[(uid - UID_PIN) as usize]; later(move || panel::open_tool(m)); }
             else if uid == crate::awake::UID { later(crate::awake::toggle); }
+            else if uid == crate::clock::UID { later(crate::clock::toggle_popup); }
             else if uid == crate::devices::UID_MIC { later(crate::devices::toggle_mic); }
             else if uid >= UID_MONITOR { let i = (uid - UID_MONITOR) as usize; later(move || monitor::toggle_panel(MonitorItem::ALL[i])); }
         }
@@ -241,6 +242,7 @@ pub fn refresh_theme() {
     for (i, id) in ModuleId::ALL.into_iter().enumerate() { if a.settings.pinned_tools.contains(&id) { a.tray.remove(UID_PIN + i as u32); } }
     sync_pins();
     crate::monitor::redraw_tray();
+    crate::clock::redraw_tray();
 }
 
 pub fn exe_module() -> HINSTANCE { unsafe { GetModuleHandleW(None).unwrap_or_default().into() } }
