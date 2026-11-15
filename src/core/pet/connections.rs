@@ -861,6 +861,50 @@ mod tests {
         assert!(detail(&ConnectionsRef::Gadget("clipboard"), &f.input()).unwrap().notice.is_none());
     }
 
+    /// The tab's switches go through `GadgetTrust`: each change is stored, each change declares the capabilities again,
+    /// and what the tab shows follows the same state the declaration is made from.
+    #[test]
+    fn the_switches_are_stored_and_declare_the_capabilities_again() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let dir = std::env::temp_dir().join(format!("nc-conn-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(GadgetTrust::FILE_NAME);
+        let _ = std::fs::remove_file(&path);
+        let trust = GadgetTrust::for_windows(false);
+        trust.attach(&path);
+        let declared = Arc::new(AtomicUsize::new(0));
+        let d = declared.clone();
+        trust.observe(Arc::new(move || { d.fetch_add(1, Ordering::SeqCst); }));
+        let get = |t: &GadgetTrust| PetCommands::windows_declaration(&t.always_allowed(), &t.disabled(), false).into_iter()
+            .find(|c| c["name"] == "combo_clipboard_get_item").map(|c| c["approval"] == "required");
+        assert_eq!(get(&trust), Some(true), "asks every time by default");
+        // always allow on: declared without approval, stored, observers told
+        assert!(trust.set_always_allowed("clipboard", true));
+        assert_eq!((get(&trust), declared.load(Ordering::SeqCst)), (Some(false), 1));
+        assert!(std::fs::read_to_string(&path).unwrap().contains("clipboard"));
+        // a second trust object reading the file (a restart) keeps it; the tab shows it on
+        let again = GadgetTrust::for_windows(false);
+        again.attach(&path);
+        assert!(again.is_always_allowed("clipboard"));
+        let mut f = Fixture::new();
+        f.always = again.always_allowed();
+        assert!(detail(&ConnectionsRef::Gadget("clipboard"), &f.input()).unwrap().always_allow.unwrap().on);
+        // off again: back to asking, declared again, stored
+        assert!(trust.set_always_allowed("clipboard", false));
+        assert_eq!((get(&trust), declared.load(Ordering::SeqCst)), (Some(true), 2));
+        assert!(!std::fs::read_to_string(&path).unwrap().contains("clipboard"));
+        // a switch with no change declares nothing; a gadget without a content_out tool cannot be trusted
+        assert!(!trust.set_always_allowed("clipboard", false));
+        assert!(!trust.set_always_allowed("dim", true) && !trust.set_always_allowed("appswitch", true));
+        assert_eq!(declared.load(Ordering::SeqCst), 2);
+        // one action off: not declared, declared again; on again: back
+        trust.set_disabled(["combo_clipboard_get_item".to_string()].into());
+        assert_eq!((get(&trust), declared.load(Ordering::SeqCst)), (None, 3));
+        trust.set_disabled(BTreeSet::new());
+        assert_eq!((get(&trust), declared.load(Ordering::SeqCst)), (Some(true), 4));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn search_keeps_the_sections_with_a_match() {
         let f = Fixture::new();

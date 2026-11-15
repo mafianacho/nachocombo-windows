@@ -75,6 +75,8 @@ pub enum Event {
     /// A read of the selection finished.
     SelRead { generation: u64, result: Option<Box<crate::pet_selection::ReadOk>> },
     SelChanged,
+    /// The connections tab: the server list, or the answer of a switch.
+    Connections(crate::pet_connections::Done),
 }
 
 static QUEUE: Mutex<Vec<Event>> = Mutex::new(Vec::new());
@@ -113,6 +115,9 @@ pub struct ChatView {
     /// The user is at the end of the log (until the wheel moves it away): new content then keeps the end in view.
     pub pinned: bool,
     pub last_view_h: f64,
+    /// Talk or Connections.
+    pub tab: crate::pet_connections::ChatTab,
+    pub conn: crate::pet_connections::ConnState,
 }
 
 #[derive(Default)]
@@ -311,6 +316,7 @@ pub fn on_message() {
             Event::Retry { text, voice, attempt } => send_when_ready(text, voice, attempt),
             Event::CardAnswered { card_id, refusal } => card_answered(&card_id, refusal),
             Event::Flash(t) => flash_text(&t),
+            Event::Connections(d) => crate::pet_connections::on_done(d),
             Event::Capabilities(caps) => { if let Some(s) = session() { s.set_connector_capabilities(Some(caps)); } }
             Event::SendDone(r) => {
                 let c = &mut app().pet.chat;
@@ -1081,6 +1087,14 @@ pub fn settings_controls(ui: &mut Ui, x: f64, y: f64, w: f64) -> f64 {
     if button(ui, "petsize", "Reset Chat Size", Btn::Secondary, running, &mut bx, y) { later(reset_chat_size); }
     y += 46.0;
     y += ui.label(&t("Nothing connects to the Nacho server until you open the chat. The login is stored in Windows Credential Manager, for your account only."), sans(12), x + 18.0, y, w - 36.0, th.ink2) + 14.0;
+    // Nacho's control of this PC: one switch for everything it does here (macOS `allowComboControl`).
+    ui.c.line(x + 18.0, y, x + w - 18.0, y, th.line, 1.0);
+    y += 14.0;
+    let allow = app().pet.settings.allow_combo_control;
+    if ui.switch("petcontrol", x + 18.0, y, allow) { later(move || update_settings(|s| s.allow_combo_control = !allow)); }
+    ui.c.line_text(&t("Let Nacho use this PC's apps, windows and gadgets"), medium(13), Rect::new(x + 70.0, y, w - 90.0, 22.0), th.ink, Align::Left);
+    y += 32.0;
+    y += ui.label(&t("When this is off, Nacho can still chat, but it does not connect to this PC and cannot open apps, move windows or switch gadgets. Nacho never switches the pet itself, and cannot turn this setting on."), sans(12), x + 18.0, y, w - 36.0, th.ink2) + 14.0;
     y = crate::pet_selection::settings_controls(ui, x, y, w);
     y
 }

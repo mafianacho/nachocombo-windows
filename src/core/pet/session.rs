@@ -10,6 +10,7 @@ use super::auth::{AuthProblem, Clock, OIDCConfig, PetAuth, PetAuthBrowser, Rando
 use super::chat_client::{ChatClient, ChatClientOptions, MakeTransport, OutgoingText, Schedule, SendRefusal};
 use super::chat_state::{ChatState, ConnectionPhase, ErrorText};
 use super::connector_client::{ConnectorBinding, ConnectorPhase, PetCommandExecuting, PetConnectorClient};
+use super::connections::{ConnectionsAPI, ConnectionsFailure};
 use super::connectors::{ConnectorError, ConnectorsAPI, OverviewCompletion};
 use super::http::PetHTTPClient;
 use super::media::{MediaProblem, PetAttachment, PetMedia, PetOutgoingFile};
@@ -400,6 +401,18 @@ impl PetSession {
             i.auth.valid_access_token(Box::new(move |tok| match tok {
                 Err(_) => completion(Err(ConnectorError::Unauthorized)),
                 Ok(token) => ConnectorsAPI::new(endpoint, http, Arc::new(move || Some(token.clone()))).load(completion),
+            }));
+        })
+    }
+
+    /// The calls behind the connection switches, with a fresh access token (signed out: `Unauthorized`).
+    pub fn with_connections_api(&self, body: Box<dyn FnOnce(Result<ConnectionsAPI, ConnectionsFailure>) + Send>) {
+        self.post(move |i| {
+            let Some(endpoint) = i.settings.endpoint() else { return body(Err(ConnectionsFailure::BadResponse)) };
+            let http = i.deps.http.clone();
+            i.auth.valid_access_token(Box::new(move |tok| match tok {
+                Err(_) => body(Err(ConnectionsFailure::Unauthorized)),
+                Ok(token) => body(Ok(ConnectionsAPI::new(endpoint, http, Arc::new(move || Some(token.clone()))))),
             }));
         })
     }
