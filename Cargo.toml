@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 
+# The platform-free core (`src/core`) is a library too, so its tests run on any OS: `cargo test --lib`.
+[lib]
+name = "nachocombo"
+path = "src/lib.rs"
+
 [[bin]]
 name = "NachoCombo"
 path = "src/main.rs"

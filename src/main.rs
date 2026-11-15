@@ -4,7 +4,6 @@ mod app;
 mod awake;
 mod capture;
 mod clipboard;
-mod core;
 mod ctl;
 mod devices;
 mod dim;
@@ -24,6 +23,8 @@ mod tray;
 mod trayorg;
 mod ui;
 mod window;
+
+use nachocombo::core;
 
 use windows::core::*;
 use windows::Win32::Foundation::*;
