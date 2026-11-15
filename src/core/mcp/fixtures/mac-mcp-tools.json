@@ -1,0 +1,2311 @@
+{
+  "gadgets" : [
+    "combo",
+    "window",
+    "menubar",
+    "monitor",
+    "disk",
+    "clipboard",
+    "shelf",
+    "capture",
+    "dim",
+    "awake",
+    "device",
+    "mouse",
+    "appswitch",
+    "calendar",
+    "computer",
+    "desktop"
+  ],
+  "server" : {
+    "default_port" : 47653,
+    "endpoint" : "\/mcp",
+    "key_prefix" : "nccu_",
+    "max_keys" : 8,
+    "max_label" : 40,
+    "name" : "NachoCombo MCP",
+    "protocol_versions" : [
+      "2025-06-18",
+      "2025-03-26",
+      "2024-11-05"
+    ]
+  },
+  "source" : "nachocombo (macOS) main a2e4d76, GadgetToolRegistry.all without the computer gadget, printed by a Swift program on Linux (swift:5.10)",
+  "tools" : [
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_arrange_window",
+      "connector_names" : [
+        "combo_arrange_window",
+        "combo_window_arrange"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          },
+          "position" : {
+            "description" : "left=왼쪽 반, right=오른쪽 반, maximize=최대화, top-left=왼쪽 위 1\/4, first-third=왼쪽 1\/3 …",
+            "enum" : [
+              "left",
+              "right",
+              "center-half",
+              "top-half",
+              "bottom-half",
+              "top-left",
+              "top-right",
+              "bottom-left",
+              "bottom-right",
+              "first-third",
+              "center-third",
+              "last-third",
+              "first-two-thirds",
+              "center-two-thirds",
+              "last-two-thirds",
+              "maximize",
+              "almost-maximize",
+              "maximize-height",
+              "center",
+              "smaller",
+              "larger",
+              "restore",
+              "next-display",
+              "previous-display"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "position"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_arrange",
+      "mcp_names" : [
+        "window_arrange"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_layout_windows",
+      "connector_names" : [
+        "combo_layout_windows",
+        "combo_window_layout"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "items" : {
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "display" : {
+                  "description" : "디스플레이 번호(combo_list_windows 기준, 왼쪽부터 1). 없으면 창이 있는 화면",
+                  "maximum" : 16,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "position" : {
+                  "enum" : [
+                    "left",
+                    "right",
+                    "center-half",
+                    "top-half",
+                    "bottom-half",
+                    "top-left",
+                    "top-right",
+                    "bottom-left",
+                    "bottom-right",
+                    "first-third",
+                    "center-third",
+                    "last-third",
+                    "first-two-thirds",
+                    "center-two-thirds",
+                    "last-two-thirds",
+                    "maximize",
+                    "almost-maximize",
+                    "maximize-height",
+                    "center"
+                  ],
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "required" : [
+                "app",
+                "position"
+              ],
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "items"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_layout",
+      "mcp_names" : [
+        "window_layout"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_list_windows",
+      "connector_names" : [
+        "combo_list_windows",
+        "combo_window_list_windows"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "window_list_windows",
+      "mcp_names" : [
+        "window_list_windows"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_list_apps",
+      "connector_names" : [
+        "combo_appswitch_list",
+        "combo_list_apps"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "installed" : {
+            "description" : "설치된 앱도 포함(기본 false)",
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_list",
+      "mcp_names" : [
+        "appswitch_list"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_open_app",
+      "connector_names" : [
+        "combo_appswitch_open",
+        "combo_open_app"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_open",
+      "mcp_names" : [
+        "appswitch_open"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_focus_app",
+      "connector_names" : [
+        "combo_appswitch_focus",
+        "combo_focus_app"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_focus",
+      "mcp_names" : [
+        "appswitch_focus"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_hide_app",
+      "connector_names" : [
+        "combo_appswitch_hide",
+        "combo_hide_app"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_hide",
+      "mcp_names" : [
+        "appswitch_hide"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_quit_app",
+      "connector_names" : [
+        "combo_appswitch_quit",
+        "combo_quit_app"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_quit",
+      "mcp_names" : [
+        "appswitch_quit"
+      ],
+      "risk" : "destructive"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_set_system",
+      "connector_names" : [
+        "combo_device_set",
+        "combo_set_system"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "brightness" : {
+            "description" : "내장 화면 밝기 %",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "dnd" : {
+            "description" : "방해금지 켜기(true)\/끄기(false)",
+            "type" : "boolean"
+          },
+          "volume" : {
+            "description" : "소리 크기 %",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "device_set",
+      "mcp_names" : [
+        "device_set"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_set_gadget",
+      "connector_names" : [
+        "combo_set_gadget"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "gadget" : {
+            "enum" : [
+              "menuBar",
+              "systemMonitor",
+              "windowSnap",
+              "fileShelf",
+              "captureFloat",
+              "focusDim",
+              "keepAwake",
+              "clipboard",
+              "deviceControl",
+              "appSwitch",
+              "mouseTune",
+              "calendarClock",
+              "diskMap"
+            ],
+            "type" : "string"
+          },
+          "on" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "gadget",
+          "on"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "combo_set_gadget",
+      "mcp_names" : [
+        "combo_set_gadget"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_list_gadgets",
+      "connector_names" : [
+        "combo_list_gadgets"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "combo_list_gadgets",
+      "mcp_names" : [
+        "combo_list_gadgets"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_set_dim_strength",
+      "connector_names" : [
+        "combo_dim_set_strength",
+        "combo_set_dim_strength"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "percent" : {
+            "maximum" : 90,
+            "minimum" : 10,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "percent"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "dim_set_strength",
+      "mcp_names" : [
+        "dim_set_strength"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clear_shelf",
+      "connector_names" : [
+        "combo_clear_shelf",
+        "combo_shelf_clear"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "shelf",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "shelf_clear",
+      "mcp_names" : [
+        "shelf_clear"
+      ],
+      "risk" : "destructive"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_workspace_save",
+      "connector_names" : [
+        "combo_workspace_save"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "name" : {
+            "description" : "작업 공간 이름, 예: 업무 모드",
+            "maxLength" : 40,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "combo_workspace_save",
+      "mcp_names" : [
+        "combo_workspace_save"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_workspace_apply",
+      "connector_names" : [
+        "combo_workspace_apply"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "name" : {
+            "description" : "작업 공간 이름, 예: 업무 모드",
+            "maxLength" : 40,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "combo_workspace_apply",
+      "mcp_names" : [
+        "combo_workspace_apply"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_workspace_list",
+      "connector_names" : [
+        "combo_workspace_list"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "combo_workspace_list",
+      "mcp_names" : [
+        "combo_workspace_list"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_gadget_guide",
+      "connector_names" : [
+        "combo_gadget_guide"
+      ],
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "combo",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "gadget" : {
+            "description" : "가젯 id, 예: window",
+            "enum" : [
+              "combo",
+              "window",
+              "menubar",
+              "monitor",
+              "disk",
+              "clipboard",
+              "shelf",
+              "capture",
+              "dim",
+              "awake",
+              "device",
+              "mouse",
+              "appswitch",
+              "calendar",
+              "computer",
+              "desktop"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "gadget"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "combo_gadget_guide",
+      "mcp_names" : [
+        "combo_gadget_guide"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_displays",
+      "connector_names" : [
+        "combo_window_displays"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "window_displays",
+      "mcp_names" : [
+        "window_displays"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_place",
+      "connector_names" : [
+        "combo_window_place"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "items" : {
+            "description" : "창마다 자리. 겹쳐도 돼요. 목록 순서가 기본 앞뒤 순서(뒤에 있는 항목이 위)",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "display" : {
+                  "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+                  "maximum" : 16,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "h" : {
+                  "description" : "높이(0보다 커야 해요)",
+                  "type" : "number"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2)",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "w" : {
+                  "description" : "너비(0보다 커야 해요)",
+                  "type" : "number"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "x" : {
+                  "description" : "왼쪽 가장자리. 사용 영역 왼쪽 위가 0",
+                  "type" : "number"
+                },
+                "y" : {
+                  "description" : "위쪽 가장자리. 사용 영역 왼쪽 위가 0",
+                  "type" : "number"
+                },
+                "z" : {
+                  "description" : "앞뒤 순서. 클수록 앞. 없으면 목록 순서",
+                  "maximum" : 1000,
+                  "minimum" : -1000,
+                  "type" : "integer"
+                }
+              },
+              "required" : [
+                "x",
+                "y",
+                "w",
+                "h"
+              ],
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "unit" : {
+            "description" : "ratio(기본)=디스플레이 사용 영역의 0~1 비율, pixel=왼쪽 위에서부터의 포인트",
+            "enum" : [
+              "ratio",
+              "pixel"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "items"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_place",
+      "mcp_names" : [
+        "window_place"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_tile",
+      "connector_names" : [
+        "combo_window_tile"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "all_windows" : {
+            "description" : "true면 열린 창 전부(모든 앱, 최소화 제외)를 깔아요. 전체 바둑판",
+            "type" : "boolean"
+          },
+          "cols" : {
+            "description" : "가로 칸 수. 없으면 창 수로 정해요",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "displays" : {
+            "description" : "쓸 디스플레이 번호들(window_displays 기준). display와 함께 쓰지 않아요. 없으면 첫 창이 있는 화면",
+            "items" : {
+              "maximum" : 16,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "maxItems" : 16,
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "fill" : {
+            "description" : "row_major(기본)=가로로 먼저, column_major=세로로 먼저",
+            "enum" : [
+              "row_major",
+              "column_major"
+            ],
+            "type" : "string"
+          },
+          "gap" : {
+            "description" : "창 사이·가장자리 간격(포인트). 없으면 앱 설정",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "rows" : {
+            "description" : "세로 칸 수. 없으면 창 수로 정해요",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "span" : {
+            "description" : "per_display(기본)=화면마다 격자, across=모든 화면에 걸친 격자 하나",
+            "enum" : [
+              "per_display",
+              "across"
+            ],
+            "type" : "string"
+          },
+          "windows" : {
+            "description" : "깔 창들. 목록 순서대로 채워요. all_windows와 함께 쓰지 않아요",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "window_tile",
+      "mcp_names" : [
+        "window_tile"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_split",
+      "connector_names" : [
+        "combo_window_split"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "direction" : {
+            "description" : "horizontal=나란히, vertical=위아래, quadrant=2x2(4등분만)",
+            "enum" : [
+              "horizontal",
+              "vertical",
+              "quadrant"
+            ],
+            "type" : "string"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "parts" : {
+            "description" : "몇 등분인지(2, 3, 4)",
+            "maximum" : 4,
+            "minimum" : 2,
+            "type" : "integer"
+          },
+          "windows" : {
+            "description" : "놓을 창들(등분 수 이하). 순서대로 채워요",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 4,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "parts",
+          "direction",
+          "windows"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_split",
+      "mcp_names" : [
+        "window_split"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_ratio",
+      "connector_names" : [
+        "combo_window_ratio"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "direction" : {
+            "description" : "기본 horizontal",
+            "enum" : [
+              "horizontal",
+              "vertical"
+            ],
+            "type" : "string"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "ratios" : {
+            "description" : "칸 비율 목록. [70,30], [1,2,1] 처럼. 합은 상관없고 서로의 비율만 봐요",
+            "items" : {
+              "maximum" : 100,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "maxItems" : 4,
+            "minItems" : 2,
+            "type" : "array"
+          },
+          "windows" : {
+            "description" : "놓을 창들(비율 개수 이하). 순서대로 채워요",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 4,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "ratios",
+          "windows"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_ratio",
+      "mcp_names" : [
+        "window_ratio"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_move_display",
+      "connector_names" : [
+        "combo_window_move_display"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "display" : {
+            "description" : "목적지 디스플레이 번호(왼쪽부터 1)",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "windows" : {
+            "description" : "옮길 창들",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "windows",
+          "display"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_move_display",
+      "mcp_names" : [
+        "window_move_display"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_arrange_apps",
+      "connector_names" : [
+        "combo_window_arrange_apps"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "apps" : {
+            "description" : "앱 이름들(순서대로 왼쪽 위부터 채워요)",
+            "items" : {
+              "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+              "maxLength" : 100,
+              "type" : "string"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "arrangement" : {
+            "description" : "기본 grid",
+            "enum" : [
+              "grid",
+              "columns",
+              "rows",
+              "quadrants"
+            ],
+            "type" : "string"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "apps"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "window_arrange_apps",
+      "mcp_names" : [
+        "window_arrange_apps"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_undo",
+      "connector_names" : [
+        "combo_window_undo"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "steps" : {
+            "description" : "몇 번의 배치를 되돌릴지(1~5, 기본 1)",
+            "maximum" : 5,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "window_undo",
+      "mcp_names" : [
+        "window_undo"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_appswitch_settings",
+      "connector_names" : [
+        "combo_appswitch_settings"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_settings",
+      "mcp_names" : [
+        "appswitch_settings"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_appswitch_set_settings",
+      "connector_names" : [
+        "combo_appswitch_set_settings"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "hide_on_repeat" : {
+            "description" : "같은 단축키를 다시 누르면 숨기기",
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "hide_on_repeat"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "appswitch_set_settings",
+      "mcp_names" : [
+        "appswitch_set_settings"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_device_status",
+      "connector_names" : [
+        "combo_device_status"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "device_status",
+      "mcp_names" : [
+        "device_status"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_device_set_volume",
+      "connector_names" : [
+        "combo_device_set_volume"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "muted" : {
+            "description" : "음소거(true)\/해제(false)",
+            "type" : "boolean"
+          },
+          "volume" : {
+            "description" : "소리 크기 %",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "device_set_volume",
+      "mcp_names" : [
+        "device_set_volume"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_device_set_mic_muted",
+      "connector_names" : [
+        "combo_device_set_mic_muted"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "muted" : {
+            "description" : "true=음소거, false=켜기",
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "muted"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "device_set_mic_muted",
+      "mcp_names" : [
+        "device_set_mic_muted"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_dim_status",
+      "connector_names" : [
+        "combo_dim_status"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "dim_status",
+      "mcp_names" : [
+        "dim_status"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_dim_pause",
+      "connector_names" : [
+        "combo_dim_pause"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "dim_pause",
+      "mcp_names" : [
+        "dim_pause"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_dim_resume",
+      "connector_names" : [
+        "combo_dim_resume"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "dim_resume",
+      "mcp_names" : [
+        "dim_resume"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_shelf_list",
+      "connector_names" : [
+        "combo_shelf_list"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "shelf",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "shelf_list",
+      "mcp_names" : [
+        "shelf_list"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_shelf_give",
+      "connector_names" : [
+        "combo_shelf_give"
+      ],
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "shelf",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "shelf_give",
+      "mcp_names" : [
+        "shelf_give"
+      ],
+      "risk" : "content_out"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_shelf_forget",
+      "connector_names" : [
+        "combo_shelf_forget"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "shelf",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "shelf_forget",
+      "mcp_names" : [
+        "shelf_forget"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_status",
+      "connector_names" : [
+        "combo_menubar_status"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "menubar_status",
+      "mcp_names" : [
+        "menubar_status"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_list_items",
+      "connector_names" : [
+        "combo_menubar_list_items"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "menubar_list_items",
+      "mcp_names" : [
+        "menubar_list_items"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_tidy",
+      "connector_names" : [
+        "combo_menubar_tidy"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "menubar_tidy",
+      "mcp_names" : [
+        "menubar_tidy"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_set_collapsed",
+      "connector_names" : [
+        "combo_menubar_set_collapsed"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "collapsed" : {
+            "description" : "true=접기, false=펼치기",
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "collapsed"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "menubar_set_collapsed",
+      "mcp_names" : [
+        "menubar_set_collapsed"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_show_hidden",
+      "connector_names" : [
+        "combo_menubar_show_hidden"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "menubar_show_hidden",
+      "mcp_names" : [
+        "menubar_show_hidden"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_monitor_stats",
+      "connector_names" : [
+        "combo_monitor_stats"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "monitor",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "monitor_stats",
+      "mcp_names" : [
+        "monitor_stats"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_disk_top_items",
+      "connector_names" : [
+        "combo_disk_top_items"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "disk",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "count" : {
+            "description" : "몇 개(1–50, 기본 10)",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "kind" : {
+            "description" : "both=폴더와 파일, folders=폴더만, files=파일만 (기본 both)",
+            "enum" : [
+              "both",
+              "folders",
+              "files"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "disk_top_items",
+      "mcp_names" : [
+        "disk_top_items"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_disk_scan",
+      "connector_names" : [
+        "combo_disk_scan"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "disk",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "path" : {
+            "description" : "홈 안의 폴더: ~, ~\/Downloads 또는 홈 폴더 아래의 절대 경로 (기본 ~)",
+            "maxLength" : 1024,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "disk_scan",
+      "mcp_names" : [
+        "disk_scan"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_list",
+      "connector_names" : [
+        "combo_clipboard_list"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "clipboard_list",
+      "mcp_names" : [
+        "clipboard_list"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_get_item",
+      "connector_names" : [
+        "combo_clipboard_get_item"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "clipboard_get_item",
+      "mcp_names" : [
+        "clipboard_get_item"
+      ],
+      "risk" : "content_out"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_copy_again",
+      "connector_names" : [
+        "combo_clipboard_copy_again"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "clipboard_copy_again",
+      "mcp_names" : [
+        "clipboard_copy_again"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_clear",
+      "connector_names" : [
+        "combo_clipboard_clear"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "clipboard_clear",
+      "mcp_names" : [
+        "clipboard_clear"
+      ],
+      "risk" : "destructive"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_capture_ask",
+      "connector_names" : [
+        "combo_capture_ask"
+      ],
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "capture",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "mode" : {
+            "description" : "area=사용자가 드래그한 영역(기본), screen=포인터가 있는 화면 전체",
+            "enum" : [
+              "area",
+              "screen"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "capture_ask",
+      "mcp_names" : [
+        "capture_ask"
+      ],
+      "risk" : "content_out"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_capture_list_pinned",
+      "connector_names" : [
+        "combo_capture_list_pinned"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "capture",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "capture_list_pinned",
+      "mcp_names" : [
+        "capture_list_pinned"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_capture_close_all",
+      "connector_names" : [
+        "combo_capture_close_all"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "capture",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "capture_close_all",
+      "mcp_names" : [
+        "capture_close_all"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_awake_status",
+      "connector_names" : [
+        "combo_awake_status"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "awake",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "awake_status",
+      "mcp_names" : [
+        "awake_status"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_awake_start",
+      "connector_names" : [
+        "combo_awake_start"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "awake",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "minutes" : {
+            "description" : "유지할 분. 0=끌 때까지",
+            "maximum" : 1440,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "awake_start",
+      "mcp_names" : [
+        "awake_start"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_awake_stop",
+      "connector_names" : [
+        "combo_awake_stop"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "awake",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "awake_stop",
+      "mcp_names" : [
+        "awake_stop"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_mouse_status",
+      "connector_names" : [
+        "combo_mouse_status"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "mouse",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "mouse_status",
+      "mcp_names" : [
+        "mouse_status"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_mouse_set",
+      "connector_names" : [
+        "combo_mouse_set"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "mouse",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "middle_button" : {
+            "description" : "가운데 버튼 동작",
+            "enum" : [
+              "click",
+              "missionControl"
+            ],
+            "type" : "string"
+          },
+          "reverse_scroll" : {
+            "description" : "마우스 스크롤 방향 반대로",
+            "type" : "boolean"
+          },
+          "side_buttons" : {
+            "description" : "옆 버튼을 뒤로\/앞으로로 쓰기",
+            "type" : "boolean"
+          },
+          "smooth_scroll" : {
+            "description" : "부드러운 스크롤",
+            "type" : "boolean"
+          },
+          "speed" : {
+            "description" : "스크롤 속도 배율: 0.5, 1, 1.5, 2, 3 중 하나",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "mouse_set",
+      "mcp_names" : [
+        "mouse_set"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_calendar_status",
+      "connector_names" : [
+        "combo_calendar_status"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "calendar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "calendar_status",
+      "mcp_names" : [
+        "calendar_status"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_calendar_set",
+      "connector_names" : [
+        "combo_calendar_set"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "calendar",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "hours" : {
+            "description" : "시간 표기",
+            "enum" : [
+              "system",
+              "twelve",
+              "twentyFour"
+            ],
+            "type" : "string"
+          },
+          "show_date" : {
+            "description" : "날짜 표시",
+            "type" : "boolean"
+          },
+          "show_next_event" : {
+            "description" : "다음 일정 표시(켜면 캘린더 권한을 써요)",
+            "type" : "boolean"
+          },
+          "show_seconds" : {
+            "description" : "초 표시",
+            "type" : "boolean"
+          },
+          "show_weekday" : {
+            "description" : "요일 표시",
+            "type" : "boolean"
+          },
+          "world_clocks" : {
+            "description" : "세계 시계 시간대 ID 목록(예: Asia\/Seoul), 최대 6개. 빈 목록이면 모두 지움",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "calendar_set",
+      "mcp_names" : [
+        "calendar_set"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_tidy_plan",
+      "connector_names" : [
+        "combo_desktop_tidy_plan"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "desktop",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "desktop_tidy_plan",
+      "mcp_names" : [
+        "desktop_tidy_plan"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : true,
+      "connector_name" : "combo_desktop_tidy_apply",
+      "connector_names" : [
+        "combo_desktop_tidy_apply"
+      ],
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "desktop",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "plan_id" : {
+            "description" : "계획 번호(plan_id). 계획을 만든 답에 들어 있어요",
+            "maxLength" : 32,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "plan_id"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "desktop_tidy_apply",
+      "mcp_names" : [
+        "desktop_tidy_apply"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_tidy_undo",
+      "connector_names" : [
+        "combo_desktop_tidy_undo"
+      ],
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "desktop",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "tidy_id" : {
+            "description" : "되돌릴 정리 번호(기본: 가장 최근)",
+            "maxLength" : 32,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "desktop_tidy_undo",
+      "mcp_names" : [
+        "desktop_tidy_undo"
+      ],
+      "risk" : "change"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_tidy_history",
+      "connector_names" : [
+        "combo_desktop_tidy_history"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "desktop",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "desktop_tidy_history",
+      "mcp_names" : [
+        "desktop_tidy_history"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_arrange_suggest",
+      "connector_names" : [
+        "combo_desktop_arrange_suggest"
+      ],
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "desktop",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "mcp_name" : "desktop_arrange_suggest",
+      "mcp_names" : [
+        "desktop_arrange_suggest"
+      ],
+      "risk" : "read"
+    },
+    {
+      "always_requires_approval" : true,
+      "connector_name" : "combo_desktop_arrange_apply",
+      "connector_names" : [
+        "combo_desktop_arrange_apply"
+      ],
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "desktop",
+      "inputSchema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "plan_id" : {
+            "description" : "계획 번호(plan_id). 계획을 만든 답에 들어 있어요",
+            "maxLength" : 32,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "plan_id"
+        ],
+        "type" : "object"
+      },
+      "mcp_name" : "desktop_arrange_apply",
+      "mcp_names" : [
+        "desktop_arrange_apply"
+      ],
+      "risk" : "change"
+    }
+  ]
+}

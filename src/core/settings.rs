@@ -206,6 +206,9 @@ pub struct AppSettings {
     /// Widget Board: order, size and hidden tiles. None until the user edits it; a broken value falls back to None.
     #[serde(deserialize_with = "lenient_board")]
     pub bento: Option<super::bento::BentoLayout>,
+    /// Settings ▸ MCP (NachoCombo MCP server): server switch, port, per-gadget MCP switches. Same key as macOS; all off
+    /// by default, and a broken section reads as the defaults without touching the rest of the file.
+    pub computer_use: super::mcp::settings::McpSettings,
 }
 
 fn lenient_board<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<super::bento::BentoLayout>, D::Error> {
@@ -218,7 +221,8 @@ impl Default for AppSettings {
         AppSettings { enabled: BTreeMap::new(), dim_intensity: 0.5, options: Options::default(),
             monitor_items: vec![MonitorItem::Cpu, MonitorItem::Memory, MonitorItem::Network], pinned_tools: vec![], tool_shortcuts: BTreeMap::new(),
             action_shortcuts: BTreeMap::new(), launch_window: LaunchWindow::WhenNeeded, attention_dot: true, combo: None, custom_combos: vec![], welcomed: false,
-            tray_keep: vec![], tray_original: BTreeMap::new(), tray_collapsed: false, window_size: None, last_page: None, language: None, mouse_saved: None, bento: None }
+            tray_keep: vec![], tray_original: BTreeMap::new(), tray_collapsed: false, window_size: None, last_page: None, language: None, mouse_saved: None, bento: None,
+            computer_use: Default::default() }
     }
 }
 
@@ -260,6 +264,20 @@ impl AppSettings {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// NachoCombo MCP (Settings ▸ MCP): files from before it open with the server and every gadget switch off; a
+    /// broken `computerUse` section never costs the rest of the file.
+    #[test] fn mcp_settings_default_off_and_stay_lenient() {
+        let old: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true}}"#).unwrap();
+        assert!(!old.computer_use.server_enabled);
+        assert!(old.computer_use.enabled_gadgets.is_empty());
+        let broken: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true},"computerUse":"junk"}"#).unwrap();
+        assert!(broken.is_on(ModuleId::FocusDim));
+        assert_eq!(broken.computer_use, crate::core::mcp::settings::McpSettings::default());
+        let on: AppSettings = serde_json::from_str(r#"{"computerUse":{"serverEnabled":true,"enabledGadgets":{"window":true}}}"#).unwrap();
+        assert!(on.computer_use.server_enabled && on.computer_use.is_gadget_enabled("window"));
+        let back: serde_json::Value = serde_json::to_value(&on).unwrap();
+        assert_eq!(back["computerUse"]["serverEnabled"], true);
+    }
     #[test] fn old_or_partial_files_keep_the_rest() {
         let s: AppSettings = serde_json::from_str(r#"{"dimIntensity":0.7,"options":{"snapGap":8},"unknown":1}"#).unwrap();
         assert_eq!(s.dim_intensity, 0.7);

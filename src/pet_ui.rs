@@ -266,6 +266,8 @@ pub fn start() -> std::result::Result<(), String> {
 pub fn stop() {
     let a = app();
     if !a.pet.started { return; }
+    // MCP calls waiting for a card cannot be answered without the pet.
+    crate::mcp::pet_stopped();
     crate::pet_selection::stop();
     let p = &mut a.pet;
     // The session first: sockets closed and no more calls back, so nothing is handed to the windows closed below.
@@ -861,6 +863,11 @@ pub fn on_link(url: &str) {
     let Some(rest) = url.strip_prefix("nachopet://") else { crate::app::open_url(url); return };
     let (action, query) = rest.split_once('?').unwrap_or((rest, ""));
     let q: std::collections::HashMap<String, String> = query.split('&').filter_map(|kv| kv.split_once('=')).filter_map(|(k, v)| Some((k.to_string(), percent_decode(v)?))).collect();
+    // NachoCombo MCP approval cards: answered here (no Nacho account needed), never sent to nacho-server.
+    if action == crate::core::pet::mcp_card::McpCards::LINK {
+        if let (Some(id), Some(a)) = (q.get("id").and_then(|i| i.parse::<u64>().ok()), q.get("a")) { crate::mcp::answer(id, a == "allow"); }
+        return;
+    }
     let Some(s) = session() else { return };
     match action {
         "older" => s.load_older_history(),

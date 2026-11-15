@@ -530,5 +530,14 @@
   "바탕 화면 정리를 되돌려요": "Undoes a desktop tidy",
   "바탕 화면 정리 기록을 봐요": "Looks at the desktop tidy history",
   "바탕 화면 아이콘 배치를 제안해요": "Suggests how to arrange desktop items",
-  "바탕 화면 아이콘을 제안대로 놓아요": "Arranges desktop items as suggested"
+  "바탕 화면 아이콘을 제안대로 놓아요": "Arranges desktop items as suggested",
+  "이 PC의 내용이 MCP 앱으로 나가요": "Content from this PC goes to the MCP app",
+  "MCP 앱이 이 PC에서 입력해요": "The MCP app types or clicks on this PC",
+  "되돌릴 수 없는 동작이에요": "This cannot be undone",
+  "이 PC를 바꾸는 동작이에요": "This changes something on this PC",
+  "MCP 앱이 '{}' 도구를 쓰려고 해요": "An MCP app wants to use '{}'",
+  "허용": "Allow",
+  "60초 안에 답하지 않으면 거절돼요": "Declined if not answered within 60 seconds",
+  "가젯: {}": "Gadget: {}",
+  "키: {}": "Key: {}"
 }

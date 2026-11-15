@@ -76,7 +76,7 @@ pub fn on_message() {
     for j in jobs { j(); }
 }
 
-fn hop(job: Job) -> bool {
+pub fn hop(job: Job) -> bool {
     let main = MAIN.load(Ordering::SeqCst);
     if main == 0 { return false; }
     JOBS.lock().unwrap().push(job);

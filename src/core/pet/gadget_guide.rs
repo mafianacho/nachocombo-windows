@@ -210,7 +210,8 @@ impl PetGadgetGuides {
         match exit {
             PetGuideExit::Connector => "위험도 read·change는 바로 실행돼요. content_out·input_inject는 매번 사용자 승인을 받아요(가젯을 '항상 허용'으로 켠 경우만 제외). \
                 destructive는 늘 승인을 받아요. Windows는 PC의 내용이 나가는 도구(시스템 모니터·디스크 지도 포함)도 매번 승인을 받아요.",
-            PetGuideExit::Mcp => "MCP 클라이언트는 API 키와 나초콤보의 가젯 스위치(기본 꺼짐)로 막아요. 꺼진 가젯의 도구는 목록에 없고 호출도 거절돼요.",
+            PetGuideExit::Mcp => "MCP 클라이언트는 API 키와 나초콤보의 가젯 스위치(기본 꺼짐)로 막아요. 꺼진 가젯의 도구는 목록에 없고 호출도 거절돼요. \
+                Windows는 되돌릴 수 없는 도구(앱 종료)와 PC의 내용이 나가는 도구를 나초 펫의 승인 카드에서 사용자가 허용해야 실행해요('항상 허용'한 가젯의 내용 도구는 제외).",
         }
     }
     // i18n-exempt:end

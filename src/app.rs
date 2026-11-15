@@ -129,6 +129,7 @@ impl App {
 
     /// Something shown may have changed: repaint what is open.
     pub fn changed(&mut self) {
+        crate::mcp::sync();
         self.settings_window.invalidate();
         self.panel.invalidate();
         self.tray.refresh_main();
@@ -192,6 +193,7 @@ impl App {
 
     pub fn shutdown(&mut self) {
         update::on_quit();
+        crate::mcp::shutdown();
         for id in ModuleId::ALL { self.stop(id); }
         self.unregister_hotkeys();
         self.tray.remove_all();
@@ -339,6 +341,7 @@ impl App {
             "clipboard": self.clipboard.diagnostics(),
             "devices": self.devices.diagnostics(),
             "appswitch": self.appswitch.diagnostics(),
+            "mcp": crate::mcp::diagnostics(),
             "appShortcuts": self.hotkey_ids.iter().filter(|i| i.starts_with("app:")).count(),
             "appShortcutsFailed": self.hotkey_clashes.iter().filter(|i| i.starts_with("app:")).collect::<Vec<_>>(),
             "diskmap": crate::diskmap::diagnostics(),
@@ -451,6 +454,8 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         update::after_launch();
         mouse::recover();
         for id in ModuleId::ALL { if a.settings.is_on(id) { a.start(id); } }
+        // NachoCombo MCP: opens the port only when Settings ▸ MCP has the server on (off by default).
+        crate::mcp::sync();
         a.sync_hotkeys();
         a.write_state();
         let failed = ModuleId::ALL.iter().any(|m| matches!(a.state(*m), State::Failed(_)));

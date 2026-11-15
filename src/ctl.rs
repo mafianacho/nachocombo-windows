@@ -104,6 +104,7 @@ pub fn run(a: &[String]) {
         "update" => crate::update::ctl(&a[1..]),
         "trust" => { crate::pet_exec::trust().set_always_allowed(arg(a, 1), arg(a, 2) == "on"); }
         "pet" => crate::pet_exec::ctl(&a[1..]),
+        "mcp" => crate::mcp::ctl(&a[1..]),
         "quit" => crate::app::quit(),
         _ => {}
     }

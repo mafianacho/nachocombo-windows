@@ -18,7 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 pub const PRODUCT: &str = "NachoCombo for Windows";
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Page { Home, Combos, General, Gadget(ModuleId) }
+pub enum Page { Home, Combos, General, Mcp, Gadget(ModuleId) }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Tab { Overview, Settings, Shortcuts }
@@ -34,6 +34,9 @@ pub struct SettingsWindow {
     pub shortcut_issue: Option<(String, String)>,
     pub confirm_reset: bool,
     pub awake_draft: String,
+    /// Settings ▸ MCP: the name typed for a new key, and why the last one could not be made.
+    pub mcp_key_draft: String,
+    pub mcp_key_problem: Option<String>,
 }
 
 impl SettingsWindow {
@@ -41,8 +44,8 @@ impl SettingsWindow {
     pub fn invalidate(&self) { if let Some(h) = self.win { unsafe { let _ = InvalidateRect(Some(HWND(h as *mut _)), None, false); } } }
 }
 
-fn page_key(p: Page) -> String { match p { Page::Home => "home".into(), Page::Combos => "combos".into(), Page::General => "general".into(), Page::Gadget(m) => m.key().into() } }
-fn page_from(k: &str) -> Option<Page> { match k { "home" => Some(Page::Home), "combos" => Some(Page::Combos), "general" => Some(Page::General), k => ModuleId::from_key(k).map(Page::Gadget) } }
+fn page_key(p: Page) -> String { match p { Page::Home => "home".into(), Page::Combos => "combos".into(), Page::General => "general".into(), Page::Mcp => "mcp".into(), Page::Gadget(m) => m.key().into() } }
+fn page_from(k: &str) -> Option<Page> { match k { "home" => Some(Page::Home), "combos" => Some(Page::Combos), "general" => Some(Page::General), "mcp" => Some(Page::Mcp), k => ModuleId::from_key(k).map(Page::Gadget) } }
 
 /// Stops recording a shortcut. Recording an app's shortcut releases every app shortcut so the keys reach this
 /// window; whatever ends the recording (another page or tab, closing the window) has to give them back.
@@ -56,6 +59,8 @@ fn end_capture() {
 pub fn go(p: Page) {
     let a = app();
     let s = &mut a.settings_window;
+    // The key made on Settings ▸ MCP is shown once: leaving the page forgets it.
+    if s.page == Some(Page::Mcp) && p != Page::Mcp { crate::mcp::forget_issued(); }
     s.page = Some(p);
     end_capture();
     let s = &mut a.settings_window;
@@ -81,6 +86,7 @@ pub fn open(m: Option<ModuleId>) {
     let hw = win.hwnd;
     win.on_close = Some(Box::new(move || {
         let a = app();
+        crate::mcp::forget_issued();
         let mut r = RECT::default();
         unsafe { let _ = windows::Win32::UI::WindowsAndMessaging::GetClientRect(hw, &mut r); }
         let s = crate::window::dpi_scale(hw);
@@ -175,6 +181,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
             Page::Home => home(ui, x, y + 28.0, w),
             Page::Combos => combos_page(ui, x, y + 28.0, w),
             Page::General => general(ui, ctx, x, y + 28.0, w),
+            Page::Mcp => mcp_page(ui, x, y + 28.0, w),
             Page::Gadget(m) => gadget_page(ui, m, x, y + 28.0, w),
         }
     });
@@ -182,7 +189,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
 }
 
 fn sidebar_pages() -> Vec<Page> {
-    let mut v = vec![Page::Home, Page::Combos, Page::General];
+    let mut v = vec![Page::Home, Page::Combos, Page::General, Page::Mcp];
     v.extend(ModuleId::ALL.into_iter().map(Page::Gadget));
     v
 }
@@ -207,7 +214,7 @@ fn sidebar(ui: &mut Ui, page: Page) {
         match p {
             Page::Gadget(m) => tile(ui.c, m, r.x + 8.0, r.y + 6.0, 22.0),
             _ => {
-                let code = match p { Page::Home => 0xF0E2, Page::Combos => 0xE7BF, _ => 0xE713 };
+                let code = match p { Page::Home => 0xF0E2, Page::Combos => 0xE7BF, Page::Mcp => 0xE968, _ => 0xE713 };
                 let t = Rect::new(r.x + 8.0, r.y + 6.0, 22.0, 22.0);
                 ui.c.gradient_round(t, 5.0, rgb(0x3A2C1F), BOARD);
                 ui.c.glyph(code, 12, t, NACHO);
@@ -220,7 +227,8 @@ fn sidebar(ui: &mut Ui, page: Page) {
     entry(ui, Page::Home, "All Gadgets", y, None);
     entry(ui, Page::Combos, "Combos", y + 36.0, None);
     entry(ui, Page::General, "General", y + 72.0, None);
-    y += 124.0;
+    entry(ui, Page::Mcp, "MCP", y + 108.0, crate::mcp::is_open().then_some(th.guac));
+    y += 160.0;
     ui.eyebrow("Gadgets", 24.0, y, 180.0, th.ink2);
     y += 24.0;
     for m in ModuleId::ALL {
@@ -1244,6 +1252,158 @@ fn updates_card(ui: &mut Ui, x: f64, y: f64, w: f64) -> f64 {
         }
         y
     })
+}
+
+// ---------- MCP ----------
+
+/// Settings ▸ MCP: the NachoCombo MCP server for MCP clients on this PC (macOS NACHO-144/195 ▸ Settings ▸ MCP).
+/// Server switch, per-gadget switches, API keys, how to connect, recent calls. Everything is off by default.
+fn mcp_page(ui: &mut Ui, x: f64, y: f64, w: f64) -> f64 {
+    use crate::core::mcp::tools::McpTools;
+    use crate::core::pet::gadget_tools::PetGadgetTools;
+    let th = ui.th;
+    let a = app();
+    let cfg = a.settings.computer_use.clone();
+    ui.c.line_text("MCP", bold(24), Rect::new(x, y, w, 32.0), th.ink, Align::Left);
+    let mut y = y + 40.0;
+    y += ui.label("NachoCombo MCP lets MCP clients on this PC (such as Claude Desktop or an AI code editor) use the gadget tools you turn on here. Nacho in the chat does not need it.", sans(13), x, y, w, th.ink2) + 18.0;
+
+    // Server
+    y = card(ui, "mcpserver", x, y, w, |ui, y| {
+        ui.c.line_text("NachoCombo MCP Server", sans(14), Rect::new(x + 18.0, y, w * 0.6, 46.0), th.ink, Align::Left);
+        if ui.switch("mcpserveron", x + w - 62.0, y + 12.0, cfg.server_enabled) { let on = !cfg.server_enabled; later(move || crate::mcp::set_server(on)); }
+        let mut y = y + 46.0;
+        let (line, color) = match (cfg.server_enabled, crate::mcp::is_open(), crate::mcp::problem()) {
+            (_, _, Some(p)) => (p, th.salsa),
+            (true, true, None) => (format!("Running at {}", crate::mcp::url()), th.guac),
+            (true, false, None) => ("Starting…".to_string(), th.ink2),
+            (false, _, None) => ("Off. The port is closed.".to_string(), th.ink2),
+        };
+        y += ui.label(&line, sans(13), x + 18.0, y, w - 36.0, color) + 8.0;
+        y += ui.label("Only programs on this PC can connect (127.0.0.1). Other computers cannot reach it: there is no LAN mode on Windows.", sans(12), x + 18.0, y, w - 36.0, th.ink2) + 12.0;
+        y
+    }) + 24.0;
+
+    // Gadget tools
+    let tools = McpTools::all();
+    ui.eyebrow("Gadget Tools", x, y, w, th.ink2);
+    y += 22.0;
+    y += ui.label("Only the tools of the gadgets switched on here are listed to MCP clients, and only while the gadget itself is on.", sans(12), x, y, w, th.ink2) + 10.0;
+    y = card(ui, "mcpgadgets", x, y, w, |ui, y| {
+        let mut y = y;
+        for (i, g) in McpTools::gadgets(&tools).into_iter().enumerate() {
+            if i > 0 { divider(ui, x, y, w); }
+            let mine: Vec<_> = tools.iter().filter(|t| t.gadget == g).collect();
+            let name = if g == "combo" { "Nacho Combo" } else { PetGadgetTools::display_name(g) };
+            ui.c.line_text(name, sans(14), Rect::new(x + 18.0, y, w * 0.5, 30.0), th.ink, Align::Left);
+            let module = ModuleId::ALL.into_iter().find(|m| PetGadgetTools::gadget_of_module(*m) == Some(g));
+            // Tools that need the gadget itself are hidden while it is off (the first contract keeps working).
+            let hidden = if module.is_some_and(|m| a.state(m) != State::Running) { mine.iter().filter(|t| t.requires.is_some()).count() } else { 0 };
+            let module_off = hidden > 0;
+            let asks = mine.iter().filter(|t| crate::core::mcp::tools::McpTools::needs_approval(t, &Default::default())).count();
+            let mut detail = if mine.len() == 1 { "1 tool".to_string() } else { format!("{} tools", mine.len()) };
+            if asks > 0 { detail.push_str(&format!(" · {asks} ask on Nacho Pet's card")); }
+            if module_off { detail.push_str(&format!(" · {hidden} hidden while the gadget is off")); }
+            ui.c.line_text(&detail, sans(12), Rect::new(x + 18.0, y + 24.0, w - 120.0, 18.0), if module_off { th.salsa } else { th.ink2 }, Align::Left);
+            let on = cfg.is_gadget_enabled(g);
+            if ui.switch(&format!("mcpg-{g}"), x + w - 62.0, y + 14.0, on) { let g = g.to_string(); later(move || crate::mcp::set_gadget(&g, !on)); }
+            y += 52.0;
+        }
+        y
+    }) + 24.0;
+
+    // Keys
+    ui.eyebrow("API Keys", x, y, w, th.ink2);
+    y += 22.0;
+    y += ui.label("A client sends its key as \"Authorization: Bearer <key>\". A key is shown once when it is made; only its fingerprint (SHA-256) is kept. Up to 8 keys.", sans(12), x, y, w, th.ink2) + 10.0;
+    y = card(ui, "mcpkeys", x, y, w, |ui, y| {
+        let mut y = y;
+        let records = crate::mcp::keys().records();
+        if records.is_empty() {
+            ui.c.line_text("No keys yet.", sans(13), Rect::new(x + 18.0, y, w - 36.0, 40.0), th.ink2, Align::Left);
+            y += 40.0;
+        }
+        for k in &records {
+            ui.c.line_text(&k.label, sans(14), Rect::new(x + 18.0, y, w * 0.5, 28.0), th.ink, Align::Left);
+            let made = k.created_at.get(..10).unwrap_or("");
+            let used = match &k.last_used_at { Some(t) => format!("Last used {}", t.get(..10).unwrap_or("")), None => "Never used".to_string() };
+            ui.c.line_text(&format!("Made {made} · {used}"), sans(12), Rect::new(x + 18.0, y + 24.0, w * 0.6, 18.0), th.ink2, Align::Left);
+            let bw = ui.button_width("Delete", true);
+            if ui.button(&format!("mcpdel-{}", k.id), "Delete", x + w - 18.0 - bw, y + 12.0, Btn::Secondary, true) { let id = k.id.clone(); later(move || crate::mcp::revoke_key(&id)); }
+            y += 50.0;
+            divider(ui, x, y, w);
+        }
+        if let Some(k) = crate::mcp::issued() {
+            y += 10.0;
+            let r = Rect::new(x + 18.0, y, w - 36.0, 92.0);
+            ui.c.round(r, 8.0, NACHO.alpha(0.18));
+            ui.c.line_text(&format!("New key \"{}\": copy it now. It is not shown again.", k.record.label), semi(13), Rect::new(r.x + 12.0, r.y + 6.0, r.w - 24.0, 22.0), th.ink, Align::Left);
+            ui.c.line_text(&k.token, mono(12), Rect::new(r.x + 12.0, r.y + 32.0, r.w - 24.0, 22.0), th.ink, Align::Left);
+            if ui.button("mcpcopy", "Copy Key", r.x + 12.0, r.y + 60.0, Btn::Primary, true) { later(crate::mcp::copy_issued); }
+            let cw = ui.button_width("Copy Key", true);
+            if ui.button("mcpdone", "Done", r.x + 22.0 + cw, r.y + 60.0, Btn::Secondary, true) { crate::mcp::forget_issued(); ui.st.again = true; }
+            let note = "The clipboard is cleared after 60 seconds.";
+            ui.c.line_text(note, sans(11), Rect::new(r.x + 34.0 + cw + ui.button_width("Done", true), r.y + 60.0, r.w * 0.5, 24.0), th.ink2, Align::Left);
+            y += 102.0;
+            divider(ui, x, y, w);
+        }
+        y += 10.0;
+        ui.c.line_text("Name", sans(13), Rect::new(x + 18.0, y, 60.0, 30.0), th.ink, Align::Left);
+        let mut draft = a.settings_window.mcp_key_draft.clone();
+        ui.text_field("mcpkeyname", Rect::new(x + 80.0, y, 240.0, 30.0), &mut draft, 40);
+        a.settings_window.mcp_key_draft = draft.clone();
+        let clean = draft.trim().to_string();
+        let full = records.len() >= crate::core::mcp::keys::KeyStore::MAX_KEYS;
+        if ui.button_rect("mcpcreate", "Create Key", Rect::new(x + 330.0, y, 120.0, 30.0), Btn::Secondary, true, !clean.is_empty() && !full) {
+            later(move || {
+                let s = &mut app().settings_window;
+                match crate::mcp::create_key(&clean) { Ok(()) => { s.mcp_key_draft.clear(); s.mcp_key_problem = None; } Err(e) => s.mcp_key_problem = Some(e) }
+                app().settings_window.invalidate();
+            });
+        }
+        y += 38.0;
+        if let Some(p) = a.settings_window.mcp_key_problem.clone() { y += ui.label(&p, sans(12), x + 18.0, y, w - 36.0, th.salsa) + 6.0; }
+        y + 6.0
+    }) + 24.0;
+
+    // Connect
+    ui.eyebrow("Connect a Client", x, y, w, th.ink2);
+    y += 22.0;
+    y = card(ui, "mcpconnect", x, y, w, |ui, y| {
+        let mut y = y + 8.0;
+        y += ui.label("Add a Streamable HTTP server with this address and your key. In a client's JSON settings it looks like this:", sans(13), x + 18.0, y, w - 36.0, th.ink) + 8.0;
+        let example = crate::mcp::client_example();
+        let lines: Vec<&str> = example.lines().collect();
+        let box_h = lines.len() as f64 * 18.0 + 16.0;
+        ui.c.round(Rect::new(x + 18.0, y, w - 36.0, box_h), 8.0, th.ink.alpha(0.05));
+        for (i, l) in lines.iter().enumerate() { ui.c.line_text(l, mono(11), Rect::new(x + 30.0, y + 8.0 + i as f64 * 18.0, w - 60.0, 18.0), th.ink, Align::Left); }
+        y += box_h + 10.0;
+        if ui.button("mcpcopyurl", "Copy Address", x + 18.0, y, Btn::Secondary, true) { later(|| crate::capture::copy_text(&crate::mcp::url())); }
+        let bw = ui.button_width("Copy Address", true);
+        if ui.button("mcpcopyjson", "Copy Example", x + 28.0 + bw, y, Btn::Secondary, true) { later(|| crate::capture::copy_text(&crate::mcp::client_example())); }
+        y += 34.0;
+        y += ui.label("Tools that close an app or send this PC's content (clipboard text) wait until you allow the call on Nacho Pet's card, every time; a gadget set to \"always allow\" skips the card for content, never for closing apps. Nacho Pet has to be on for those tools.", sans(12), x + 18.0, y, w - 36.0, th.ink2) + 12.0;
+        y
+    }) + 24.0;
+
+    // Recent calls (names and outcomes only)
+    let log = crate::mcp::call_log();
+    if !log.is_empty() {
+        ui.eyebrow("Recent Calls", x, y, w, th.ink2);
+        y += 22.0;
+        y = card(ui, "mcplog", x, y, w, |ui, y| {
+            let mut y = y + 4.0;
+            for e in log.iter().rev().take(8) {
+                let (h, m) = { let p = crate::core::pet::clock::local_parts(e.time, crate::core::pet::clock::local_offset()); (p.3, p.4) };
+                let outcome = match e.outcome { crate::core::mcp::service::CallOutcome::Ok => "ok", crate::core::mcp::service::CallOutcome::Error => "error", crate::core::mcp::service::CallOutcome::Denied => "denied" };
+                ui.c.line_text(&format!("{h:02}:{m:02}  {}  ·  {}  ·  {}", e.tool, e.key_label, outcome), mono(11), Rect::new(x + 18.0, y, w - 36.0, 22.0), th.ink, Align::Left);
+                y += 24.0;
+            }
+            y + 4.0
+        }) + 24.0;
+        y += ui.label("The log keeps tool names, keys and outcomes, never arguments or results, and only until the server is switched off.", sans(12), x, y, w, th.ink2) + 10.0;
+    }
+    y + 40.0
 }
 
 /// The settings window, to own a dialog.
