@@ -7,8 +7,9 @@
 //!   nacho-pet-cli chat      --server … --store DIR "안녕 나초"
 //!   nacho-pet-cli ask-image --server … --store DIR capture.png "이거 뭐야?"     (Capture Float → pet)
 //!   nacho-pet-cli send-file --server … --store DIR notes.md "요약해 줘"        (File Shelf → pet)
-//!   nacho-pet-cli command   --server … --store DIR [--trust FILE] [--deny] "창 왼쪽으로 붙여 줘"
-//!                                (connector, the Windows declaration; an approval card is approved, or denied)
+//!   nacho-pet-cli command   --server … --store DIR [--trust FILE] [--deny] [--desktop DIR] "창 왼쪽으로 붙여 줘"
+//!                                (connector, the Windows declaration; an approval card is approved, or denied;
+//!                                 desktop tidy runs the real engine on DIR, window tools the real planner on a fake desktop)
 //!   nacho-pet-cli trust     --trust FILE clipboard on|off   ("always allow" for a gadget, stored in FILE)
 //!   nacho-pet-cli stop|queued|usage|history|recover|search|task|plan-start|plan-cancel|plan-change|remember|dictate|logout
 //! Secrets go to 0600 files in DIR (0700 on Unix); they are never printed.
@@ -17,7 +18,12 @@ use nachocombo::core::pet::chat_client::{thread_schedule, MakeTransport, WebSock
 use nachocombo::core::pet::chat_state::{ConnectionPhase, TurnStatus};
 use nachocombo::core::pet::frames::ActivityKind;
 use nachocombo::core::pet::commands::{PetCommand, PetCommandOutcome, PetCommands, PetGadget};
-use nachocombo::core::pet::gadget_tools::{PetAwakeState, PetClipKind, PetClipRow, PetDataTools};
+use nachocombo::core::layout::Rect;
+use nachocombo::core::pet::data_tools::{self, PetDiskEntry, PetDiskState, PetMonitorStats};
+use nachocombo::core::pet::desktop_runner::PetWindowInfo;
+use nachocombo::core::pet::desktop_tidy::{DesktopTidyEngine, PetDesktopTools};
+use nachocombo::core::pet::gadget_tools::{PetAwakeState, PetClipKind, PetClipRow, PetDataTools, PetGadgetTools};
+use nachocombo::core::pet::window_tools::{PetDisplayInfo, PetWindowToolRequest, PetWindowTools, PetWindowUndoStack};
 use nachocombo::core::pet::trust::GadgetTrust;
 use nachocombo::core::pet::connector_client::{ConnectorBinding, ConnectorPhase, PetCommandExecuting};
 use nachocombo::core::pet::crypto;
@@ -168,6 +174,45 @@ impl PetAuthBrowser for HTTPBrowser {
 #[derive(Default)]
 struct SimulatedPC {
     on: Mutex<BTreeSet<String>>,
+    /// `--desktop DIR`: desktop tidy runs the real engine there (journal next to it).
+    desktop: Option<PetDesktopTools>,
+    /// Window frames of the fake desktop, moved by the window tools (real planner), and their undo stack.
+    frames: Mutex<BTreeMap<isize, Rect>>,
+    undo: Mutex<PetWindowUndoStack>,
+}
+
+/// One 1920x1080 display (work area above a 40-pixel taskbar) and four app windows.
+fn fake_displays() -> Vec<PetDisplayInfo> {
+    vec![PetDisplayInfo { frame: Rect::new(0.0, 0.0, 1920.0, 1080.0), work: Rect::new(0.0, 0.0, 1920.0, 1040.0), name: "DISPLAY1".into() }]
+}
+
+impl SimulatedPC {
+    fn windows(&self) -> Vec<PetWindowInfo> {
+        let mut f = self.frames.lock().unwrap();
+        let apps = [(1, "C:\\Windows\\notepad.exe", "메모장"), (2, "C:\\Program Files\\Google\\Chrome\\chrome.exe", "Chrome"),
+                    (3, "C:\\Program Files\\Google\\Chrome\\chrome.exe", "Chrome"), (4, "C:\\Windows\\explorer.exe", "File Explorer")];
+        apps.iter().map(|(id, path, app)| {
+            let frame = *f.entry(*id).or_insert(Rect::new(100.0 * *id as f64, 80.0 * *id as f64, 800.0, 600.0));
+            PetWindowInfo { id: *id, path: path.to_string(), app: app.to_string(), frame, minimized: false }
+        }).collect()
+    }
+
+    fn window_tool(&self, req: PetWindowToolRequest) -> PetCommandOutcome {
+        let ds = fake_displays();
+        if let PetWindowToolRequest::Undo { steps } = req {
+            let snaps = self.undo.lock().unwrap().pop(steps);
+            let plan = PetWindowTools::undo_plan(&snaps, &self.windows(), &ds);
+            let restored: Vec<(String, Option<Rect>)> = plan.moves.iter().map(|m| { self.frames.lock().unwrap().insert(m.id, m.requested); (m.label.clone(), Some(m.requested)) }).collect();
+            stamp(&format!("pc: window undo restored {} window(s)", restored.len()));
+            return PetWindowTools::undo_outcome(&restored, &plan.missing, snaps.len(), &ds);
+        }
+        if req == PetWindowToolRequest::Displays { return PetWindowTools::displays(&ds); }
+        let plan = match PetWindowTools::plan(&req, &self.windows(), &ds, 0.0) { Ok(p) => p, Err(o) => return o };
+        let applied: Vec<Option<Rect>> = plan.moves.iter().map(|m| { self.frames.lock().unwrap().insert(m.id, m.requested); Some(m.requested) }).collect();
+        self.undo.lock().unwrap().push(PetWindowTools::undo_snapshot(&plan, &applied));
+        stamp(&format!("pc: window tool placed {} window(s)", applied.len()));
+        PetWindowTools::outcome(&plan, &applied)
+    }
 }
 
 impl PetCommandExecuting for SimulatedPC {
@@ -219,6 +264,32 @@ impl PetCommandExecuting for SimulatedPC {
                 stamp(&format!("pc: quit {app}"));
                 done(PetCommandOutcome::new(true, format!("Asked {app} to close.")))
             }
+            PetCommand::Window(req) => done(self.window_tool(req)),
+            PetCommand::MonitorStats => {
+                stamp("pc: monitor stats");
+                done(data_tools::monitor_outcome(Some(&PetMonitorStats { cpu_percent: Some(37.5), memory_percent: Some(62.0), battery_percent: Some(81.0), ..Default::default() })))
+            }
+            PetCommand::DiskTopItems { count, kind } => {
+                let entries = vec![PetDiskEntry { name: "Users".into(), path: "C:\\Users".into(), folder: true, bytes: 80 << 30, depth: 1, modified: None },
+                                   PetDiskEntry { name: "game.iso".into(), path: "C:\\Users\\me\\Downloads\\game.iso".into(), folder: false, bytes: 40 << 30, depth: 4, modified: None }];
+                stamp(&format!("pc: disk top {count}"));
+                let now = nachocombo::core::pet::clock::now();
+                done(data_tools::disk_top_outcome(&PetDiskState::Ready { drive: "C:\\".into(), bytes: 200 << 30, scanned_at: now - 120.0, entries }, count, kind, now))
+            }
+            PetCommand::GadgetGuide(g) => {
+                let o = PetGadgetTools::guide_outcome(&g, false);
+                let n = o.details.as_ref().and_then(|d| d["guide"].as_str()).map_or(0, |t| t.chars().count());
+                stamp(&format!("pc: guide {g} ({n} characters)"));
+                done(o)
+            }
+            PetCommand::Desktop(name, args) => {
+                let Some(d) = self.desktop.as_ref() else { return done(PetCommandOutcome::new(false, "no --desktop folder")) };
+                let action = name.trim_start_matches("combo_desktop_");
+                let o = d.run_tidy(action, &args);
+                let n = |k: &str| o.details.as_ref().and_then(|x| x.get(k)).and_then(|v| v.as_u64()).unwrap_or(0);
+                stamp(&format!("pc: desktop {action} ok={} total={} moved={} restored={}", o.ok, n("total"), n("moved"), n("restored")));
+                done(o)
+            }
             other => {
                 // The desktop actions (apps, several windows, system, workspaces) only print what Nacho asked for.
                 stamp(&format!("pc: {other:?}"));
@@ -269,7 +340,7 @@ fn main() {
     if args.is_empty() { fail("usage: nacho-pet-cli login|restart|chat|ask-image|send-file|command|stop|queued|logout|history|recover|task|plan-start|plan-cancel|plan-change|remember|search|dictate|usage --server URL --store DIR …"); }
     let command: &'static str = Box::leak(args.remove(0).into_boxed_str());
     let (mut server, mut store_dir, mut rest) = (String::new(), String::new(), Vec::<String>::new());
-    let (mut trust_file, mut deny) = (String::new(), false);
+    let (mut trust_file, mut deny, mut desktop_dir) = (String::new(), false, String::new());
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -277,6 +348,7 @@ fn main() {
             "--store" if i + 1 < args.len() => { store_dir = args[i + 1].clone(); i += 2; }
             "--trust" if i + 1 < args.len() => { trust_file = args[i + 1].clone(); i += 2; }
             "--deny" => { deny = true; i += 1; }
+            "--desktop" if i + 1 < args.len() => { desktop_dir = args[i + 1].clone(); i += 2; }
             _ => { rest.push(args[i].clone()); i += 1; }
         }
     }
@@ -304,7 +376,12 @@ fn main() {
     if command != "command" { settings.allow_combo_control = false; }
     let files = FileSecretStore::new(PathBuf::from(&store_dir)).unwrap_or_else(|e| fail(&format!("store: {e}")));
     let secrets: Arc<dyn PetSecretStore> = Arc::new(PetSecretBundle::new(Arc::new(files)));
-    let pc: Arc<dyn PetCommandExecuting> = Arc::new(SimulatedPC::default());
+    let desktop = (!desktop_dir.is_empty()).then(|| {
+        let dir = PathBuf::from(&desktop_dir);
+        let journal = dir.parent().unwrap_or(&dir).join("desktop-tidy.json");
+        PetDesktopTools::new(DesktopTidyEngine::new(dir, journal, Box::new(nachocombo::core::pet::clock::now)))
+    });
+    let pc: Arc<dyn PetCommandExecuting> = Arc::new(SimulatedPC { desktop, ..Default::default() });
     let make_transport: MakeTransport = Arc::new(|| Box::new(SocketTransport::new()) as Box<dyn WebSocketTransport>);
     let http: Arc<dyn PetHTTPClient> = Arc::new(LoopbackHTTP);
     let session = Arc::new(PetSession::new(settings, PetSessionDeps {

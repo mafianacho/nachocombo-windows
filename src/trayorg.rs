@@ -183,6 +183,29 @@ pub fn set_keep(path: &str, keep: bool) {
 
 pub fn refresh_list() { if let Some(e) = read_entries() { app().organizer.entries = e; } }
 
+// ---------- for the pet's tray tools (`combo_menubar_*`) ----------
+
+/// The icons as the tools show them: the program's name and whether it stays shown while folded (no tooltips).
+pub fn tool_items() -> Vec<crate::core::pet::settings_tools::PetTrayItem> {
+    refresh_list();
+    let a = app();
+    a.organizer.entries.iter().map(|e| crate::core::pet::settings_tools::PetTrayItem {
+        app: e.name.clone(),
+        kept: a.settings.tray_keep.iter().any(|k| k.eq_ignore_ascii_case(&e.path)) || own_path(&e.path),
+    }).collect()
+}
+
+pub fn tool_state() -> crate::core::pet::settings_tools::PetTrayState {
+    let items = tool_items();
+    let a = app();
+    crate::core::pet::settings_tools::PetTrayState {
+        collapsed: a.settings.tray_collapsed,
+        auto_collapse_seconds: a.settings.options.auto_collapse_seconds,
+        icons: items.len(),
+        kept: items.iter().filter(|i| i.kept).count(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,3 +215,4 @@ mod tests {
         assert_eq!(friendly("noext"), "noext");
     }
 }
+

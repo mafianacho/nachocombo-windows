@@ -529,6 +529,19 @@ const GADGETS = [
 ];
 function planTool(text) {
   if (/가젯 ?목록|list gadgets/i.test(text)) return { name: 'combo_list_gadgets', params: {} };
+  // Gadget tools of the Windows W5a declaration (window grid, data gadgets, desktop tidy, guides, settings).
+  const grid = /창 ?(\d+) ?[x×] ?(\d+)/.exec(text);
+  if (grid) return { name: 'combo_window_tile', params: { rows: Number(grid[1]), cols: Number(grid[2]), all_windows: true },
+                    then: /되돌려/.test(text) ? () => ({ name: 'combo_window_undo', params: {} }) : undefined };
+  if (/창 ?배치 ?되돌려|undo window/i.test(text)) return { name: 'combo_window_undo', params: {} };
+  if (/시스템 ?모니터|PC ?상태/.test(text)) return { name: 'combo_monitor_stats', params: {} };
+  if (/디스크.*(큰|차지)/.test(text)) return { name: 'combo_disk_top_items', params: { count: 5 } };
+  if (/(\S+) ?가젯 ?안내/.test(text)) return { name: 'combo_gadget_guide', params: { gadget: /(\S+) ?가젯 ?안내/.exec(text)[1] } };
+  if (/바탕 ?화면 ?정리 ?계획/.test(text)) return { name: 'combo_desktop_tidy_plan', params: {} };
+  if (/바탕 ?화면 ?정리 ?(되돌려|취소)/.test(text)) return { name: 'combo_desktop_tidy_undo', params: {} };
+  // Like the model: make the plan, then apply it with the plan_id it answered.
+  if (/바탕 ?화면 ?정리해/.test(text)) return { name: 'combo_desktop_tidy_plan', params: {}, then: (r) => r.plan_id ? { name: 'combo_desktop_tidy_apply', params: { plan_id: r.plan_id } } : null };
+  if (/마우스 ?휠 ?반대/.test(text)) return { name: 'combo_mouse_set', params: { reverse_scroll: true } };
   const item = /클립보드 ?(\d+) ?번/.exec(text);
   if (item && /읽|봐|read/i.test(text)) return { name: 'combo_clipboard_get_item', params: { index: Number(item[1]) } };
   if (item && /다시 ?복사|copy again/i.test(text)) return { name: 'combo_clipboard_copy_again', params: { index: Number(item[1]) } };
@@ -615,18 +628,23 @@ function handleChat(socket) {
       return;
     }
     let reply;
-    const tool = planTool(text);
+    let tool = planTool(text);
     if (tool) {
       active = { clientId, turnId, partial: '', timer: null }; // busy while the tool runs
-      activity('tool', clientId, tool.name);
-      const callId = 'call_' + rand(6);
-      out({ type: 'tool_call_started', room_id: ROOM, call_id: callId, name: tool.name, arguments: tool.params, client_id: clientId });
-      const r = await callConnector(tool.name, tool.params);
-      const shown = r.result && typeof r.result.text === 'string' ? { ...r, result: { ...r.result, text: '(redacted)' } } : r; // tests grep the logs for content
-      out({ type: 'tool_call_finished', room_id: ROOM, call_id: callId, name: tool.name, preview: JSON.stringify(shown).slice(0, 200), meta: { source: 'connector', is_error: !!r.error }, client_id: clientId });
-      log('tool', { name: tool.name, params: tool.params, result: r.result && typeof r.result.text === 'string' ? { ...r.result, text: '(redacted)' } : r });
+      const replies = [];
+      while (tool) {
+        activity('tool', clientId, tool.name);
+        const callId = 'call_' + rand(6);
+        out({ type: 'tool_call_started', room_id: ROOM, call_id: callId, name: tool.name, arguments: tool.params, client_id: clientId });
+        const r = await callConnector(tool.name, tool.params);
+        const shown = r.result && typeof r.result.text === 'string' ? { ...r, result: { ...r.result, text: '(redacted)' } } : r; // tests grep the logs for content
+        out({ type: 'tool_call_finished', room_id: ROOM, call_id: callId, name: tool.name, preview: JSON.stringify(shown).slice(0, 200), meta: { source: 'connector', is_error: !!r.error }, client_id: clientId });
+        log('tool', { name: tool.name, params: tool.params, result: r.result && typeof r.result.text === 'string' ? { ...r.result, text: '(redacted)' } : r });
+        replies.push(r.error ? `(모의) ${tool.name} 을 쓰려 했는데 안 됐어요: ${r.error}` : `(모의) ${tool.name} 결과: ${r.result && r.result.message ? r.result.message : JSON.stringify(r.result)}`);
+        tool = !r.error && r.result && r.result.ok && tool.then ? tool.then(r.result) : null;
+      }
       active = null;
-      reply = r.error ? `(모의) ${tool.name} 을 쓰려 했는데 안 됐어요: ${r.error}` : `(모의) ${tool.name} 결과: ${r.result && r.result.message ? r.result.message : JSON.stringify(r.result)}`;
+      reply = replies.join(' ');
     } else if (items.length) {
       const desc = items.map((a) => a.png ? `${a.name} (사진 ${a.png.width}×${a.png.height}, ${a.bytes}바이트)` : a.text !== null ? `${a.name} (글: "${a.text.slice(0, 20)}")` : `${a.name} (${a.mime}, 내용은 못 열어요)`).join(', ');
       reply = `(모의) 받은 첨부: ${desc}. 질문: "${text}"`;

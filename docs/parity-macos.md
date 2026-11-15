@@ -3,7 +3,7 @@
 NachoCombo for Windows가 [Nacho Combo for macOS](https://github.com/mafianacho/nachocombo)의 어떤 기능을 어떻게 갖추고
 있는지 정리한 표입니다. 이름이 같아도 동작이 다르면 그 차이를 적었습니다.
 
-- **기준:** macOS `main` 342c8e7 (v0.10.2) · Windows 통합 브랜치(`main` f8f77b3 v0.1.0 기반, Calendar Clock·App Switch·
+- **기준:** macOS `main` 342c8e7 (v0.10.2), W5a 가젯 행동은 `main` a2e4d76 · Windows 통합 브랜치(`main` f8f77b3 v0.1.0 기반, Calendar Clock·App Switch·
   Mouse Tune과 Nacho Pet 코어(W1) 포함) · 작성일 2026-11-15
 - **상태:** **있음** = 맥과 같은 일을 함 · **부분** = 일부만, 또는 다른 방식으로 함 · **없음** = 아직 없음(만들 수 있음) ·
   **불가** = Windows에서 공개된 방법으로는 할 수 없음(이유를 적음)
@@ -112,9 +112,12 @@ NachoCombo for Windows가 [Nacho Combo for macOS](https://github.com/mafianacho/
 | `combo_workspace_apply` | 작업 공간 불러오기(없는 앱 열기, 아무것도 안 끔) | 있음 — 선언·실행(W3) | 같음. 저장할 때 없던 디스플레이의 창은 첫 디스플레이 안으로 당김 | W3 |
 | `combo_workspace_list` | 저장된 작업 공간 목록 | 있음 — 선언·실행(W3) | 같음 | W3 |
 
-맥 `main`은 위 16개 뒤에 가젯별 도구(`Sources/NachoComboCore/Gadgets/Tools/*`)도 커넥터로 선언합니다(맥 `b794bfa` 기준 75개).
-W3에서 기존 Windows 가젯으로 바로 되는 것만 같은 이름·같은 입력 스키마로 옮겼습니다(`gadget_tools.rs`). Windows 선언은
-처음 계약 15개(+`combo_clear_shelf` 제외) + 가젯 도구 14개 = 29개이고, 맥 hello 순서를 따릅니다.
+맥 `main`은 위 16개 뒤에 가젯별 도구(`Sources/NachoComboCore/Gadgets/Tools/*`)도 커넥터로 선언합니다(맥 `a2e4d76` 기준 75개).
+W3에서 기존 Windows 가젯으로 바로 되는 14개를, W5a에서 나머지 28개(가젯 안내, 창 도구 8, 앱 전환 설정 2, 트레이 4, 모니터 1,
+디스크 2, 마우스 2, 달력 2, 바탕 화면 정리 6)를 같은 이름·같은 입력 스키마로 옮겼습니다(`gadget_tools.rs`의 레지스트리).
+Windows 선언은 처음 계약 15개(+`combo_clear_shelf` 제외) + 가젯 도구 42개 = **57개**(대화 첨부가 붙으면 선반 보내기·캡처 보내기를
+더해 59개)이고, 맥 hello 순서를 따릅니다. 선언하지 않는 맥 기능은 `PetGadgetTools::LEFT_OUT`에 이유와 함께 있고(삭제형 4개,
+`menubar_show_hidden`), 컴퓨터 사용 도구는 W5d입니다.
 
 **개인정보 규칙(W3).** PC의 내용(클립보드 글, 화면 캡처, 파일 자체)을 서버로 보내는 행동(content_out)은 hello에
 `"approval":"required"`로 선언해 나초서버가 매번 승인 카드를 띄웁니다. 가젯별 "이 가젯은 항상 허용"을 켜면 그 가젯의
@@ -128,7 +131,7 @@ content_out 행동만 승인 없이 선언합니다. 기본 꺼짐, `gadget-trus
 |---|---|---|---|---|
 | 깨어 있기 도구 | `combo_awake_status` / `start {minutes 0–1440}` / `stop` | 있음 — 선언·실행(W3) | 상태의 `reason`은 manual·app·battery_guard·none. 맥의 `keep_display`·`power_only`·`battery_floor_percent`는 Windows 가젯 설정 이름이 달라 아직 보내지 않음 | W3 |
 | 기기 도구 | `combo_device_status` / `set_volume {volume, muted}` / `set_mic_muted {muted}` | 있음 — 선언·실행(W3) | 마이크 음소거는 기기 제어 가젯의 단축키와 같이 이 PC의 모든 마이크에 적용 | W3 |
-| 흐리게 도구 | `combo_dim_status` / `pause` / `resume` | 있음 — 선언·실행(W3) | 상태는 `paused`·`strength_percent`만(맥의 범위 설정은 Windows 옵션 이름이 달라 W5) | W3 |
+| 흐리게 도구 | `combo_dim_status` / `pause` / `resume` | 있음 — 선언·실행(W3), 범위 설정(W5a) | 상태에 `scope`(`frontWindow`/`frontApp`, 맥과 같은 값)·`other_displays`를 더함(W5a). 맥의 `only_in_session`은 Windows에 그 옵션이 없어 보내지 않음. 맥처럼 범위는 읽기만 함 | W3 → W5a |
 | 클립보드 도구 | `combo_clipboard_list`(read, 내용 없음) / `get_item {index, id}`(**content_out**, 4000자까지) / `copy_again`(change) | 있음 — 선언·실행(W3) | id는 내용의 SHA-256 앞 8자리(Windows 클립보드 기록에는 UUID가 없음). 복사 시각이 없어 `copied_at`을 보내지 않음. 그림은 `not_text` | W3 |
 | 선반·캡처 목록 | `combo_shelf_list`, `combo_capture_list_pinned`(read) | 있음 — 선언·실행(W3) | 선반의 글·링크는 이름 대신 `text snippet`·`web link`(맥과 같음). 캡처 크기는 떠 있는 창의 픽셀 크기 | W3 |
 | 나초에게 넘기기 | `combo_shelf_give {index, id}`, `combo_capture_ask {mode}`(**content_out**, 다음 채팅 메시지에 첨부) | 부분 — core(이름·스키마·위험·승인 규칙·시험)만, **선언 안 함** | 다음 메시지 첨부는 펫 대화창(W2)이 있어야 함. W2가 붙으면 `windows_declaration(.., chat_handoff=true)`로 선언(선반·캡처에도 "항상 허용" 스위치가 생김) | W2 → W3 |
@@ -136,13 +139,29 @@ content_out 행동만 승인 없이 선언합니다. 기본 꺼짐, `gadget-trus
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
-| 창 도구 | `window_displays`, `window_place`, `window_tile`, `window_split`, `window_ratio`, `window_move_display`, `window_arrange_apps`, `window_undo` | 없음 — 의미 있음 | — | W5 |
-| 앱 도구 | `appswitch_settings` / `set_settings`(반복 시 숨김) | 없음 — 의미 있음 | — | W5 |
-| 데이터 가젯 도구(나머지) | 모니터 `stats`, 디스크(`top_items`, `scan`) | 없음 — 의미 있음 | 클립보드·선반·캡처는 W3(위 표) | W5 |
-| 상태·설정 도구(나머지) | 마우스(`status`, `set`), 달력(`status`, `set`), 메뉴 막대(`status`, `list_items`, `tidy`, `set_collapsed`, `show_hidden`) | 없음 — 대부분 의미 있음 | 메뉴 막대 도구는 Tray Organizer에 맞게 다시 정의해야 함(항목 위치·늘 숨김 구역이 없음). 마우스 `set`은 Windows 옵션(포인터 속도 등)이 달라 스키마 차이 확인 필요 | W5 |
-| 바탕 화면 정리 | `desktop_tidy_plan`, `tidy_apply`(늘 승인), `tidy_undo`(늘 승인), `tidy_history`, `arrange_suggest`, `arrange_apply`(늘 승인): 바탕 화면 파일을 `정리됨/<분류>/`로 옮기고 되돌림 | 없음 — 의미 있음 | 바탕 화면 경로는 OneDrive 백업이면 달라짐(알려진 폴더 API로 찾아야 함) | W5 |
-| 가젯 안내 | `combo_gadget_guide`(가젯 설명·할 수 있는 일·한계) | 없음 | 안내 문구를 Windows 동작에 맞게 다시 써야 함 | W5 |
+| 창 도구 | `window_displays`, `window_place`, `window_tile`, `window_split`, `window_ratio`, `window_move_display`, `window_arrange_apps`, `window_undo` | 있음 — 선언·실행(W5a) | 맥 `WindowTiling`을 `window_tools.rs`로 이식(왼쪽 위 원점, 디스플레이 번호는 왼쪽부터). 창 배치 가젯이 켜져 있어야 함(맥과 같음). 좌표의 기준은 작업 영역(작업 표시줄 제외). 관리자 권한 앱의 창은 Windows가 막아 `reason: elevated`. `window N`은 `combo_list_windows`와 같은 번호(최소화 창 포함, 최소화 창은 `missing`). 같은 창을 두 번 가리키면 두 번째는 `missing`. `displays`의 x·y는 실제 화면 좌표(맥은 늘 0). undo 기록은 앱을 끄면 사라짐(맥과 같음) | W5a |
+| 앱 도구 | `appswitch_settings` / `set_settings`(반복 시 숨김) | 있음 — 선언·실행(W5a) | 같은 스키마. 단축키 자체는 바꾸지 않음(맥과 같음). 숨김은 Windows에서 최소화 | W5a |
+| 데이터 가젯 도구(나머지) | 모니터 `stats`, 디스크(`top_items`, `scan`) | 있음 — 선언·실행(W5a), **Windows는 승인** | 프로그램 이름·폴더·파일 경로가 PC 밖으로 나가므로 Windows는 세 도구를 `"approval":"required"`로 선언(가젯별 "항상 허용"을 켜면 승인 없이, 기본 꺼짐). 맥은 승인 없음. 모니터: 맥의 메모리 압력 자리에 커밋 비율, 스왑·부하 평균은 Windows에 없어 null·빈 목록, `gpu_percent`·`processor_queue`를 더 보냄. 디스크: Windows 디스크 지도는 드라이브 전체를 읽으므로 `scan`의 `path`는 `~`(사용자 폴더의 드라이브)·`D:`·드라이브 안의 폴더를 받아 그 드라이브를 스캔(맥은 홈 안 폴더). 고정 드라이브만. 삭제 도구 없음 | W5a |
+| 상태·설정 도구(나머지) | 마우스(`status`, `set`), 달력(`status`, `set`), 메뉴 막대(`status`, `list_items`, `tidy`, `set_collapsed`, `show_hidden`) | 있음 — 선언·실행(W5a), `menubar_show_hidden`만 미선언 | 아래 "W5a 스키마 차이" 표. 메뉴 막대 도구는 같은 이름으로 트레이 정리(Windows 11 알림 영역)에 다시 정의: `status`(접힘·자동 접힘 초·아이콘 수·늘 보이게 둔 수), `list_items`(프로그램 이름·`visible`/`hidden`, 위치·툴팁 없음), `tidy`·`set_collapsed`(같음). `show_hidden`은 Windows에 늘 숨김 구역이 없어 선언하지 않음(`set_collapsed false`가 모든 아이콘을 보임). Windows 10에서는 트레이 정리가 켜지지 않아 `gadget_off` | W5a |
+| 바탕 화면 정리 | `desktop_tidy_plan`, `tidy_apply`(늘 승인), `tidy_undo`, `tidy_history`, `arrange_suggest`, `arrange_apply`(늘 승인): 바탕 화면 파일을 `정리됨/<분류>/`로 옮기고 되돌림 | 있음 — 선언·실행(W5a), **`tidy_undo`도 늘 승인** | 맥 `DesktopTidyEngine`을 `desktop_tidy.rs`로 이식. 바탕 화면 위치는 알려진 폴더 API(`FOLDERID_Desktop`, OneDrive 백업 포함). 옮기기만 하고 덮어쓰지 않음(`MoveFileExW`를 바꾸기 플래그 없이, 드라이브 사이 복사 없음). 건너뜀: 폴더·바로 가기(`.lnk` `.url` `.appref-ms`)·`desktop.ini`·`Thumbs.db`·숨김/시스템 파일·받는 중(`.crdownload` `.part` `.partial` `.tmp` `.download`)·2분 안에 바뀐 파일. 스크린샷은 Windows 이름(`스크린샷 …`, `화면 캡처 …`)도, 설치 파일은 `.exe` `.msi` `.msix` `.appx`도 분류. 맥은 되돌리기에 승인이 없지만 Windows는 파일을 다시 옮기므로 매번 승인. apply·undo·arrange_apply는 대화(커넥터)에만(맥과 같음). `arrange_apply`는 창 배치 가젯을 거치므로 그 가젯이 켜져 있어야 함. 기록은 `desktop-tidy.json`(설정 폴더) | W5a |
+| 가젯 안내 | `combo_gadget_guide`(가젯 설명·할 수 있는 일·한계) | 있음 — 선언·실행(W5a) | `gadget_guide.rs`에 15개 가젯 안내를 Windows 동작으로 다시 씀(권한 문구 없음, 트레이·드라이브 단위 디스크 지도 등). 안내의 도구 목록·예시는 이 PC가 선언한 도구만 씀. 맥의 `computer` 안내는 W5d 전이라 없음(gadget 목록에서 뺌) | W5a |
+| 승인 카드의 도구 이름 | (맥은 서버 제목 그대로) | 다름(W5a) | `PetText::tool_name`에 가젯 도구 44개의 이름(4개 언어)을 더해, 승인 카드가 "PC에서 도구 실행" 대신 "PC에서 바탕 화면 정리 되돌리기 실행"처럼 보임 | W5a |
 | 컴퓨터 사용 도구(나초용) | 화면 캡처(content_out), 디스플레이 목록, 마우스·키 입력(input_inject), 클립보드 읽기 등 일부를 커넥터에도 선언 | 없음 | 컴퓨터 사용 MCP가 생긴 뒤. 화면·입력은 호출마다 승인 | W5 |
+
+**W5a 스키마 차이.** 아래 말고는 이름·입력 스키마(종류·범위·필수)·hello 순서가 맥 `main` a2e4d76과 같습니다
+(`fixtures/mac-capabilities.json`, `gadget_tools.rs`의 `mac_contract` 시험). 승인은 Windows가 맥보다 적게 묻는 곳이 없음을
+시험으로 고정했습니다.
+
+| 도구 | 맥 | Windows | 이유 |
+|---|---|---|---|
+| `combo_mouse_set` | `reverse_scroll`, `smooth_scroll`, `speed`(0.5·1·1.5·2·3), `side_buttons`, `middle_button`(click·missionControl) | `reverse_scroll`, `speed`(같은 값), `pointer_speed`(0·4·6·8·10·12·14·16, 0=그대로), `precision`(keep·on·off) | Windows 마우스 조정에는 부드러운 스크롤·옆 버튼·가운데 버튼 옵션이 없고(옆 버튼은 Windows가 이미 뒤로/앞으로), 포인터 속도·"포인터 정확도 향상"이 있음. 맥 전용 필드를 주면 이유와 함께 거절 |
+| `combo_mouse_status` | 위 5개 + `speed_choices` | 위 4개 + `speed_choices`·`pointer_speed_choices`·`precision_choices` | 같은 이유 |
+| `combo_calendar_set`·`status` | `show_next_event` 있음 | 없음 | Windows 달력 시계는 일정을 읽지 않음. 세계 시계는 시계가 아는 시간대 ID만 |
+| `combo_gadget_guide` | `gadget` 목록에 `computer` | 없음 | 컴퓨터 사용은 W5d |
+| `combo_monitor_stats`, `combo_disk_top_items`, `combo_disk_scan` | 승인 없음 | 승인(항상 허용으로 해제 가능) | 프로그램 이름·경로가 나감 |
+| `combo_desktop_tidy_undo` | 승인 없음 | 늘 승인 | 파일을 다시 옮김 |
+| `combo_menubar_show_hidden` | 있음 | 선언 안 함 | 늘 숨김 구역이 없음 |
+
 
 ## 2. 가젯
 
@@ -168,7 +187,7 @@ Windows는 모두 기본 꺼짐입니다. 단축키는 대체로 ⌃⌥ → Ctrl
 | 벤토 위젯 | 메인 창에 모든 도구를 위젯으로 놓는 벽, 메뉴 막대에 고정 위젯 작은 보드. 편집 모드(⌘E): 옮기기·숨기기·크기(작게·넓게·크게)·고정·단축키. 게이지·타이머·목록·달력 등. UI 문구는 한국어 | 부분 | Windows: **Widget Board** 가젯(기본 꺼짐). 메인 창이 아니라 트레이 패널·설정 쪽·`board.show` 단축키(기본 키 없음)로 여는 창 하나. 배치·내용 규칙은 `src/core/bento.rs`(6/4/2열, 작게·넓게·크게, 숨김·복귀, 끌어놓기와 ←→ 키 이동), 편집은 어떤 가젯도 켜거나 끄지 않음. 꺼진 가젯은 한 줄 안내 타일. 맥과 다른 점: 나초 펫 타일 없음(펫 UI는 W2), 컴퓨터 사용 타일 없음, 달력 시계 타일은 다음 일정 대신 요일·날짜·세계 시계 2개(일정 읽기 **불가**), 클립보드 행에 복사 시각 없음(기록에 시각이 없음), 디스크 지도 타일은 시스템 드라이브 막대만(폴더별 몫은 미연결), 메뉴 막대 위젯 대신 Tray Organizer 접힘 상태, 메뉴 막대 고정 작은 보드·위젯 고정·위젯별 단축키 없음. 문구는 4개 언어 | W4d |
 | 앱 안 업데이트 | GitHub Releases `latest`를 시작 시·6시간마다·지금 확인. 초안·프리릴리스·되돌린 버전 건너뜀. `SHA256SUMS.txt`, 번들 ID, 버전, 코드 서명 확인. 자동 설치 기본 켜짐: 앱을 끌 때 교체(쓰는 중에는 재시작 안 함), "재시작하여 업데이트"·되돌리기는 확인 대화상자. 이전 판 하나 보관, 두 번 비정상 시작이면 스스로 되돌림 | 없음 | 지금은 사용자가 zip을 직접 받고 `certutil`로 `SHA256SUMS.txt`와 비교. Windows 판은 GitHub Release 확인 → 내려받기·해시 확인 → 사용자가 확인하면 교체로 계획. 실행 중인 exe는 이름 바꾸기로 교체해야 함. exe가 코드 서명되지 않아 서명 확인은 아직 불가 | W4e |
 | 컴퓨터 사용 MCP | 실험 기능. `127.0.0.1:47653/mcp` Streamable HTTP MCP 서버, Bearer 키(`nccu_`, 해시만 저장, 8개). 도구 묶음: 화면, 앱·창, 입력, 클립보드, 열기, 시스템 정보. 고위험(AppleScript, 셸, 파일 읽기·쓰기, 프로세스 종료)은 따로 켜고 켤 때 확인. 가젯·묶음·LAN 모드 모두 기본 꺼짐, 조합이 켜고 끄지 않음, 나초도 못 켬. LAN 모드는 TLS만(자체 서명, 지문 고정), 사설 주소만. 분당 240회 제한, 키 5번 틀리면 60초 잠금. 비상 정지 ⌃⌥⌘. | 없음 | Windows 판은 기본 꺼짐, `127.0.0.1`만으로 계획. AppleScript 묶음은 **불가**(Windows에 없음, PowerShell은 셸 묶음과 같은 위험으로 따로 판단). 입력은 SendInput(관리자 권한 앱에는 안 됨, 보안 데스크톱 불가) | W5 |
-| 가젯 MCP | 설정 ▸ MCP: 가젯별 MCP 스위치(기본 꺼짐), 가젯 도구를 MCP `tools/list`로 제공(커넥터와 같은 레지스트리) | 없음 | 위 1.4의 가젯별 도구와 같은 목록을 씀 | W5 |
+| 가젯 MCP | 설정 ▸ MCP: 가젯별 MCP 스위치(기본 꺼짐), 가젯 도구를 MCP `tools/list`로 제공(커넥터와 같은 레지스트리) | 없음 | 위 1.4의 가젯별 도구와 같은 목록을 씀. 레지스트리(W5a)는 도구마다 MCP 이름(`window_place`)과 MCP 제공 여부(`on_mcp`, 승인 카드나 대화 첨부가 필요한 도구는 꺼짐)를 가짐 | W5 |
 | 조합(Combos) | No.1 Starter – No.7 Full Combo + 사용자 조합 5개(이름 24자), 바뀌는 것 미리보기, 5분 안 되돌리기. 조합별 "쉬워지는 순간"과 물어볼 권한 | 부분 | 7개 프리셋과 사용자 조합 5개는 같음. 다른 점: No.1·No.3·No.4·No.6은 메뉴 막대 정리 대신 Tray Organizer. **No.5 Meeting**: 맥은 달력 시계·기기 제어·깨어 있기(화면 켜 둠), Windows는 기기 제어·깨어 있기·클립보드 기록(화면 켜 둠 조정 없음). **No.6 Presenter**: 맥 흐리게 0.7·바로 접기·다른 화면도 흐리게, Windows 흐리게 0.6만. No.7은 맥 13개(펫·컴퓨터 사용 제외), Windows 14개(Widget Board 포함). Windows 조정 항목에 "화면 켜 두기" 없음 | — |
 | 가젯 동작·단축키 | 가젯별 전역 단축키 동작 목록과 기본 키, 도구 패널 열기 단축키(동작은 실행 안 함), 가젯이 켜져 있을 때만 등록 | 있음 | 맥만: `menuBar.showAll`, `layout.save`, `layout.restore`, `capture.record`, `dim.session`. Windows만: `window.onTop`, `device.theme`. 충돌 검사는 양쪽 다 있음 | — |
 | 빠른 패널 | 메뉴 막대 팝오버(도구 목록 → 도구 조작) + 벤토 작은 보드 | 있음 | Windows는 트레이 패널(`src/panel.rs`). 벤토 보드는 Widget Board 가젯(패널의 "Open Widget Board" 단추, W4d) | — |
@@ -184,7 +203,7 @@ Windows는 모두 기본 꺼짐입니다. 단축키는 대체로 ⌃⌥ → Ctrl
 |---|---|---|---|---|
 | 코어/셸 분리 | `NachoComboCore`(플랫폼 없는 논리) + `NachoCombo`(AppKit 앱) + 개발 CLI(`NachoPetCLI`, `NachoUpdateCLI`) | 부분 | Windows는 `src/core/*`(라이브러리 타깃, Windows 호출 없음)와 `src/*.rs`(Win32·Direct2D 셸). 펫은 `src/core/pet/`(Swift 파일 하나당 Rust 파일 하나, 같은 타입 이름)와 셸 조각(WinHTTP, 자격 증명 관리자, OS 난수, 시간대). 펫 개발 CLI는 `examples/nacho-pet-cli.rs`(앱과 같은 `PetSession`). 업데이트 CLI는 W4e | W1 |
 | 단위 테스트 | `swift test`(Core 전체) | 있음 | `cargo test --lib`이 코어 테스트를 Linux·macOS에서도 돌림. `i18n`·`trayorg`·`diskmap` 테스트는 셸 쪽이라 Windows에서 `cargo test`로만 | W1 |
-| `scripts/pet-roundtrip.sh` | 목 nacho-server + 대리 로그인과 펫 CLI 사이 실제 왕복: PKCE 로그인, 채팅 스트리밍·멈춤, 캡처·선반 업로드, 거절 파일, 커넥터 명령, 기록·델타, 도구 진행, 작업·카드, 기억, 받아쓰기, 토큰 갱신, 로그아웃 | 있음 — `tools/mock-server` 상대로 29개 시나리오 모두 PASS(다시 로그인 없는 재시작, 계획 작업 시작·취소·견적 변경 포함) | Rust와 Node 18+ 필요. 출력은 `target/pet-roundtrip/` | W1 |
+| `scripts/pet-roundtrip.sh` | 목 nacho-server + 대리 로그인과 펫 CLI 사이 실제 왕복: PKCE 로그인, 채팅 스트리밍·멈춤, 캡처·선반 업로드, 거절 파일, 커넥터 명령, 기록·델타, 도구 진행, 작업·카드, 기억, 받아쓰기, 토큰 갱신, 로그아웃 | 있음 — `tools/mock-server` 상대로 50개 확인 모두 PASS(다시 로그인 없는 재시작, 계획 작업 시작·취소·견적 변경, W3 데스크톱 동작, W5a 가젯 행동: 창 바둑판+되돌리기, 모니터·디스크 승인, 바탕 화면 정리 계획→거절/승인→되돌리기를 실제 폴더에서, 안내, 마우스) | Rust와 Node 18+ 필요. 출력은 `target/pet-roundtrip/` | W1 |
 | 펫 화면 문구의 현지화 | 맥의 펫 문구(`PetTranscript`·`PetCardRules` 등)는 한국어 고정 | 다름 — 4개 언어 | 한국어 문장은 코드에 그대로 두고(맥과 같은 문장·같은 시험), 그리는 곳에서 `i18n::t`가 그 문장을 키로 en·ja·zh를 찾는다(`assets/i18n/en.json` 신설, `ja.json`·`zh.json`에 추가. ko는 원문 그대로). `{}`가 든 문장은 패턴, 담긴 한국어 조각은 따로 번역. 서버로 가는 글(도구 설명·선택 맥락 파일·번역/요약 요청문)은 번역하지 않음(`i18n-exempt` 표시). 새 한국어 문장을 넣고 세 파일에 없으면 `core/pet/i18n_check.rs`가 실패함 | i18n 정리 |
 | 승인 카드의 행동 이름 | 서버가 보낸 카드 제목을 그대로 보임 | 다름 | 서버가 제목·세부·허용 규칙 문장에 `combo_quit_app` 같은 내부 이름을 쓰면 `PetText::humanize_action_names`가 도구 이름(예: "앱 종료")으로 바꿔 보임. 내부 이름은 보이지 않음(도구 칩의 툴팁에만 남음). 맥 코드는 서버 문장을 그대로 보인다(맥에는 이 변환이 없음) | i18n 정리 |
 | `scripts/check-server-contract.sh` | 펫이 쓰는 REST 경로가 nacho-server 명세에 아직 있는지 읽기 전용으로 확인 | 있음 — 19/19 경로가 nacho-server 명세에 있음(`server_api.rs`의 `PET_SERVER_ROUTES`) | 서버 레포 위치는 실행할 때 인자로 줌 | W1 |
