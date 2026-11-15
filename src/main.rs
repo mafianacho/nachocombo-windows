@@ -7,7 +7,6 @@ mod board;
 mod capture;
 mod clock;
 mod clipboard;
-mod core;
 mod ctl;
 mod devices;
 mod dim;
@@ -22,6 +21,7 @@ mod mouse;
 mod pages;
 mod panel;
 mod peek;
+mod pet_win;
 mod shelf;
 mod snap;
 mod tray;
@@ -29,6 +29,8 @@ mod trayorg;
 mod ui;
 mod update;
 mod window;
+
+use nachocombo::core;
 
 use windows::core::*;
 use windows::Win32::Foundation::*;
