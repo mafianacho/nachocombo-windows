@@ -218,6 +218,9 @@ fn show_menu() {
         }
         let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(crate::i18n::t("Combo").as_ref()));
         let _ = AppendMenuW(menu, MF_STRING, 1, &HSTRING::from(crate::i18n::t("Settings…").as_ref()));
+        if let crate::update::Status::Available { version, .. } = &a.updater.status {
+            let _ = AppendMenuW(menu, MF_STRING, 3, &HSTRING::from(crate::i18n::t(&format!("Update to {version}…")).as_ref()));
+        }
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
         let _ = AppendMenuW(menu, MF_STRING, 2, &HSTRING::from(crate::i18n::t("Quit Nacho Combo").as_ref()));
         let mut p = POINT::default();
@@ -230,6 +233,7 @@ fn show_menu() {
         match cmd {
             1 => pages::open(None),
             2 => app::quit(),
+            3 => crate::update::confirm_and_install(),
             n if n >= 100 => { if let Some(c) = all.get(n - 100) { app().order(c); } }
             _ => {}
         }
