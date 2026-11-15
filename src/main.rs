@@ -3,6 +3,7 @@
 mod app;
 mod appswitch;
 mod awake;
+mod board;
 mod capture;
 mod clock;
 mod clipboard;

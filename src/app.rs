@@ -4,7 +4,7 @@ use crate::core::combos::{self, Combo, Snapshot};
 use crate::core::layout::SnapAction;
 use crate::core::settings::*;
 use crate::core::shortcut::*;
-use crate::{appswitch, awake, capture, clipboard, clock, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg, update};
+use crate::{appswitch, awake, board, capture, clipboard, clock, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg, update};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use windows::core::*;
@@ -42,6 +42,7 @@ pub const TIMER_APPSWITCH: usize = 12;
 pub const TIMER_CLOCK: usize = 13;
 pub const TIMER_UPDATE_HEALTHY: usize = 14;
 pub const TIMER_UPDATE_CHECK: usize = 15;
+pub const TIMER_BOARD: usize = 16;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State { Off, Running, Failed(String) }
@@ -68,6 +69,7 @@ pub struct App {
     pub devices: devices::Devices,
     pub appswitch: appswitch::AppSwitch,
     pub clock: clock::Clock,
+    pub board: board::Board,
     pub settings_window: pages::SettingsWindow,
     pub panel: panel::Panel,
     pub updater: update::Updater,
@@ -154,6 +156,7 @@ impl App {
             ModuleId::AppSwitch => appswitch::start(),
             ModuleId::CalendarClock => clock::start(),
             ModuleId::MouseTune => mouse::start(),
+            ModuleId::WidgetBoard => board::start(),
         };
         self.states.insert(id, match r { Ok(()) => State::Running, Err(e) => State::Failed(e) });
         hooks::sync();
@@ -176,6 +179,7 @@ impl App {
             ModuleId::AppSwitch => appswitch::stop(),
             ModuleId::CalendarClock => clock::stop(),
             ModuleId::MouseTune => mouse::stop(),
+            ModuleId::WidgetBoard => board::stop(),
         }
         self.states.insert(id, State::Off);
         hooks::sync();
@@ -269,6 +273,7 @@ impl App {
             "appswitch.hideOthers" => appswitch::hide_others(),
             "clock.show" => clock::show(),
             "mouse.reverse" => mouse::toggle_reverse(),
+            "board.show" => board::show(),
             _ => {}
         }
     }
@@ -332,6 +337,7 @@ impl App {
             "appShortcutsFailed": self.hotkey_clashes.iter().filter(|i| i.starts_with("app:")).collect::<Vec<_>>(),
             "diskmap": crate::diskmap::diagnostics(),
             "clock": self.clock.diagnostics(),
+            "board": self.board.diagnostics(),
             "mouse": mouse::diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
@@ -378,6 +384,7 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
                 TIMER_PASTE => clipboard::on_paste_timer(),
                 TIMER_THEME => devices::theme_tick(),
                 TIMER_CLOCK => clock::tick(),
+                TIMER_BOARD => board::tick(),
                 TIMER_LAYOUT => snap::layout_tick(),
                 TIMER_APPSWITCH => appswitch::on_timer(),
                 TIMER_UPDATE_HEALTHY => update::mark_healthy(),
@@ -417,7 +424,7 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         crate::i18n::set_language(settings.language.as_deref());
         let boxed = Box::leak(Box::new(App { settings, dir, states: BTreeMap::new(), main, debug_ctl, later: vec![], hotkey_ids: vec![], hotkey_clashes: BTreeSet::new(),
             tray: tray::Tray::default(), snap: Default::default(), dim: Default::default(), organizer: Default::default(), shelf: Default::default(), capture: Default::default(),
-            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), settings_window: Default::default(), panel: Default::default(), updater: Default::default(), undo: None }));
+            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), board: Default::default(), settings_window: Default::default(), panel: Default::default(), updater: Default::default(), undo: None }));
         APP.with(|c| c.set(boxed));
         let a = app();
         // A version that failed its first launches is replaced before anything starts.
