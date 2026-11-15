@@ -125,7 +125,8 @@ pub enum PetGadget {
 
 impl PetGadget {
     pub fn all() -> Vec<PetGadget> {
-        ModuleId::ALL.iter().map(|m| PetGadget::Module(*m)).chain([PetGadget::NachoPet, PetGadget::ComputerUse]).collect()
+        // The pet is a gadget of this app too (`ModuleId::NachoPet`), but for Nacho it is `PetGadget::NachoPet`: never a module it may switch.
+        ModuleId::ALL.iter().filter(|m| **m != ModuleId::NachoPet).map(|m| PetGadget::Module(*m)).chain([PetGadget::NachoPet, PetGadget::ComputerUse]).collect()
     }
 
     /// `windowSnap`, `nachoPet` … (the settings file's camelCase names of the modules).
@@ -254,7 +255,7 @@ impl PetCommands {
     pub const MAX_APP_NAME_LENGTH: usize = 100;
 
     /// Gadgets Nacho may switch: every gadget of this app (Computer Use and the pet are never among them).
-    pub fn toggleable() -> Vec<ModuleId> { ModuleId::ALL.to_vec() }
+    pub fn toggleable() -> Vec<ModuleId> { ModuleId::ALL.iter().copied().filter(|m| *m != ModuleId::NachoPet).collect() }
 
     fn object(properties: Value, required: &[&str]) -> Value {
         let mut o = json!({"type": "object", "properties": properties, "additionalProperties": false});

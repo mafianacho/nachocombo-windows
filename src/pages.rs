@@ -135,6 +135,7 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::AppSwitch => (rgb(0xB9C4FF), rgb(0x3C4FC4), white),
         ModuleId::CalendarClock => (rgb(0xFF9F9A), rgb(0xD9382F), white),
         ModuleId::MouseTune => (rgb(0xFF9A8A), rgb(0xC8321F), white),
+        ModuleId::NachoPet => (rgb(0xFFD36B), rgb(0xE8870E), white),
         ModuleId::WidgetBoard => (rgb(0xFFE08A), rgb(0xE59A12), rgb(0x2A1A0B)),
     }
 }
@@ -311,6 +312,7 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
             ModuleId::CalendarClock => a.clock.status(),
             ModuleId::MouseTune => if a.settings.options.mouse_reverse { "Wheel reversed".into() } else { "Wheel as Windows has it".into() },
+            ModuleId::NachoPet => crate::pet_ui::status_text(),
             ModuleId::WidgetBoard => if a.board.is_open() { "Board open".into() } else { "Ready".into() },
             ModuleId::DeviceControl => {
                 let out = a.devices.outputs.iter().find(|d| d.default).map_or("No output".to_string(), |d| d.name.clone());
@@ -704,6 +706,7 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 y = ny;
                 y += ui.label("Your own pointer and scroll settings come back when you switch this off or quit.", sans(12), x + 18.0, y + 6.0, w - 36.0, th.ink2) + 14.0;
             }
+            ModuleId::NachoPet => { y = crate::pet_ui::settings_controls(ui, x, y, w); }
             ModuleId::WidgetBoard => {
                 y += ui.label("The board has no options here: open it, press Edit, and move, resize or hide its tiles.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 12.0;
                 if !a.settings.bento.is_none() {
@@ -1178,7 +1181,8 @@ fn general(ui: &mut Ui, ctx: &mut WindowCtx, x: f64, y: f64, w: f64) -> f64 {
         y
     }) + 24.0;
     ui.c.line_text(&format!("{PRODUCT} {}", env!("CARGO_PKG_VERSION")), medium(13), Rect::new(x, y, w, 20.0), th.ink2, Align::Left);
-    y += 30.0;
+    y += 24.0;
+    y += ui.label("The Nacho character pictures, the logo and the names Nacho Combo™, Nacho™ and Mafianacho™ are not open source (see TRADEMARKS.md).", sans(12), x, y, w, th.ink2) + 14.0;
     if ui.button("quitapp", "Quit NachoCombo", x, y, Btn::Secondary, false) { ctx.close = true; app::quit(); }
     y + 60.0
 }
@@ -1262,7 +1266,7 @@ pub fn ctl(a: &[String]) {
 /// `ctl snapshot settings|panel|monitor <file.png>`: the window's picture without capturing the screen.
 pub fn snapshot(which: &str, path: &std::path::Path) {
     let a = app();
-    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), "board" => crate::board::hwnd(), _ => None };
+    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), "petchat" => a.pet.chat.hwnd, "board" => crate::board::hwnd(), _ => None };
     let Some(h) = h else { return };
     let ptr = unsafe { GetWindowLongPtrW(HWND(h as *mut _), GWLP_USERDATA) } as *mut UiWindow;
     if !ptr.is_null() { if let Err(e) = unsafe { &mut *ptr }.snapshot(path) { let _ = std::fs::write(a.dir.join("snapshot-error.txt"), format!("{e:?}")); } }

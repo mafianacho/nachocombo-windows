@@ -173,7 +173,7 @@ fn body_of(m: ModuleId) -> BentoBody {
         ModuleId::TrayOrganizer => build::tray(running, a.settings.tray_collapsed, a.organizer.notice.is_some()),
         ModuleId::AppSwitch => build::app_switch(running, shortcut_label("appswitch.next").as_deref(), a.settings.options.app_shortcuts.iter().filter(|h| h.shortcut.is_some()).count()),
         ModuleId::MouseTune => build::mouse(a.settings.options.mouse_speed, a.settings.options.mouse_reverse),
-        ModuleId::WidgetBoard => BentoBody::Basic { line: String::new() },
+        ModuleId::WidgetBoard | ModuleId::NachoPet => BentoBody::Basic { line: String::new() },
     }
 }
 

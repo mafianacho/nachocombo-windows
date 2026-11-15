@@ -100,3 +100,5 @@ No.1 Starter, No.2 Desk, No.3 Builder, No.4 Focus, No.5 Meeting, No.6 Presenter,
 ## 라이선스
 
 [MIT](LICENSE) © 2026 Mafianacho. "Nacho Combo" 이름과 로고는 이 라이선스에 포함되지 않습니다.
+
+**상표와 나초 캐릭터.** 소스 코드는 MIT입니다. 나초 캐릭터 그림(`assets/nacho/`), 앱 아이콘·로고, 나초 콤보™·나초™·마피아나초™ 이름은 오픈소스 대상이 **아니며** MIT 라이선스에 포함되지 않습니다. [TRADEMARKS.md](TRADEMARKS.md)를 보세요. 포크는 자기 이름과 그림을 써야 합니다.

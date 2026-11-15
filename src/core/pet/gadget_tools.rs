@@ -234,7 +234,9 @@ impl PetGadgetTools {
 
     /// The macOS gadget id of a module (the id "always allow" and `gadget_off` use).
     pub fn gadget_of_module(m: ModuleId) -> Option<&'static str> {
+        // Nacho never switches the pet itself, so it has no gadget id.
         Some(match m {
+            ModuleId::NachoPet => return None,
             ModuleId::Clipboard => "clipboard",
             ModuleId::FileShelf => "shelf",
             ModuleId::CaptureFloat => "capture",

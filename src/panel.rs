@@ -256,6 +256,12 @@ pub fn controls(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
             ui.label(&a.clock.status(), sans(12), x, y, w, th.ink2);
             y += 24.0;
         }
+        ModuleId::NachoPet => {
+            if btn(ui, "petchat", "Open Chat", &mut y, Btn::Primary) { later(crate::pet_ui::open_chat); }
+            y += 46.0;
+            ui.label(&crate::pet_ui::status_text(), sans(12), x, y, w, th.ink2);
+            y += 24.0;
+        }
         ModuleId::WidgetBoard => {
             if btn(ui, "board", "Open Widget Board", &mut y, Btn::Primary) { later(|| { close(); crate::board::show(); }); }
             y += 46.0;

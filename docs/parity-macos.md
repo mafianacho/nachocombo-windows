@@ -14,79 +14,78 @@ NachoCombo for Windows가 [Nacho Combo for macOS](https://github.com/mafianacho/
   표시했습니다.
 - 펫 코어(W1)는 브랜치에서 이식을 마쳤습니다(`src/core/pet/` 32개 모듈). 코어 파일은 맥 `Sources/NachoComboCore/Pet`의 Swift 파일
   하나당 Rust 파일 하나로 옮기며, `cargo test --lib`로 어느 OS에서나 테스트합니다. Windows 셸 조각(`src/pet_win.rs`)과 함께 아직 펫 UI에
-  연결되지 않아 앱에서는 아무것도 실행되지 않습니다. 개발 CLI(`examples/nacho-pet-cli.rs`)는 같은 세션으로 목 서버와 왕복합니다.
+  연결되지 않았습니다(W1 시점). W2에서 가젯 `Nacho Pet`(기본 꺼짐)으로 연결했습니다. 개발 CLI(`examples/nacho-pet-cli.rs`)는 같은 세션으로 목 서버와 왕복합니다.
 
 ## 1. Nacho Pet
 
-맥에서는 Nacho Pet이 처음부터 켜져 있는 유일한 가젯입니다. Windows에는 아직 펫 가젯 ID가 없습니다(`src/core/catalog.rs`에
-없음). 펫이 켜지는 시점과 기본값은 W2에서 정합니다.
+맥에서는 Nacho Pet이 처음부터 켜져 있는 유일한 가젯입니다. Windows에는 가젯 `Nacho Pet`(`ModuleId::NachoPet`, 키 `pet`)이 W2에서 생겼고 **기본 꺼짐**입니다(새 기능은 기본 꺼짐 원칙). 켜도 채팅을 열 때까지 서버에 연결하지 않습니다.
 
 ### 1.1 캐릭터와 말풍선
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
-| 캐릭터 창 | 화면 오른쪽 아래(위치 저장)에 112pt 캐릭터. 클릭하면 채팅을 열고 닫음. 3px 넘게 움직이면 드래그, 2초 누르고 있으면 말하기. 마우스를 올리면 이름표, 파일을 끌어오면 점선 링. 우클릭 메뉴: 채팅·파일 주기·로그인/로그아웃·오른쪽 아래로 돌려놓기·채팅 크기 초기화·설정·숨기기 | 없음 | Win32 레이어드 창(항상 위, 활성화 안 됨)으로 새로 만들어야 함. 위치·크기 규칙은 코어로 옮길 수 있음 | W2 |
-| 표정(PetFace) | 표정 8개: 대기, 듣기, 생각, 말하기, 기쁨(답 뒤 4초), 기다림(연결 중), 피곤(10분 조용하면), 잠(30분). 받아쓰기·채팅 상태로 정해짐. 듣기·생각·잠 배지 | 부분 — W1 core 이식됨(`face.rs`), UI는 W2 | 상태 → 표정 규칙은 코어에 있음. 그림을 그리는 창은 W2 | W1 → W2 |
-| 움직임(PetMotion) | 200ms 교차 페이드와 작은 팝, 대기 중 숨쉬기(2.4초), 2–5.2초마다 눈 깜빡임(130ms), 상태별 루프, 기쁨 점프(420ms)와 착지, 피곤할 때 끄덕임, 누름·드래그 기울기·착지 찌그러짐. 동작 줄이기 설정을 따르고, 숨겨졌거나 화면이 꺼졌거나 전체 화면 앱이 앞에 있으면 멈춤 | 부분 — W1 core 이식됨(`motion.rs`, 시간의 순수 함수), UI는 W2 | 수치는 디자인 토큰에서 나옴. Windows는 "애니메이션 효과" 설정(SPI_GETCLIENTAREAANIMATION)으로 동작 줄이기를 판단해야 함. 전체 화면 감지는 SHQueryUserNotificationState 등으로 대체 | W1 → W2 |
-| 디자인 토큰·테마 | `PetDesignTokens.swift`는 `design/tokens.json`에서 생성(크기, 간격, 모서리, 글꼴, 밝은/어두운 색, 움직임 시간·곡선). `PetTheme`이 AppKit 색·글꼴로 바꾸고 한글 단어 단위 줄바꿈 | 부분 — W1 core 이식됨(`design_tokens.rs`, `color_hex.rs`), UI는 W2 | 토큰은 `assets/pet/design-tokens.json`(맥 원본의 사본)을 Rust 상수로 옮기고 테스트가 JSON과 대조(맥은 스크립트로 생성). 글꼴은 맥 시스템 글꼴 대신 Windows 글꼴(맑은 고딕 등)로 대응, 줄바꿈은 DirectWrite 설정으로 맞춰야 함 | W1 → W2 |
+| 캐릭터 창 | 화면 오른쪽 아래(위치 저장)에 112pt 캐릭터. 클릭하면 채팅을 열고 닫음. 3px 넘게 움직이면 드래그, 2초 누르고 있으면 말하기. 마우스를 올리면 이름표, 파일을 끌어오면 점선 링. 우클릭 메뉴: 채팅·파일 주기·로그인/로그아웃·오른쪽 아래로 돌려놓기·채팅 크기 초기화·설정·숨기기 | 있음 — `src/pet_ui.rs`: 레이어드 창(항상 위, 활성화 안 됨), 클릭·드래그·누르고 있기, 위치 저장, 모니터 경계 보정(`core/pet/placement.rs`), 파일 끌어놓기, 우클릭 메뉴 | 맥과 다른 점: 이름표와 끌어올 때 점선 링은 아직 없음. 우클릭 메뉴는 채팅 열기/닫기·로그인/로그아웃·채팅 크기 초기화·위치 초기화·설정·숨기기(맥의 "파일 주기"는 채팅의 클립 버튼). 위치는 화면 픽셀(맥은 포인트)로 저장하고, 연결이 끊긴 모니터에 있던 위치는 주 모니터 오른쪽 아래로 돌아옴. 가젯은 기본 꺼짐(맥은 켜짐) | W2 (완료)|
+| 표정(PetFace) | 표정 8개: 대기, 듣기, 생각, 말하기, 기쁨(답 뒤 4초), 기다림(연결 중), 피곤(10분 조용하면), 잠(30분). 받아쓰기·채팅 상태로 정해짐. 듣기·생각·잠 배지 | 있음 — W1 core 이식 + W2 UI(`face.rs`)| 상태 → 표정 규칙은 코어에 있음. 그림을 그리는 창은 W2 | W1 → W2 (완료) |
+| 움직임(PetMotion) | 200ms 교차 페이드와 작은 팝, 대기 중 숨쉬기(2.4초), 2–5.2초마다 눈 깜빡임(130ms), 상태별 루프, 기쁨 점프(420ms)와 착지, 피곤할 때 끄덕임, 누름·드래그 기울기·착지 찌그러짐. 동작 줄이기 설정을 따르고, 숨겨졌거나 화면이 꺼졌거나 전체 화면 앱이 앞에 있으면 멈춤 | 있음 — W1 core 이식 + W2 UI(`motion.rs`, 시간의 순수 함수)| 수치는 디자인 토큰에서 나옴. Windows는 "애니메이션 효과" 설정(SPI_GETCLIENTAREAANIMATION)으로 동작 줄이기를 판단해야 함. 전체 화면 감지는 SHQueryUserNotificationState 등으로 대체 | W1 → W2 (완료) |
+| 디자인 토큰·테마 | `PetDesignTokens.swift`는 `design/tokens.json`에서 생성(크기, 간격, 모서리, 글꼴, 밝은/어두운 색, 움직임 시간·곡선). `PetTheme`이 AppKit 색·글꼴로 바꾸고 한글 단어 단위 줄바꿈 | 있음 — W1 core 이식 + W2 UI(`design_tokens.rs`, `color_hex.rs`)| 토큰은 `assets/pet/design-tokens.json`(맥 원본의 사본)을 Rust 상수로 옮기고 테스트가 JSON과 대조(맥은 스크립트로 생성). 글꼴은 맥 시스템 글꼴 대신 Windows 글꼴(맑은 고딕 등)로 대응, 줄바꿈은 DirectWrite 설정으로 맞춰야 함 | W1 → W2 (완료) |
 | 캐릭터 그림(서버) | 공개 API에서 받음(토큰 없음): `GET /api/v1/character-assets`(ETag) → `GET /api/v1/character-assets/files/{sha256}.{png\|webp}`. 1MB 이하, PNG/WebP 시그니처, sha256 일치 확인. sha256 이름으로 캐시하고 목록에서 빠진 파일은 지움. 시작할 때와 앱이 활성화될 때 새로 받음. `original` 그림만 씀 | 부분 — W1 core 이식됨(`character_assets.rs`: 목록·ETag·크기·시그니처·sha256 검사, 캐시 정리, 대체 순서), UI는 W2 | 캐시는 `%LOCALAPPDATA%` 아래. WebP 디코딩은 WIC 코덱에 기대야 함(Windows 판 WebP 코덱 유무 확인 필요) | W1 → W2 |
-| 캐릭터 그림(번들) | 서버 그림이 없으면 앱에 들어 있는 그림(`Resources/Nacho`)을 씀 | 없음 | 캐릭터 그림은 오픈소스 대상이 아님(맥 레포 TRADEMARKS). MIT 공개 레포인 이 레포에 같은 그림을 넣어도 되는지 확인 필요. 넣지 못하면 서버 그림 + 비공개 빌드 자산으로 대체 | W2 |
-| 말풍선 위치·따라가기 | 활성화하지 않는 테두리 없는 창. 캐릭터 위에 오른쪽 끝을 맞춰 4pt 간격으로 붙고, 위가 모자라면 아래로 뒤집힘. 늘 캐릭터가 있는 화면 안. 캐릭터를 끌면 따라옴 | 부분 — W1 core 이식됨(`chat_layout.rs`), UI는 W2 | 배치 계산은 코어에 있음. 모니터마다 DPI가 다르므로 Windows는 픽셀·DPI 변환이 더 필요 | W1 → W2 |
-| 말풍선 크기·꼬리 | 기본 360×520, 최소 320×420, 최대 = 화면 − 여백. 캐릭터 반대쪽 가장자리와 그 모서리만 크기 조절. 크기는 저장(기본값이면 저장 안 함). 꼬리 12pt가 캐릭터 중앙을 가리킴 | 부분 — W1 core 이식됨(`chat_layout.rs`), UI는 W2 | 크기 규칙은 코어에 있음. 크기 조절은 WM_NCHITTEST로 자유 가장자리만 허용 | W1 → W2 |
-| 말풍선 구성 | 머리(아바타·이름·상태·크레딧), 탭 두 개: 대화, 연결 | 없음 | 연결 탭은 W5 | W2 |
-| 굵게 등 마크다운 | 인라인만: 굵게, 기울임, 인라인 코드, 링크(http·https·mailto만 클릭). 블록 문법은 그대로 두고, 스트리밍 중 닫히지 않은 표시는 평문 | 부분 — W1 core 이식됨(`markdown.rs`), UI는 W2 | 맥은 Foundation 파서, Windows는 보이는 결과가 같은 작은 CommonMark 인라인 파서(`~~지움~~`은 표시만 지우고 취소선은 없음) | W1 → W2 |
-| 빈 채팅·안내 | 빈 채팅에 인사와 예시 문장. 서비스 상태(`/client/config`)에 따라 점검·종료·지연 안내 | 부분 — W1 core 이식됨(`server_models.rs`의 서비스 상태), UI는 W2 | — | W1 → W2 |
+| 캐릭터 그림(번들) | 서버 그림이 없으면 앱에 들어 있는 그림(`Resources/Nacho`)을 씀 | 있음 — `assets/nacho/`에 맥 그림 10개를 바이트 그대로 둠(git blob 해시 동일, NACHO-170 결정). 서버 그림(sha256 확인)이 우선 | `calling-eyeless.webp`는 WebP라 WIC WebP 코덱이 없는 Windows에서는 같은 표정의 `calling.png`로 대체. 그림·이름은 MIT 대상이 아님(루트 `LICENSE`, `TRADEMARKS.md`, `NOTICE`, `assets/nacho/LICENSE`) | W2 (완료)|
+| 말풍선 위치·따라가기 | 활성화하지 않는 테두리 없는 창. 캐릭터 위에 오른쪽 끝을 맞춰 4pt 간격으로 붙고, 위가 모자라면 아래로 뒤집힘. 늘 캐릭터가 있는 화면 안. 캐릭터를 끌면 따라옴 | 있음 — `core/pet/chat_layout.rs` 계산을 모니터 DPI에 맞춰 사용 | — | W1 → W2 (완료) |
+| 말풍선 크기·꼬리 | 기본 360×520, 최소 320×420, 최대 = 화면 − 여백. 캐릭터 반대쪽 가장자리와 그 모서리만 크기 조절. 크기는 저장(기본값이면 저장 안 함). 꼬리 12pt가 캐릭터 중앙을 가리킴 | 있음 — W1 core 이식 + W2 UI(`chat_layout.rs`)| 크기 규칙은 코어에 있음. 크기 조절은 WM_NCHITTEST로 자유 가장자리만 허용 | W1 → W2 (완료) |
+| 말풍선 구성 | 머리(아바타·이름·상태·크레딧), 탭 두 개: 대화, 연결 | 부분 — 머리(아바타·이름·상태·크레딧)와 대화는 `src/pet_chat.rs`. **연결 탭 없음** | 연결 탭(`ConnectorsAPI`)은 W5 | W2 |
+| 굵게 등 마크다운 | 인라인만: 굵게, 기울임, 인라인 코드, 링크(http·https·mailto만 클릭). 블록 문법은 그대로 두고, 스트리밍 중 닫히지 않은 표시는 평문 | 있음 — W1 core 이식 + W2 UI(`markdown.rs`)| 맥은 Foundation 파서, Windows는 보이는 결과가 같은 작은 CommonMark 인라인 파서(`~~지움~~`은 표시만 지우고 취소선은 없음) | W1 → W2 (완료) |
+| 빈 채팅·안내 | 빈 채팅에 인사와 예시 문장. 서비스 상태(`/client/config`)에 따라 점검·종료·지연 안내 | 있음 — W1 core 이식 + W2 UI(`server_models.rs`의 서비스 상태)| — | W1 → W2 (완료) |
 
 ### 1.2 로그인과 연결
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
-| PKCE 로그인 | Keycloak 인가 코드 + PKCE(S256, 32바이트 verifier, 16바이트 state), 클라이언트 `nacho-gadget-app`, 리다이렉트 `nachogadget://auth/callback`. 콜백은 scheme·host·path·state를 엄격히 확인. 만료 60초 전에 갱신하고 동시에 부른 쪽은 한 번의 갱신을 같이 기다림. 갱신 토큰이 죽으면 로그아웃 상태. 로그아웃은 Keycloak 로그아웃 엔드포인트 호출 | 부분 — W1 core 이식됨(`auth.rs`: 인가 URL·PKCE·콜백 검사·토큰 해석·갱신 시점, `crypto.rs`), 브라우저와 콜백 받기는 W2 | OS 난수는 셸이 넣음(`src/pet_win.rs`의 `BCryptGenRandom`) | W1 → W2 |
-| 로그인 브라우저·콜백 | `ASWebAuthenticationSession` 시트가 사용자 지정 scheme을 직접 받음. URL scheme 등록도 루프백 서버도 없음 | 없음 | Windows에는 같은 API가 없음. 기본 브라우저를 열고 `nachogadget://`를 HKCU(`Software\Classes`)에 등록해 콜백을 받음. 콜백으로 새로 뜬 exe는 실행 중인 앱에 URL을 넘기고 끝나야 함(단일 인스턴스 전달). 다른 앱이 같은 scheme을 가로챌 수 있으므로 state 확인이 유일한 방어선 | W2 |
-| 로그인 버튼 | 말풍선과 우클릭 메뉴의 **나초 계정으로 로그인**, 설정 탭의 로그인/로그아웃 | 없음 | — | W2 |
-| 토큰 저장 | 로그인 키체인 항목 하나에 모든 비밀(토큰, 커넥터 바인딩)을 묶어 저장(이 기기만, 첫 잠금 해제 후). 계정 범위(서버 + 발급자)별 키. 키체인 읽기를 거부해도 로그아웃으로 보지 않음 | 부분 — W1 core 이식됨(`secrets.rs`의 `PetSecretBundle`·`PetSecretStore`), Windows 저장소는 `src/pet_win.rs`(자격 증명 관리자)에 있고 UI에는 아직 연결 안 됨 | Windows 자격 증명 관리자 일반 자격 증명(이 사용자). 항목 하나가 2560바이트까지라 묶음을 2048바이트 조각 여러 항목으로 나눠 저장. 맥처럼 "읽기 실패 ≠ 로그아웃" 규칙 유지. 키체인 허용 대화상자는 Windows에 없음 | W1(셸) → W2 |
-| 채팅 WebSocket | `/ws/chat`, Bearer 헤더. `message`(`client_msg_id`, 첨부 ID), `stop`, `read{room_id,seq}`, `ready` 뒤 30초마다 JSON `ping`. 처음 채팅을 열거나 보낼 때 연결, 펫을 숨기면 모든 연결을 닫음 | 부분 — W1 core 이식됨(`chat_client.rs`의 `ChatClient`: 연결·스트림·멈춤·핑·재연결, `frames.rs`), Windows 전송은 `src/pet_win.rs`(WinHTTP WebSocket), UI 연결은 W2 | 맥은 `URLSessionWebSocketTask`. Windows는 WinHTTP WebSocket(Windows 8+, TLS·시스템 프록시). RFC 6455 직접 구현(`ws_framing.rs`, `socket_transport.rs`)은 개발 CLI·테스트용으로만 씀(이 컴퓨터의 `ws://`만, TLS 없음) | W1 → W2 |
+| PKCE 로그인 | Keycloak 인가 코드 + PKCE(S256, 32바이트 verifier, 16바이트 state), 클라이언트 `nacho-gadget-app`, 리다이렉트 `nachogadget://auth/callback`. 콜백은 scheme·host·path·state를 엄격히 확인. 만료 60초 전에 갱신하고 동시에 부른 쪽은 한 번의 갱신을 같이 기다림. 갱신 토큰이 죽으면 로그아웃 상태. 로그아웃은 Keycloak 로그아웃 엔드포인트 호출 | 있음 — W1 core 이식 + W2 UI(`auth.rs`: 인가 URL·PKCE·콜백 검사·토큰 해석·갱신 시점, `crypto.rs`) | OS 난수는 셸이 넣음(`src/pet_win.rs`의 `BCryptGenRandom`) | W1 → W2 (완료) |
+| 로그인 브라우저·콜백 | `ASWebAuthenticationSession` 시트가 사용자 지정 scheme을 직접 받음. URL scheme 등록도 루프백 서버도 없음 | 있음 — `core/pet/login_browser.rs`(`PetCallbackBrowser`) + `pet_ui.rs`: 기본 브라우저, `nachogadget://`를 **로그인 버튼을 누를 때** HKCU에만 등록, 새로 뜬 exe가 `WM_COPYDATA`로 실행 중인 앱에 넘기고 끝남. state·PKCE는 코어가 검사. 가젯을 끄면 등록을 지움 | 다른 앱이 같은 scheme을 가로챌 수 있어 state 확인이 방어선. 10분 안에 끝나지 않은 로그인은 취소로 처리 | W2 (완료)|
+| 로그인 버튼 | 말풍선과 우클릭 메뉴의 **나초 계정으로 로그인**, 설정 탭의 로그인/로그아웃 | 있음 — 채팅 안 **Sign in** 버튼과 펫 우클릭 메뉴(로그인/로그아웃), 가젯 설정 페이지 | 맥은 설정 탭에도 같은 버튼이 있음 | W2 (완료) |
+| 토큰 저장 | 로그인 키체인 항목 하나에 모든 비밀(토큰, 커넥터 바인딩)을 묶어 저장(이 기기만, 첫 잠금 해제 후). 계정 범위(서버 + 발급자)별 키. 키체인 읽기를 거부해도 로그아웃으로 보지 않음 | 있음 — W1 core 이식 + W2 UI(`secrets.rs`의 `PetSecretBundle`·`PetSecretStore`), Windows 저장소는 `src/pet_win.rs`(자격 증명 관리자)에 있고| Windows 자격 증명 관리자 일반 자격 증명(이 사용자). 항목 하나가 2560바이트까지라 묶음을 2048바이트 조각 여러 항목으로 나눠 저장. 맥처럼 "읽기 실패 ≠ 로그아웃" 규칙 유지. 키체인 허용 대화상자는 Windows에 없음 | W1(셸) → W2 (완료) |
+| 채팅 WebSocket | `/ws/chat`, Bearer 헤더. `message`(`client_msg_id`, 첨부 ID), `stop`, `read{room_id,seq}`, `ready` 뒤 30초마다 JSON `ping`. 처음 채팅을 열거나 보낼 때 연결, 펫을 숨기면 모든 연결을 닫음 | 있음 — W1 core 이식 + W2 UI(`chat_client.rs`의 `ChatClient`: 연결·스트림·멈춤·핑·재연결, `frames.rs`), Windows 전송은 `src/pet_win.rs`(WinHTTP WebSocket)| 맥은 `URLSessionWebSocketTask`. Windows는 WinHTTP WebSocket(Windows 8+, TLS·시스템 프록시). RFC 6455 직접 구현(`ws_framing.rs`, `socket_transport.rs`)은 개발 CLI·테스트용으로만 씀(이 컴퓨터의 `ws://`만, TLS 없음) | W1 → W2 (완료) |
 | 재연결 | 1초부터 두 배씩, 최대 30초, 지터 50–100%, 최대 8회. 401/403은 다시 시도하지 않고 토큰을 한 번 갱신한 뒤 한 번 다시 연결 | 있음(코어) — `reconnect.rs`, 세션(`session.rs`)이 채팅·커넥터 연결에 씀 | 지터는 밖에서 넣어 테스트가 결정적 | W1 |
-| 기록·델타 복구 | 처음 연결 시 `GET /api/v1/rooms/{id}/history?view=app&limit=50`, **이전 대화 더 보기**는 `before_seq`. 재연결 뒤 `GET /api/v1/rooms/{id}/delta?since_seq=…`를 `has_more`로 최대 5쪽. 끊긴 동안 끝난 답을 질문의 seq로 원래 차례에 붙임. 답이 끝나면 `read` | 부분 — W1 core 이식됨: 리듀서·복구는 `chat_state.rs`, 서버 모델은 `server_models.rs`. 서버 호출은 `server_api.rs`, 복구 흐름은 `session.rs`. UI는 W2 | — | W1 → W2 |
-| 도구 진행 | `activity` 프레임은 한국어 상태 줄(도구 11종 + 생각·입력·재시도), `tool_call_*`는 차례마다 렌치 줄(한국어 도구 이름, 원래 이름은 툴팁, ✓/✕/…). 중간 메시지는 답이 아닌 진행 줄. 나초가 만든 파일은 클릭할 수 있는 칩(http·https 서명 URL만) | 부분 — W1 core 이식됨: 상태 처리는 `chat_state.rs`, 도구 이름·대화 항목은 `transcript.rs`. UI는 W2 | — | W1 → W2 |
-| 알림 프레임 | `notification`(크레딧 지급, 커넥터)을 한 줄로 표시 | 부분 — W1 core 이식됨, UI는 W2 | — | W1 → W2 |
-| 오류 문구 | 서버 오류 코드를 한국어로 표시(다시 시도 가능한 속도 제한 포함). 메시지는 4000 코드포인트까지 | 부분 — W1 core 이식됨: 길이·빈 메시지 거절은 `chat_client.rs`, 오류 모델은 `server_models.rs` | Rust는 길이를 Unicode 스칼라로 셈(맥과 같은 단위) | W1 → W2 |
-| 서버 설정·모드 | 운영(기본, 서버 `https://nacho.nachotown.com`, 로그인 `https://auth.nachotown.com/realms/nachotown`), 로컬(이 컴퓨터의 nacho-server), 목 서버, 사용자 지정(루프백 밖은 https만, 200자 이하, 계정·쿼리·조각 금지, 발급자는 `/realms/<이름>` 꼴). 설정은 `pet.json`에 저장하고 읽을 때 다시 검사 | 부분 — W1 core 이식됨: `settings.rs`(서버 모드·URL 검사, 펫 위치, 채팅 크기, 나초 제어 스위치 등 `PetSettings` 전체, `pet.json` 저장, 깨진 파일은 `pet.json.corrupt`로 옮기고 기본값). 설정 화면은 W2 | Windows는 앱의 다른 설정 옆(`%APPDATA%\NachoCombo`)에 `pet.json` | W1 → W2 |
-| 펫 설정 화면 | 계정, 서버, "이 Mac의 앱·창·가젯을 나초가 쓰게 하기", 음성(첫 문장 읽기), 구석으로 돌려놓기, 선택 막대, 작업 공간 목록(손쉬운 사용 권한 상태와 삭제) | 없음 | Windows는 창 조작에 권한이 필요 없어 권한 안내가 빠짐. 문구는 "이 PC"로 | W2 |
+| 기록·델타 복구 | 처음 연결 시 `GET /api/v1/rooms/{id}/history?view=app&limit=50`, **이전 대화 더 보기**는 `before_seq`. 재연결 뒤 `GET /api/v1/rooms/{id}/delta?since_seq=…`를 `has_more`로 최대 5쪽. 끊긴 동안 끝난 답을 질문의 seq로 원래 차례에 붙임. 답이 끝나면 `read` | 있음 — W1 core 이식 + W2 UI: 리듀서·복구는 `chat_state.rs`, 서버 모델은 `server_models.rs`. 서버 호출은 `server_api.rs`, 복구 흐름은 `session.rs`.| — | W1 → W2 (완료) |
+| 도구 진행 | `activity` 프레임은 한국어 상태 줄(도구 11종 + 생각·입력·재시도), `tool_call_*`는 차례마다 렌치 줄(한국어 도구 이름, 원래 이름은 툴팁, ✓/✕/…). 중간 메시지는 답이 아닌 진행 줄. 나초가 만든 파일은 클릭할 수 있는 칩(http·https 서명 URL만) | 있음 — W1 core 이식 + W2 UI: 상태 처리는 `chat_state.rs`, 도구 이름·대화 항목은 `transcript.rs`.| — | W1 → W2 (완료) |
+| 알림 프레임 | `notification`(크레딧 지급, 커넥터)을 한 줄로 표시 | 있음 — W1 core 이식 + W2 UI| — | W1 → W2 (완료) |
+| 오류 문구 | 서버 오류 코드를 한국어로 표시(다시 시도 가능한 속도 제한 포함). 메시지는 4000 코드포인트까지 | 있음 — W1 core 이식 + W2 UI: 길이·빈 메시지 거절은 `chat_client.rs`, 오류 모델은 `server_models.rs` | Rust는 길이를 Unicode 스칼라로 셈(맥과 같은 단위) | W1 → W2 (완료) |
+| 서버 설정·모드 | 운영(기본, 서버 `https://nacho.nachotown.com`, 로그인 `https://auth.nachotown.com/realms/nachotown`), 로컬(이 컴퓨터의 nacho-server), 목 서버, 사용자 지정(루프백 밖은 https만, 200자 이하, 계정·쿼리·조각 금지, 발급자는 `/realms/<이름>` 꼴). 설정은 `pet.json`에 저장하고 읽을 때 다시 검사 | 부분 — W1 core 이식됨: `settings.rs`(서버 모드·URL 검사, 펫 위치, 채팅 크기 등 `PetSettings` 전체, `pet.json` 저장, 깨진 파일은 `pet.json.corrupt`로 옮기고 기본값). 앱은 운영 서버를 쓰고, 서버를 바꾸는 화면은 아직 없음(파일을 고치면 적용) | Windows는 앱의 다른 설정 옆(`%APPDATA%\NachoCombo`)에 `pet.json` | W1 → W2 |
+| 펫 설정 화면 | 계정, 서버, "이 Mac의 앱·창·가젯을 나초가 쓰게 하기", 음성(첫 문장 읽기), 구석으로 돌려놓기, 선택 막대, 작업 공간 목록(손쉬운 사용 권한 상태와 삭제) | 부분 — 가젯 설정 페이지에 상태, 채팅 열기, 로그인/로그아웃, 위치·채팅 크기 초기화 | 서버 선택, 나초 제어 스위치, 음성, 선택 막대, 작업 공간 목록은 W3 이후 | W2 |
 
 ### 1.3 대화 기능
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
-| 승인 카드 | 무엇을·결과·되돌릴 수 있는지 요약, **실행** / **거절**(같은 크기) | 부분 — W1 core 이식됨: 카드 모델은 `server_models.rs`, 상태는 `chat_state.rs`. 카드 규칙은 `card_rules.rs`. UI는 W2 | — | W1 → W2 |
-| 승인 + `rule_options` | **이번만 실행**, 규칙마다 **실행하고 항상 허용**(`allow_rule.rule_option_id`로 보냄), **거절** | 부분 — W1 core 이식됨(`card_rules.rs`), UI는 W2 | — | W1 → W2 |
-| 선택 카드 | 하나 고르기: 번호 줄, 클릭하면 답함. 여러 개: 체크 후 **확정**. 입력칸이 비어 있으면 숫자 키로 표시, Enter 답, Esc 지움 | 부분 — W1 core 이식됨(`card_rules.rs`), UI는 W2 | 숫자 키 처리는 말풍선 창이 포커스를 받을 때만 가능(맥은 활성화 없는 패널) | W1 → W2 |
-| 제안 칩 | 답 아래 빠른 답 칩, 클릭하면 그 글을 다음 메시지로 보냄 | 부분 — W1 core 이식됨(`card_rules.rs`), UI는 W2 | — | W1 → W2 |
-| 규칙 제안 카드 | 규칙 문장과 **적용** / **아니요**(선택지가 여러 개면 각 선택지 + 아니요) | 부분 — W1 core 이식됨(`card_rules.rs`), UI는 W2 | — | W1 → W2 |
-| 카드 보내기·충돌 | `POST /api/v1/chat/requests/{id}/answer`(`expected_version`). 이미 답함·만료·대체·버전 충돌이면 `GET`으로 다시 읽음. 실패 시 **다시 시도**, 만료 시각은 KST | 부분 — W1 core 이식됨(`server_api.rs`의 답 보내기·다시 읽기, `card_rules.rs`), UI는 W2 | KST 표시는 PC 시간대와 무관하게 고정 | W1 → W2 |
-| 휴대폰 전용 카드 | 로그인·인증번호·결제 카드는 휴대폰 앱으로 안내 | 부분 — W1 core 이식됨(`card_rules.rs`), UI는 W2 | — | W1 → W2 |
-| 작업 시작·취소 카드 | `planned` 작업에 예상 크레딧과 **시작**(`POST /api/v1/tasks/{id}/start`, `expected_estimate_id`) / **취소**(`POST /api/v1/tasks/{id}/cancel`). 409 `estimate_changed`면 새 견적을 보여 주고 다시 누르게 함. 요청 중 두 번째 누름 무시. 진행·결과는 `task_id`로 그 차례에 붙음 | 부분 — W1 core 이식됨: 작업 모델·상태는 `server_models.rs`·`chat_state.rs`, 호출과 견적 변경 처리는 `server_api.rs`·`session.rs`. UI는 W2 | — | W1 → W2 |
-| 기억 | "🧠 기억했어요" 줄(`update_id`로 중복 제거), **잊어 줘**(`DELETE /api/v1/memory/facts\|episodes/{id}`), 10초 안 **되돌리기**(`POST /api/v1/memory/{id}/restore`), **기억이 틀렸어요**(`POST /api/v1/memory/feedback`, Idempotency-Key, 2000자 이하) | 부분 — W1 core 이식됨: 기억 모델·상태, 호출은 `server_api.rs`. UI는 W2 | — | W1 → W2 |
-| 사용량 | 읽기 전용. `usage` 이벤트와 `GET /api/v1/me/usage`. 머리에 "크레딧 N", 소진·부족·차단 시 로그 줄. 구매는 휴대폰 앱 | 부분 — W1 core 이식됨: 사용량 모델(`server_models.rs`), 숫자·금액 표시(`transcript.rs`). UI는 W2 | — | W1 → W2 |
-| 답하는 중 보내기(대기열) | 나초가 답하는 동안 보내면 한 칸에 담음(뒤 글은 줄바꿈으로 이어 붙임), "답이 끝나면 보낼게요 · 취소" 표시. 차례가 끝나면(완료·오류·멈춤) 자동으로 보내고, 거절되면 입력칸으로 되돌림 | 부분 — W1 core 이식됨(`session.rs`의 `send_or_queue`), UI는 W2 | — | W1 → W2 |
-| 멈추기 | 답하는 동안 보내기 버튼이 **멈추기**로 바뀜(`stop` 프레임) | 부분 — W1 core 이식됨: 프레임. 버튼은 W2 | — | W1 → W2 |
-| 업로드(공통) | `POST /api/v1/media/uploads`(JSON, base64). 첨부 4개, 개당 20MB. png·jpg·gif·webp·heic·pdf·txt·md·csv·mp4. 5MB 넘는 그림은 긴 쪽 2048px JPEG로 줄임. 서버는 jpeg/png/webp/gif(5MB 이하)를 보고 txt/md/csv를 읽음 | 부분 — W1 core 이식됨: 종류·크기 규칙과 요청은 `media.rs`. 그림 줄이기와 파일 읽기는 셸(WIC)에서 | heic는 Windows에 코덱이 없을 수 있어 줄이기가 안 될 수 있음(확인 필요) | W1 → W2 |
-| 캡처 → 펫 | 떠 있는 캡처 우클릭 ▸ **Ask Nacho About This…**: 다음 메시지에 그림 첨부 | 없음 | Capture Float에 메뉴 추가 필요. 화면 내용이 서버로 가므로 사용자가 직접 고른 경우만 | W2 |
-| 선반 → 펫 | 선반 항목 우클릭 ▸ **Give to Nacho**, 펫에 끌어다 놓기(파일, 그림, 글 → 글 파일), 클립 버튼·파일 고르기 | 없음 | 끌어다 놓기는 OLE 드롭 대상으로 받음 | W2 |
-| 말하기(누르고 있기) | 로그인 상태에서 나초를 누른 채 가만히: 2초 동안 링이 차고, 녹음 중에는 마이크 크기를 보여 줌. Esc·밖으로 끌기 = 취소, 0.5초 미만은 안 보냄. 최대 길이는 서버 `dictation.max_sec`(없으면 60초, 2,000,000바이트). 결과는 메시지로 자동 전송(약 30초 재시도). 첫 사용 때 마이크 권한 | 부분 — W1 core 이식됨(`voice.rs`의 `PetHoldGesture`: 누름 판정·링·짧은 녹음 거르기), 녹음과 UI는 W2 | 녹음은 Media Foundation 등으로. Windows 마이크 개인정보 설정이 꺼져 있으면 안내 필요 | W1 → W2 |
-| 받아쓰기 API | `POST /api/v1/dictation` multipart: `language=ko`, `duration_sec`(소수 둘째 자리), `file`(`dictation.m4a`, `audio/mp4`, AAC 16kHz 모노). 허용 MIME: mp4, m4a, x-m4a, aac, wav, webm, mpeg | 부분 — W1 core 이식됨(`server_api.rs`의 받아쓰기 요청, `voice.rs`), 녹음은 W2 | Windows는 AAC 인코더 대신 WAV를 보내도 서버가 받지만 크기가 커짐(60초 16kHz 모노 16비트 ≈ 1.9MB, 한도 근처). 형식은 W2에서 정함 | W1 → W2 |
-| 입력칸 마이크 | 서버가 받아쓰기를 켜 두면 서버로, 아니면 기기 안 한국어 음성 인식. 글은 입력칸에만 들어가고 혼자 보내지지 않음 | 부분 — W1 core 이식됨(`dictation.rs`: 기기 안 인식 상태), 인식기와 UI는 W2 | 기기 안 인식은 Windows 음성 인식(한국어 음성 팩 필요)으로 대체할 수 있으나 설치 상태에 따라 다름. 서버 받아쓰기만 먼저 하는 것도 가능 | W2 |
-| 음성 답 | 말로 물은 차례의 답 첫 문장(140자, 마크다운·URL·이모지 제거)을 기기 안 한국어 음성으로 한 번 읽음. 서버로 아무것도 안 보냄. 새 입력·멈춤·새 누름이면 멈춤. 기본 켜짐 | 부분 — W1 core 이식됨(`voice.rs`: 읽을 첫 문장 고르기, 차례마다 한 번, 멈춤), 음성 합성과 UI는 W2 | Windows 음성 합성(SAPI 또는 Windows.Media.SpeechSynthesis)의 한국어 음성이 있어야 함. 없으면 꺼 두고 안내 | W1 → W2 |
-| 선택 막대 | 다른 앱에서 글을 고르면(3px 넘는 드래그, 더블클릭, Shift+화살표 뒤) 작은 막대. 지연: 바로·0.3초(기본)·0.6초·⌘ 누를 때만. 손쉬운 사용 권한 필요, 기본 꺼짐, 첫 사용 카드. 보안 입력 중 숨김. 암호 관리자·키체인·시스템 설정 제외, 터미널은 기본 제외(다시 허용 가능), 사용자 제외 앱. 동작: 복사·검색(Google, Naver, DuckDuckGo)은 Mac 안에서, 번역·요약·설명·나초에게 묻기는 미리보기와 **보내기** 뒤 `선택 맥락.md` 첨부(8000자 + 앱·창 제목·URL·주변 글). 버튼 순서·숨김·1시간 끄기 | 부분 — W1 core 이식됨: 규칙은 `selection.rs`(앱은 exe 이름으로 식별, 길이는 Unicode 스칼라로 셈). 선택 읽기와 막대 UI는 W2 | 선택 읽기는 UI Automation(TextPattern). UIA를 지원하지 않는 앱에서는 안 나옴. 보안 입력 대신 암호 칸(IsPassword)과 제외 목록으로 막음. ⌘ 대신 다른 수정 키(확인 필요) | W1 → W2 |
-| 펫 링크 | 채팅 안 링크는 앱 안에서만 처리하는 `nachopet://` scheme을 씀 | 없음 | 앱 안 처리라 등록 불필요 | W2 |
+| 승인 카드 | 무엇을·결과·되돌릴 수 있는지 요약, **실행** / **거절**(같은 크기) | 있음 — W1 core 이식 + W2 UI: 카드 모델은 `server_models.rs`, 상태는 `chat_state.rs`. 카드 규칙은 `card_rules.rs`.| — | W1 → W2 (완료) |
+| 승인 + `rule_options` | **이번만 실행**, 규칙마다 **실행하고 항상 허용**(`allow_rule.rule_option_id`로 보냄), **거절** | 있음 — W1 core 이식 + W2 UI(`card_rules.rs`)| — | W1 → W2 (완료) |
+| 선택 카드 | 하나 고르기: 번호 줄, 클릭하면 답함. 여러 개: 체크 후 **확정**. 입력칸이 비어 있으면 숫자 키로 표시, Enter 답, Esc 지움 | 있음 — W1 core 이식 + W2 UI(`card_rules.rs`)| 숫자 키 처리는 말풍선 창이 포커스를 받을 때만 가능(맥은 활성화 없는 패널) | W1 → W2 (완료) |
+| 제안 칩 | 답 아래 빠른 답 칩, 클릭하면 그 글을 다음 메시지로 보냄 | 있음 — W1 core 이식 + W2 UI(`card_rules.rs`)| — | W1 → W2 (완료) |
+| 규칙 제안 카드 | 규칙 문장과 **적용** / **아니요**(선택지가 여러 개면 각 선택지 + 아니요) | 있음 — W1 core 이식 + W2 UI(`card_rules.rs`)| — | W1 → W2 (완료) |
+| 카드 보내기·충돌 | `POST /api/v1/chat/requests/{id}/answer`(`expected_version`). 이미 답함·만료·대체·버전 충돌이면 `GET`으로 다시 읽음. 실패 시 **다시 시도**, 만료 시각은 KST | 있음 — W1 core 이식 + W2 UI(`server_api.rs`의 답 보내기·다시 읽기, `card_rules.rs`)| KST 표시는 PC 시간대와 무관하게 고정 | W1 → W2 (완료) |
+| 휴대폰 전용 카드 | 로그인·인증번호·결제 카드는 휴대폰 앱으로 안내 | 있음 — W1 core 이식 + W2 UI(`card_rules.rs`)| — | W1 → W2 (완료) |
+| 작업 시작·취소 카드 | `planned` 작업에 예상 크레딧과 **시작**(`POST /api/v1/tasks/{id}/start`, `expected_estimate_id`) / **취소**(`POST /api/v1/tasks/{id}/cancel`). 409 `estimate_changed`면 새 견적을 보여 주고 다시 누르게 함. 요청 중 두 번째 누름 무시. 진행·결과는 `task_id`로 그 차례에 붙음 | 있음 — W1 core 이식 + W2 UI: 작업 모델·상태는 `server_models.rs`·`chat_state.rs`, 호출과 견적 변경 처리는 `server_api.rs`·`session.rs`.| — | W1 → W2 (완료) |
+| 기억 | "🧠 기억했어요" 줄(`update_id`로 중복 제거), **잊어 줘**(`DELETE /api/v1/memory/facts\| 있음 — W1 core + W2 UI(잊어 줘·되돌리기 링크) | **기억이 틀렸어요**는 대화상자 대신 입력창에 써서 보냄(다음 입력이 정정으로 감) | W1 → W2 (완료) | W1 → W2 |
+| 사용량 | 읽기 전용. `usage` 이벤트와 `GET /api/v1/me/usage`. 머리에 "크레딧 N", 소진·부족·차단 시 로그 줄. 구매는 휴대폰 앱 | 있음 — W1 core 이식 + W2 UI: 사용량 모델(`server_models.rs`), 숫자·금액 표시(`transcript.rs`).| — | W1 → W2 (완료) |
+| 답하는 중 보내기(대기열) | 나초가 답하는 동안 보내면 한 칸에 담음(뒤 글은 줄바꿈으로 이어 붙임), "답이 끝나면 보낼게요 · 취소" 표시. 차례가 끝나면(완료·오류·멈춤) 자동으로 보내고, 거절되면 입력칸으로 되돌림 | 있음 — W1 core 이식 + W2 UI(`session.rs`의 `send_or_queue`)| — | W1 → W2 (완료) |
+| 멈추기 | 답하는 동안 보내기 버튼이 **멈추기**로 바뀜(`stop` 프레임) | 있음 — W1 core 이식 + W2 UI: 프레임. 버튼은 W2 | — | W1 → W2 (완료) |
+| 업로드(공통) | `POST /api/v1/media/uploads`(JSON, base64). 첨부 4개, 개당 20MB. png·jpg·gif·webp·heic·pdf·txt·md·csv·mp4. 5MB 넘는 그림은 긴 쪽 2048px JPEG로 줄임. 서버는 jpeg/png/webp/gif(5MB 이하)를 보고 txt/md/csv를 읽음 | 있음 — W1 core 이식 + W2 UI: 종류·크기 규칙과 요청은 `media.rs`. 그림 줄이기와 파일 읽기는 셸(WIC)에서 | heic는 Windows에 코덱이 없을 수 있어 줄이기가 안 될 수 있음(확인 필요) | W1 → W2 (완료) |
+| 캡처 → 펫 | 떠 있는 캡처 우클릭 ▸ **Ask Nacho About This…**: 다음 메시지에 그림 첨부 | 없음 | Capture Float 메뉴 연결은 W3 이후(파일 끌어놓기와 클립 버튼으로 첨부는 됨) | W2 |
+| 선반 → 펫 | 선반 항목 우클릭 ▸ **Give to Nacho**, 펫에 끌어다 놓기(파일, 그림, 글 → 글 파일), 클립 버튼·파일 고르기 | 부분 — 펫 창에 파일을 끌어다 놓기와 채팅의 클립 버튼(파일 고르기) | 선반 항목의 우클릭 메뉴(Give to Nacho)는 아직 없음. 그림 줄이기(5MB 초과)는 아직 없음 — 서버가 거절하면 안내 | W2 |
+| 말하기(누르고 있기) | 로그인 상태에서 나초를 누른 채 가만히: 2초 동안 링이 차고, 녹음 중에는 마이크 크기를 보여 줌. Esc·밖으로 끌기 = 취소, 0.5초 미만은 안 보냄. 최대 길이는 서버 `dictation.max_sec`(없으면 60초, 2,000,000바이트). 결과는 메시지로 자동 전송(약 30초 재시도). 첫 사용 때 마이크 권한 | 있음 — 2초 누름 링(`PetHoldGesture`), 녹음(`src/pet_audio.rs`, wave-in 16kHz 모노)과 마이크 크기 링, Esc·밖으로 끌기=취소, 0.5초 미만 안 보냄, 결과를 자동 전송(약 30초 재시도) | 녹음 형식은 WAV(맥은 m4a). 마이크 접근이 막혀 있으면 안내 줄과 "설정 열기"(`ms-settings:privacy-microphone`) | W1 → W2 (완료)|
+| 받아쓰기 API | `POST /api/v1/dictation` multipart: `language=ko`, `duration_sec`(소수 둘째 자리), `file`(`dictation.m4a`, `audio/mp4`, AAC 16kHz 모노). 허용 MIME: mp4, m4a, x-m4a, aac, wav, webm, mpeg | 있음 — `POST /api/v1/dictation`에 `audio/wav`(`core/pet/wav.rs`) | WAV 16kHz 모노 16비트는 60초에 약 1.9MB. 서버 한도(2,000,000바이트)에 가까워 서버가 `dictation_max_sec`을 더 짧게 주면 그에 맞춰 자름 | W1 → W2 (완료)|
+| 입력칸 마이크 | 서버가 받아쓰기를 켜 두면 서버로, 아니면 기기 안 한국어 음성 인식. 글은 입력칸에만 들어가고 혼자 보내지지 않음 | 부분 — 서버 받아쓰기만. 글은 입력칸에만 들어가고 혼자 보내지지 않음 | 기기 안 음성 인식(맥의 대체 경로)은 없음. 서버가 받아쓰기를 꺼 두면 "이 서버는 받아쓰기를 지원하지 않아요." | W2 |
+| 음성 답 | 말로 물은 차례의 답 첫 문장(140자, 마크다운·URL·이모지 제거)을 기기 안 한국어 음성으로 한 번 읽음. 서버로 아무것도 안 보냄. 새 입력·멈춤·새 누름이면 멈춤. 기본 켜짐 | 없음 | 첫 문장 읽기(음성 합성)는 다음 단계. 설정 `speakVoiceReplies`는 저장만 됨 | W1 → W2 |
+| 선택 막대 | 다른 앱에서 글을 고르면(3px 넘는 드래그, 더블클릭, Shift+화살표 뒤) 작은 막대. 지연: 바로·0.3초(기본)·0.6초·⌘ 누를 때만. 손쉬운 사용 권한 필요, 기본 꺼짐, 첫 사용 카드. 보안 입력 중 숨김. 암호 관리자·키체인·시스템 설정 제외, 터미널은 기본 제외(다시 허용 가능), 사용자 제외 앱. 동작: 복사·검색(Google, Naver, DuckDuckGo)은 Mac 안에서, 번역·요약·설명·나초에게 묻기는 미리보기와 **보내기** 뒤 `선택 맥락.md` 첨부(8000자 + 앱·창 제목·URL·주변 글). 버튼 순서·숨김·1시간 끄기 | 없음 | UI Automation 기반 선택 읽기와 막대 UI는 다음 단계(코어 규칙 `selection.rs`는 이식됨) | W1 → W2 |
+| 펫 링크 | 채팅 안 링크는 앱 안에서만 처리하는 `nachopet://` scheme을 씀 | 있음 — `nachopet://` 링크를 앱 안에서 처리(`pet_ui::on_link`) | 기억 정정은 대화상자 대신 입력창에 쓰고 보내기 | W2 (완료)|
 
 ### 1.4 커넥터와 데스크톱 동작
 
 | 영역 | 맥 기능(동작) | Windows 상태 | 차이·이유 | 담당 |
 |---|---|---|---|---|
-| 커넥터 바인딩 | `POST /api/v1/agents/{id}/connector-binding {kind:"nacho_combo", label}` → `nct_…` 토큰을 비밀 저장소에 보관 | 부분 — W1 core 이식됨(`server_api.rs`, `secrets.rs`, `connector_client.rs`), UI 연결은 W2 | 토큰은 자격 증명 관리자 묶음에 함께 저장. 라벨은 `Nacho Combo (Windows)`, `kind`는 같음 | W1 → W2 |
-| 커넥터 연결 | `/ws/connector`, 첫 `hello` 프레임에 토큰과 `capabilities`(이름, 한국어 설명, `input_schema`, 위험한 것은 `"approval":"required"`). "항상 허용"이나 끈 기능이 바뀌면 `capabilities` 프레임으로 다시 알림. 서버 `request` → 앱 `response`. 30초 핑, 채팅과 같은 재연결, `error{replaced}`면 멈추고 다시 연결 안 함 | 있음 — core(W1·W3) + 실행기(W3, `pet_exec.rs`). 펫 세션에 붙이는 것은 W2 | 기능 이름·입력 스키마는 맥 선언과 같음(`fixtures/mac-capabilities.json` 비교 시험). 다시 알릴 때 핑 장벽, 그 사이 온 요청은 `approval_revoked`로 거절(맥과 같음). Windows에서 의미 없는 기능·삭제형 기능은 선언하지 않음(아래 표) | W1 → W3 |
-| 나초 제어 끄기 | 설정 탭 "이 Mac의 앱·창·가젯을 나초가 쓰게 하기"(`allowComboControl`)로 전부 끔. 나초는 컴퓨터 사용 가젯과 자기 자신을 켜고 끄지 못하고, 권한이 남은 가젯은 켜지 않음 | 부분 — core·실행기 있음(끄면 커넥터를 열지 않음), 설정 화면은 W2 | 같은 스위치. 컴퓨터 사용은 Windows에 아직 없음 | W2·W3 |
+| 커넥터 바인딩 | `POST /api/v1/agents/{id}/connector-binding {kind:"nacho_combo", label}` → `nct_…` 토큰을 비밀 저장소에 보관 | 있음 — core(`server_api.rs`, `secrets.rs`, `connector_client.rs`) + W2에서 펫 세션에 연결(`pet_ui::make_session`) | 토큰은 자격 증명 관리자 묶음에 함께 저장. 라벨은 `Nacho Combo (Windows)`, `kind`는 같음 | W1 → W2 (완료) |
+| 커넥터 연결 | `/ws/connector`, 첫 `hello` 프레임에 토큰과 `capabilities`(이름, 한국어 설명, `input_schema`, 위험한 것은 `"approval":"required"`). "항상 허용"이나 끈 기능이 바뀌면 `capabilities` 프레임으로 다시 알림. 서버 `request` → 앱 `response`. 30초 핑, 채팅과 같은 재연결, `error{replaced}`면 멈추고 다시 연결 안 함 | 있음 — core(W1·W3) + 실행기(W3, `pet_exec.rs`). 펫 세션에 붙임(W2: `executor`와 `declaration()`을 세션에 주고, "항상 허용" 스위치가 바뀌면 `watch_declaration`으로 다시 선언) | 기능 이름·입력 스키마는 맥 선언과 같음(`fixtures/mac-capabilities.json` 비교 시험). 다시 알릴 때 핑 장벽, 그 사이 온 요청은 `approval_revoked`로 거절(맥과 같음). Windows에서 의미 없는 기능·삭제형 기능은 선언하지 않음(아래 표) | W1 → W3 |
+| 나초 제어 끄기 | 설정 탭 "이 Mac의 앱·창·가젯을 나초가 쓰게 하기"(`allowComboControl`)로 전부 끔. 나초는 컴퓨터 사용 가젯과 자기 자신을 켜고 끄지 못하고, 권한이 남은 가젯은 켜지 않음 | 부분 — core·실행기·세션 연결 있음(끄면 커넥터를 열지 않음). **설정 화면의 스위치는 아직 없음** (`pet.json`의 `allowComboControl`을 고치면 적용) | 같은 스위치. 컴퓨터 사용은 Windows에 아직 없음 | W2·W3 |
 | 작업 공간 저장소 | 실행 중인 앱·창 위치·가젯을 이름 붙여 `workspaces.json`에 저장(20개, 이름 40자). 불러오면 없는 앱을 열고 어떤 앱도 끄지 않음 | 있음 — core(`desktop.rs`, `desktop_runner.rs`) + 실행기(W3) | `bundleID` 자리에 exe 전체 경로를 기록(없는 앱을 다시 열려고)하므로 맥 파일과 호환되지 않음. 같은 이름 규칙·20개 한도 | W3 |
 
 `Sources/NachoComboCore/Pet/PetCommands.swift`의 기능(처음 커넥터 계약의 16개, hello 순서). 승인 열은 맥 `main`의 선언

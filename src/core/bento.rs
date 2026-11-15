@@ -42,8 +42,9 @@ impl BentoItem {
 }
 
 /// The gadgets that get a tile: all of them except the board itself.
-pub fn board_modules() -> Vec<ModuleId> { ModuleId::ALL.into_iter().filter(|m| *m != ModuleId::WidgetBoard).collect() }
-fn board_module(key: &str) -> Option<ModuleId> { ModuleId::from_key(key).filter(|m| *m != ModuleId::WidgetBoard) }
+/// The pet is not a tile yet (the Mac board shows it first and large): it is the next step of the pet UI work.
+pub fn board_modules() -> Vec<ModuleId> { ModuleId::ALL.into_iter().filter(|m| *m != ModuleId::WidgetBoard && *m != ModuleId::NachoPet).collect() }
+fn board_module(key: &str) -> Option<ModuleId> { ModuleId::from_key(key).filter(|m| *m != ModuleId::WidgetBoard && *m != ModuleId::NachoPet) }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -209,7 +210,7 @@ pub fn size_text(id: ModuleId, size: BentoSize) -> &'static str {
         (TrayOrganizer, _) => "Whether the icons are folded",
         (AppSwitch, _) => "The switch shortcut",
         (MouseTune, _) => "Scroll speed and direction",
-        (WidgetBoard, _) => "",
+        (WidgetBoard, _) | (NachoPet, _) => "",
     }
 }
 
@@ -344,7 +345,7 @@ pub fn off_line(id: ModuleId) -> &'static str {
         ModuleId::TrayOrganizer => "Turn on to fold away tray icons",
         ModuleId::AppSwitch => "Switch between windows with one shortcut",
         ModuleId::MouseTune => "Set the wheel direction and pointer of a mouse",
-        ModuleId::WidgetBoard => "",
+        ModuleId::WidgetBoard | ModuleId::NachoPet => "",
     }
 }
 
@@ -505,7 +506,7 @@ mod tests {
     #[test] fn the_default_board_puts_gadgets_that_are_on_first() {
         let b = BentoLayout::defaults(|m| matches!(m, Clipboard | KeepAwake));
         assert_eq!(&ids(&b)[..2], ["awake", "clipboard"], "on gadgets in design order");
-        assert_eq!(b.items.len(), ModuleId::ALL.len() - 1, "every gadget once, not the board itself");
+        assert_eq!(b.items.len(), board_modules().len(), "every gadget once, not the board itself and not the pet");
         assert_eq!(b.item(Clipboard).unwrap().size, BentoSize::Wide);
         assert_eq!(b.item(KeepAwake).unwrap().size, BentoSize::Small);
         assert!(b.items.iter().all(|i| !i.hidden));
@@ -588,7 +589,7 @@ mod tests {
             {"id":"clipboard","size":"wide"},{"id":"board"},{"id":"mouse","hidden":"yes"}]}"#;
         let b: BentoLayout = serde_json::from_str(text).unwrap();
         let b = b.normalized();
-        assert_eq!(b.items.len(), ModuleId::ALL.len() - 1);
+        assert_eq!(b.items.len(), board_modules().len());
         assert_eq!(b.items[0].id, "clipboard");
         assert_eq!(b.item(Clipboard).unwrap().size, BentoSize::Small, "an unknown size becomes one cell");
         assert!(b.item(Clipboard).unwrap().hidden, "the first entry wins");
@@ -614,7 +615,7 @@ mod tests {
         assert!(bad.bento.is_none());
         assert!(bad.is_on(KeepAwake));
         let sizes: AppSettings = serde_json::from_str(r#"{"bento":{"items":[{"id":"clipboard","size":"wide"}]}}"#).unwrap();
-        assert_eq!(sizes.board_layout().items.len(), ModuleId::ALL.len() - 1, "missing gadgets are added");
+        assert_eq!(sizes.board_layout().items.len(), board_modules().len(), "missing gadgets are added");
         assert!(sizes.board_layout().items.iter().all(|i| !i.hidden || i.id != "clipboard"));
     }
 
