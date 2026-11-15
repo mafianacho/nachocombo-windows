@@ -29,6 +29,7 @@ pub mod secrets;
 pub mod selection;
 pub mod server_api;
 pub mod server_models;
+pub mod session;
 pub mod settings;
 pub mod socket_transport;
 pub mod transcript;
