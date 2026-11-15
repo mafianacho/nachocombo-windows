@@ -97,7 +97,7 @@ const readBody = (req, limit = 30_000_000) => new Promise((resolve, reject) => {
 // ---- data ----
 const CONNECTIONS = [
   { id: uuid(), user_id: USER, source: 'google_calendar', connect_kind: 'oauth', status: 'connected', enabled: true,
-    label: 'Google 캘린더', account_label: 'm***@example.com', scope_summary: '읽기만 · 모든 캘린더',
+    label: 'Google 캘린더', account_label: 'm***@example.com', scope_summary: '읽기만 · 모든 캘린더', version: 1, granted_scope: { level: 'read' },
     link: `http://${HOST}:${PORT}/mock/manage/google_calendar` },
   { id: uuid(), user_id: USER, source: 'naver_mail', connect_kind: 'app_password', status: 'needs_reauth', enabled: true,
     label: '네이버 메일', account_label: 'n***@naver.com', scope_summary: '읽기만', needs_attention: 'needs_reauth' },
@@ -106,8 +106,8 @@ const CONNECTIONS = [
 ];
 const TOOLS = {
   tools: [
-    { id: uuid(), name: 'get_current_time', search_description: '현재 시각을 알려준다', config: { kind: 'builtin' }, enabled: true },
-    { id: uuid(), name: 'search_web', search_description: '웹을 검색한다', config: { kind: 'builtin' }, enabled: true },
+    { id: uuid(), name: 'get_current_time', search_description: '현재 시각을 알려준다', config: { kind: 'builtin' }, enabled: true, user_enabled: true, locked: true },
+    { id: uuid(), name: 'search_web', search_description: '웹을 검색한다', config: { kind: 'builtin' }, enabled: true, user_enabled: true, locked: false },
     { id: uuid(), name: 'calendar_list_events', search_description: '캘린더 일정을 읽는다', config: { kind: 'connection', source: 'google_calendar' }, source: 'google_calendar', enabled: true },
     { id: uuid(), name: 'mail_search', search_description: '메일을 검색한다', config: { kind: 'connection', source: 'naver_mail' }, source: 'naver_mail', enabled: false },
   ],
@@ -321,6 +321,30 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/api/v1/me') return send(200, { id: USER, display_name: '모의 사용자' });
     if (req.method === 'GET' && url.pathname === '/api/v1/connections') return send(200, CONNECTIONS);
+    // The connections tab's switches (nacho-server spec connections.tsp / tools.tsp): tool switch (locked → 409
+    // tool_locked), service on/off and scope with expected_version (stale → 409 version_conflict), disconnect.
+    const toolSwitch = /^\/api\/v1\/tools\/([0-9a-f-]{36})\/switch$/.exec(url.pathname);
+    if (req.method === 'PUT' && toolSwitch) {
+      const t = TOOLS.tools.find((x) => x.id === toolSwitch[1]);
+      if (!t) return send(404, { error: { code: 'not_found', message: 'tool' } });
+      if (t.locked) return send(409, { error: { code: 'conflict', reason: 'tool_locked', message: 'locked' } });
+      let body; try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch { return send(400, { error: { code: 'validation_error', message: 'json' } }); }
+      if (typeof body.enabled !== 'boolean') return send(400, { error: { code: 'validation_error', message: 'enabled' } });
+      t.user_enabled = body.enabled;
+      return send(200, t);
+    }
+    const conn = /^\/api\/v1\/connections\/([0-9a-f-]{36})(\/scope)?$/.exec(url.pathname);
+    if (conn && ['PATCH', 'DELETE'].includes(req.method)) {
+      const c = CONNECTIONS.find((x) => x.id === conn[1]);
+      if (!c) return send(404, { error: { code: 'not_found', message: 'connection' } });
+      if (req.method === 'DELETE') { c.status = 'disconnected'; c.version = (c.version || 0) + 1; res.writeHead(204); return res.end(); }
+      let body; try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch { return send(400, { error: { code: 'validation_error', message: 'json' } }); }
+      if (body.expected_version !== (c.version || 0)) return send(409, { error: { code: 'conflict', reason: 'version_conflict', message: 'stale' } });
+      if (conn[2]) { if (!['read', 'read_write'].includes(body.level)) return send(400, { error: { code: 'validation_error', message: 'level' } }); c.granted_scope = { level: body.level }; }
+      else { if (typeof body.enabled !== 'boolean') return send(400, { error: { code: 'validation_error', message: 'enabled' } }); c.enabled = body.enabled; }
+      c.version = (c.version || 0) + 1;
+      return send(200, c);
+    }
     if (req.method === 'GET' && url.pathname === '/api/v1/tools') {
       return send(200, { ...TOOLS, connector_capabilities: connector ? connector.capabilities : [] });
     }

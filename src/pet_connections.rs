@@ -391,3 +391,27 @@ fn apply(a: Act, gadgets: &[GadgetSwitchState], disabled: &BTreeSet<String>) {
     }
     crate::pet_chat::invalidate();
 }
+
+/// `ctl petui tab <talk|connections|open <gadget id | tool name | service source>|back|refresh>` — drives the tab without
+/// the mouse (debug channel, the same one the other pet screens use).
+pub fn ctl(a: &[&str]) {
+    let c = &mut app().pet.chat;
+    match a.first().copied().unwrap_or("") {
+        "talk" => c.tab = ChatTab::Talk,
+        "connections" => { c.tab = ChatTab::Connections; opened(); }
+        "refresh" => load(),
+        "back" => { c.conn.detail = None; c.conn.confirm = None; }
+        "open" => {
+            let key = a.get(1).copied().unwrap_or("");
+            c.tab = ChatTab::Connections;
+            let o = c.conn.overview.as_ref();
+            let target = GadgetSwitchState::listed().into_iter().find(|(_, g)| *g == key).map(|(_, g)| ConnectionsRef::Gadget(g))
+                .or_else(|| o.and_then(|o| o.tools.iter().find(|t| t.name == key)).map(|t| ConnectionsRef::Tool(t.id.clone())))
+                .or_else(|| o.and_then(|o| o.connections.iter().find(|x| x.source == key)).map(|x| ConnectionsRef::Connector(x.id.clone())));
+            c.conn.detail = target;
+            c.conn.confirm = None;
+        }
+        _ => {}
+    }
+    crate::pet_chat::invalidate();
+}
