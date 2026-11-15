@@ -15,6 +15,7 @@
 //! aliases. Descriptions use Windows wording (PC instead of 맥, exe names instead of bundle ids, no Accessibility
 //! permission); the schemas (types, enums, bounds, required fields) are the macOS ones.
 use super::desktop::{DesktopWorkspaceStore, PetAppMatcher, PetSystemChange, PetWindowPlacement};
+use super::gadget_tools::{PetCaptureMode, PetGadgetTools, PetItemRef};
 use super::json::JsonObject;
 use crate::core::layout::SnapAction;
 use crate::core::settings::ModuleId;
@@ -45,6 +46,28 @@ pub enum PetCommand {
     SaveWorkspace(String),
     ApplyWorkspace(String),
     ListWorkspaces,
+    // Gadget tools (`gadget_tools.rs`, macOS registry names `combo_<gadget>_<action>`).
+    DeviceStatus,
+    /// Volume 0...100 and/or mute of the current sound output.
+    SetVolume { volume: Option<i64>, muted: Option<bool> },
+    SetMicMuted(bool),
+    DimStatus,
+    DimPause,
+    DimResume,
+    ShelfList,
+    /// content_out: the item goes on the next chat message.
+    ShelfGive(PetItemRef),
+    ClipboardList,
+    /// content_out: the item's text goes to the server.
+    ClipboardGetItem(PetItemRef),
+    ClipboardCopyAgain(PetItemRef),
+    /// content_out: a capture goes on the next chat message.
+    CaptureAsk(PetCaptureMode),
+    CaptureListPinned,
+    AwakeStatus,
+    /// 0 = until stopped.
+    AwakeStart { minutes: i64 },
+    AwakeStop,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -202,9 +225,10 @@ impl PetCommands {
         Self::LEGACY_NAMES.iter().copied().filter(|n| *n != Self::QUIT_APP || allow_quit).collect()
     }
 
-    /// The legacy name for a declared name or an alias.
+    /// The legacy name for a declared name or an alias; a gadget tool's own name.
     pub fn resolve(name: &str) -> Option<&'static str> {
         if let Some(n) = Self::LEGACY_NAMES.iter().find(|n| **n == name) { return Some(n); }
+        if let Some(t) = PetGadgetTools::TOOLS.iter().find(|t| t.name == name) { return Some(t.name); }
         Self::ALIASES.iter().find(|(a, _)| *a == name).map(|(_, l)| *l)
     }
 
@@ -252,6 +276,7 @@ impl PetCommands {
 
     /// Korean description (at most 200 characters: what and when) and JSON schema of a capability (or an alias).
     pub fn spec(name: &str) -> Option<(String, Value)> {
+        if PetGadgetTools::is_tool(name) { return PetGadgetTools::spec(name); }
         let app = Self::app_property;
         let (d, schema) = match Self::resolve(name)? {
             Self::ARRANGE_WINDOW => ("맨 앞 창(또는 지정한 실행 중 앱의 창) 하나를 화면 왼쪽 반·오른쪽 반·최대화·네 귀퉁이·3분할 등으로 옮겨요. \
@@ -325,10 +350,39 @@ impl PetCommands {
         }).collect()
     }
 
-    /// Accepts the raw value (`windowSnap`) or the display name (`Window Snap`, any case and spacing).
+    /// The hello declaration of `names` (declared names, in order): `"approval": "required"` by risk
+    /// ([`PetGadgetTools::approval_required`]; gadgets in `always_allowed` lift their content_out tools), names in
+    /// `disabled` (declared name or alias) left out, `combo_quit_app` only with `allow_quit`.
+    pub fn declaration(names: &[&str], allow_quit: bool, always_allowed: &BTreeSet<String>, disabled: &BTreeSet<String>) -> Vec<Value> {
+        names.iter().copied().filter(|n| *n != Self::QUIT_APP || allow_quit)
+            .filter(|n| !Self::connector_names(n).iter().any(|c| disabled.contains(*c)) && !disabled.contains(*n))
+            .filter_map(|name| {
+                let (description, schema) = Self::spec(name)?;
+                let mut c = json!({"name": name, "description": description, "input_schema": schema});
+                if PetGadgetTools::approval_required(name, always_allowed) { c["approval"] = json!("required"); }
+                Some(c)
+            }).collect()
+    }
+
+    /// What the Windows app declares: [`PetGadgetTools::WINDOWS`] (plus the chat handoff tools once the pet's chat
+    /// window can take an attachment).
+    pub fn windows_declaration(always_allowed: &BTreeSet<String>, disabled: &BTreeSet<String>, chat_handoff: bool) -> Vec<Value> {
+        let mut names: Vec<&str> = PetGadgetTools::WINDOWS.to_vec();
+        if chat_handoff {
+            let at = names.iter().position(|n| *n == PetGadgetTools::CLIPBOARD_LIST).unwrap_or(names.len());
+            names.insert(at, PetGadgetTools::SHELF_GIVE); // macOS order: shelf list, give, …, capture ask, list pinned
+            let at = names.iter().position(|n| *n == PetGadgetTools::CAPTURE_LIST_PINNED).unwrap_or(names.len());
+            names.insert(at, PetGadgetTools::CAPTURE_ASK);
+        }
+        Self::declaration(&names, Self::DECLARES_QUIT_APP, always_allowed, disabled)
+    }
+
+    /// Accepts the raw value (`windowSnap`) or the display name (`Window Snap`, any case and spacing). The macOS
+    /// `menuBar` (Menu Bar Organizer) is Tray Organizer here.
     pub fn gadget(named: &str) -> Option<PetGadget> {
         let s = named.trim();
         if let Some(g) = PetGadget::from_raw(s) { return Some(g); }
+        if s.eq_ignore_ascii_case("menuBar") || s.eq_ignore_ascii_case("menu bar organizer") { return Some(PetGadget::Module(ModuleId::TrayOrganizer)); }
         let folded = s.to_lowercase().replace(' ', "");
         PetGadget::all().into_iter().find(|g| g.raw_value().to_lowercase() == folded || g.display_name().to_lowercase().replace(' ', "") == folded)
     }
@@ -391,6 +445,7 @@ impl PetCommands {
     pub fn parse_with(raw_name: &str, params: Option<&Value>, allow_quit: bool) -> Result<PetCommand, PetCommandProblem> {
         use PetCommandProblem::*;
         let Some(capability) = Self::resolve(raw_name) else { return Err(UnknownCapability(raw_name.chars().take(64).collect())) };
+        if PetGadgetTools::is_tool(capability) { return PetGadgetTools::parse(capability, params); }
         if Self::present(params) && !params.is_some_and(Value::is_object) { return Err(BadParams("parameters must be an object".into())); }
         let p = params.and_then(Value::as_object).cloned().unwrap_or_default();
         match capability {

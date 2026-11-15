@@ -11,18 +11,25 @@
 //! Windows shell passes [`ConnectorBinding::LABEL_WINDOWS`]); `kind` stays `nacho_combo` (the server's connector kind,
 //! not a platform). The hello frame keeps the macOS shape so a strict server never sees an unknown field.
 //!
-//! Not ported (macOS 0.10.2): the gadget tool registry and its "always allow" trust (re-declaration with a ping
-//! barrier, `approval_revoked` refusals) and the registry tools beyond the 16 `PetCommands`. What stays: the shell
-//! decides what hello declares ([`PetConnectorClient::with_capabilities`], [`PetConnectorClient::declare`]) and a
-//! request for anything not declared is refused before it reaches the shell.
+//! The shell decides what hello declares ([`PetConnectorClient::with_capabilities`], [`PetConnectorClient::declare`])
+//! and a request for anything not declared is refused before it reaches the shell.
+//!
+//! "Always allow" (macOS, `trust.rs`): a change is declared again at once (`capabilities` frame) with a ping
+//! right behind it. The client keeps what the server believes (`confirmed`: the hello, or the last `capabilities`
+//! frame once the pong behind it arrived; frames on one socket are handled in order). A request for a capability the
+//! server still believes runs without a card, but which now needs one, came without an approval card: it is refused
+//! (`approval_revoked`) instead of run. No pong within [`PetConnectorClient::BARRIER_SECONDS`]: the connection is
+//! opened again and hello declares fresh.
 use super::chat_client::{MakeTransport, Schedule, TransportEvent, WebSocketTransport};
 use super::commands::{PetCommand, PetCommandOutcome, PetCommandProblem, PetCommands};
+use super::gadget_tools::PetGadgetTools;
 use super::http::PetHTTPRequest;
 use super::json::{self, JsonExt};
 use super::media::PetIDs;
 use super::reconnect::{ReconnectPolicy, TransportFailure};
 use super::settings::ServerEndpoint;
 use serde_json::{json, Value};
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, Weak};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -137,6 +144,10 @@ struct State {
     attempt: u32,
     wanted: bool,
     capabilities: Vec<Value>,
+    /// What the server believes is declared (hello, or a `capabilities` frame whose ping barrier came back).
+    confirmed: Vec<Value>,
+    /// One entry per ping in flight: Some(declaration) behind a `capabilities` frame, None for the keep-alive ping.
+    pings: VecDeque<Option<Vec<Value>>>,
 }
 
 /// Work decided under the lock and done after it is released (transport calls, callbacks, timers).
@@ -173,7 +184,7 @@ impl PetConnectorClient {
     pub fn new(url: &str, token: &str, executor: &Arc<dyn PetCommandExecuting>, make_transport: MakeTransport, schedule: Schedule) -> Self {
         let state = State {
             phase: ConnectorPhase::Off, handled: Vec::new(), transport: None, generation: 0, attempt: 0, wanted: false,
-            capabilities: PetCommands::capabilities(),
+            capabilities: PetCommands::capabilities(), confirmed: Vec::new(), pings: VecDeque::new(),
         };
         Self { inner: Arc::new(Inner {
             url: url.into(), token: token.into(), executor: Arc::downgrade(executor), make_transport,
@@ -221,15 +232,18 @@ impl PetConnectorClient {
         Inner::run(&self.inner, acts);
     }
 
-    /// Changes what is declared; an open connection hears it at once (`capabilities` frame), a later one in hello.
+    /// How long a re-declaration may stay unanswered before the connection is opened again (macOS `barrierSeconds`).
+    pub const BARRIER_SECONDS: f64 = 10.0;
+
+    /// Changes what is declared; an open connection hears it at once (`capabilities` frame + ping barrier), a later
+    /// one in hello.
     pub fn declare(&self, capabilities: Vec<Value>) {
         let mut acts = Vec::new();
         {
             let mut s = self.inner.state.lock().unwrap();
+            if s.capabilities == capabilities { return; }
             s.capabilities = capabilities;
-            if let (true, ConnectorPhase::Ready, Some(t)) = (s.wanted, &s.phase, &s.transport) {
-                acts.push(Act::Send(t.clone(), ConnectorFrames::capabilities(&s.capabilities)));
-            }
+            Inner::redeclare(&self.inner, &mut s, &mut acts);
         }
         Inner::run(&self.inner, acts);
     }
@@ -299,6 +313,8 @@ impl Inner {
             if gen != s.generation { return; }
             match ev {
                 TransportEvent::Opened => {
+                    s.confirmed = s.capabilities.clone();
+                    s.pings.clear();
                     if let Some(t) = &s.transport { acts.push(Act::Send(t.clone(), ConnectorFrames::hello(&this.token, &s.capabilities))); }
                 }
                 TransportEvent::Text(text) => match ConnectorFrames::decode(&text) {
@@ -306,6 +322,8 @@ impl Inner {
                         s.attempt = 0;
                         Self::set(&mut s, ConnectorPhase::Ready, &mut acts);
                         Self::schedule_ping(this, gen, &mut acts);
+                        // A switch changed between hello and ready: say so now.
+                        if s.capabilities != s.confirmed { Self::redeclare(this, &mut s, &mut acts); }
                     }
                     ConnectorIncoming::Request { id, capability, params_json } => Self::request(this, &mut s, &id, &capability, &params_json, gen, &mut acts),
                     ConnectorIncoming::Error { code } => {
@@ -318,7 +336,10 @@ impl Inner {
                             acts.push(Act::Unauthorized);
                         }
                     }
-                    ConnectorIncoming::Pong | ConnectorIncoming::Other => {}
+                    ConnectorIncoming::Pong => {
+                        if let Some(Some(declared)) = s.pings.pop_front() { s.confirmed = declared; }
+                    }
+                    ConnectorIncoming::Other => {}
                 },
                 TransportEvent::Closed(failure) => Self::closed(this, &mut s, failure, &mut acts),
             }
@@ -353,6 +374,33 @@ impl Inner {
         })));
     }
 
+    /// Sends the current declaration with a ping barrier behind it (only on a ready connection; a new one declares in
+    /// hello). The server never answering the barrier: open the connection again.
+    fn redeclare(this: &Arc<Inner>, s: &mut State, acts: &mut Vec<Act>) {
+        let (true, ConnectorPhase::Ready, Some(t)) = (s.wanted, &s.phase, s.transport.clone()) else { return };
+        acts.push(Act::Send(t.clone(), ConnectorFrames::capabilities(&s.capabilities)));
+        s.pings.push_back(Some(s.capabilities.clone()));
+        acts.push(Act::Send(t, ConnectorFrames::PING.into()));
+        let gen = s.generation;
+        let weak = Arc::downgrade(this);
+        acts.push(Act::Later(PetConnectorClient::BARRIER_SECONDS, Box::new(move || {
+            let Some(i) = weak.upgrade() else { return };
+            let mut acts = Vec::new();
+            {
+                let mut s = i.state.lock().unwrap();
+                if !s.wanted || gen != s.generation || !s.pings.iter().any(Option::is_some) { return; }
+                s.attempt = 0;
+                Inner::open(&i, &mut s, &mut acts);
+            }
+            Inner::run(&i, acts);
+        })));
+    }
+
+    /// The `approval` of `name` in a declaration (None: declared without a card, or not declared).
+    fn asks(declaration: &[Value], name: &str) -> Option<bool> {
+        declaration.iter().find(|c| c["name"].as_str() == Some(name)).map(|c| c["approval"] == "required")
+    }
+
     fn request(this: &Arc<Inner>, s: &mut State, id: &str, capability: &str, params_json: &str, gen: u64, acts: &mut Vec<Act>) {
         let Some(t) = s.transport.clone() else { return };
         let declared: Vec<String> = s.capabilities.iter().filter_map(|c| c["name"].as_str().map(str::to_string)).collect();
@@ -365,6 +413,13 @@ impl Inner {
         if let Some(legacy) = PetCommands::resolve(capability) {
             if !declared.iter().any(|d| d == legacy) {
                 return refuse(s, acts, PetCommandProblem::NotAllowed(format!("{short} is not declared by this Nacho Combo")));
+            }
+            // The server still believes it runs without a card, but it needs one now: no card ran for this call.
+            if Self::asks(&s.confirmed, legacy) == Some(false) && Self::asks(&s.capabilities, legacy) == Some(true) {
+                s.handled.push(format!("{short}:refused"));
+                let gadget = PetGadgetTools::gadget(legacy).unwrap_or("combo");
+                acts.push(Act::Send(t.clone(), ConnectorFrames::response(id, &PetCommandOutcome::approval_revoked(gadget))));
+                return;
             }
         }
         let params: Option<Value> = serde_json::from_str(params_json).ok();
@@ -384,9 +439,9 @@ impl Inner {
             let Some(i) = weak.upgrade() else { return };
             let mut acts = Vec::new();
             {
-                let s = i.state.lock().unwrap();
+                let mut s = i.state.lock().unwrap();
                 if gen != s.generation || s.phase != ConnectorPhase::Ready { return; }
-                if let Some(t) = &s.transport { acts.push(Act::Send(t.clone(), ConnectorFrames::PING.into())); }
+                if let Some(t) = s.transport.clone() { s.pings.push_back(None); acts.push(Act::Send(t, ConnectorFrames::PING.into())); }
                 Inner::schedule_ping(&i, gen, &mut acts);
             }
             Inner::run(&i, acts);
@@ -569,5 +624,134 @@ mod tests {
         assert_eq!(phases.lock().unwrap().first(), Some(&ConnectorPhase::Connecting));
         c.disconnect();
         assert_eq!(c.phase(), ConnectorPhase::Off);
+    }
+
+    // "Always allow" (macOS PetConnectorClient: confirmedAllowed, ping barrier, approval_revoked)
+
+    fn windows(always: &[&str]) -> Vec<Value> {
+        PetCommands::windows_declaration(&always.iter().map(|s| s.to_string()).collect(), &Default::default(), false)
+    }
+
+    fn ready_client(declared: Vec<Value>) -> (PetConnectorClient, Arc<FakeTransport>, Arc<RecordingExecutor>, Scheduled, Made) {
+        let (made, make, scheduled, schedule) = setup();
+        let rec = Arc::new(RecordingExecutor::default());
+        let ex: Arc<dyn PetCommandExecuting> = rec.clone();
+        let c = PetConnectorClient::new("ws://h/ws/connector", "nct_1", &ex, make, schedule).with_capabilities(declared);
+        std::mem::forget(ex); // the client holds the executor weakly; keep it alive for the test
+        c.connect();
+        let t = made.lock().unwrap()[0].clone();
+        t.fire(TransportEvent::Opened);
+        t.deliver(r#"{"type":"ready","agent_id":"a"}"#);
+        scheduled.lock().unwrap().clear(); // the keep-alive ping timer
+        (c, t, rec, scheduled, made)
+    }
+
+    fn get_item(t: &FakeTransport, id: &str) {
+        t.deliver(&format!(r#"{{"type":"request","id":"{id}","capability":"combo_clipboard_get_item","params":{{"index":1}}}}"#));
+    }
+
+    #[test]
+    fn switching_always_allow_declares_again_with_a_ping_barrier() {
+        let (c, t, _rec, scheduled, _made) = ready_client(windows(&[]));
+        let hello = json::object_str(&t.sent()[0]).unwrap();
+        let item = hello["capabilities"].as_array().unwrap().iter().find(|c| c["name"] == "combo_clipboard_get_item").unwrap().clone();
+        assert_eq!(item["approval"], "required", "content_out asks every time by default");
+        let n = t.sent().len();
+        c.declare(windows(&["clipboard"]));
+        let sent = t.sent();
+        assert_eq!(sent.len(), n + 2, "capabilities frame and a ping right behind it");
+        let frame = json::object_str(&sent[n]).unwrap();
+        assert_eq!(frame.str("type").as_deref(), Some("capabilities"));
+        let lifted = frame["capabilities"].as_array().unwrap().iter().find(|c| c["name"] == "combo_clipboard_get_item").unwrap().clone();
+        assert!(lifted.get("approval").is_none(), "always allowed: no card");
+        let quit = frame["capabilities"].as_array().unwrap().iter().find(|c| c["name"] == "combo_quit_app").unwrap().clone();
+        assert_eq!(quit["approval"], "required", "destructive keeps its card");
+        assert_eq!(sent[n + 1], ConnectorFrames::PING);
+        assert_eq!(scheduled.lock().unwrap()[0].0, PetConnectorClient::BARRIER_SECONDS);
+        // Same declaration again: nothing is sent.
+        c.declare(windows(&["clipboard"]));
+        assert_eq!(t.sent().len(), n + 2);
+    }
+
+    #[test]
+    fn a_call_in_the_revoke_race_is_refused_not_run() {
+        // Hello said "always allowed" (no card); the user switched it off; the server has not read the new frame yet.
+        let (c, t, rec, _scheduled, _made) = ready_client(windows(&["clipboard"]));
+        get_item(&t, "before");
+        assert_eq!(rec.commands.lock().unwrap().len(), 1, "always allowed: runs");
+        c.declare(windows(&[]));
+        get_item(&t, "race");
+        let r = t.last();
+        assert_eq!(r.str("id").as_deref(), Some("race"));
+        assert_eq!(r["result"]["ok"], false);
+        assert_eq!(r["result"]["reason"], "approval_revoked");
+        assert_eq!(r["result"]["gadget"], "clipboard");
+        assert_eq!(rec.commands.lock().unwrap().len(), 1, "never reached the PC");
+        // The pong behind the frame: the server now shows the card, so a call that comes is an approved one.
+        t.deliver(r#"{"type":"pong"}"#);
+        get_item(&t, "after");
+        assert_eq!(t.last().str("id").as_deref(), Some("after"));
+        assert_eq!(t.last()["result"]["ok"], true);
+        assert_eq!(rec.commands.lock().unwrap().len(), 2);
+        assert_eq!(c.handled(), vec!["combo_clipboard_get_item:ok", "combo_clipboard_get_item:refused", "combo_clipboard_get_item:ok"]);
+    }
+
+    #[test]
+    fn the_keep_alive_pong_does_not_confirm_a_new_declaration() {
+        let (c, t, _rec, scheduled, _made) = ready_client(windows(&["clipboard"]));
+        // A keep-alive ping was in flight before the switch changed.
+        let mut s = c.inner.state.lock().unwrap();
+        s.pings.push_back(None);
+        drop(s);
+        c.declare(windows(&[]));
+        t.deliver(r#"{"type":"pong"}"#); // answers the keep-alive, not the barrier
+        get_item(&t, "x");
+        assert_eq!(t.last()["result"]["reason"], "approval_revoked");
+        t.deliver(r#"{"type":"pong"}"#);
+        get_item(&t, "y");
+        assert_eq!(t.last()["result"]["ok"], true);
+        assert!(scheduled.lock().unwrap().iter().any(|(d, _)| *d == PetConnectorClient::BARRIER_SECONDS));
+    }
+
+    #[test]
+    fn no_pong_behind_the_frame_opens_the_connection_again() {
+        let (c, t, _rec, scheduled, made) = ready_client(windows(&["clipboard"]));
+        c.declare(windows(&[]));
+        let barrier = scheduled.lock().unwrap().remove(0);
+        (barrier.1)();
+        assert!(*t.closed.lock().unwrap(), "the old socket is closed");
+        assert_eq!(made.lock().unwrap().len(), 2);
+        let t2 = made.lock().unwrap()[1].clone();
+        t2.fire(TransportEvent::Opened);
+        let hello = json::object_str(&t2.sent()[0]).unwrap();
+        let item = hello["capabilities"].as_array().unwrap().iter().find(|c| c["name"] == "combo_clipboard_get_item").unwrap().clone();
+        assert_eq!(item["approval"], "required", "hello declares fresh");
+        // A barrier answered in time does nothing.
+        let (c2, t3, _r, scheduled2, made2) = ready_client(windows(&["clipboard"]));
+        c2.declare(windows(&[]));
+        t3.deliver(r#"{"type":"pong"}"#);
+        let barrier = scheduled2.lock().unwrap().remove(0);
+        (barrier.1)();
+        assert_eq!(made2.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_switch_changed_before_ready_is_declared_at_ready() {
+        let (made, make, _scheduled, schedule) = setup();
+        let rec = Arc::new(RecordingExecutor::default());
+        let ex: Arc<dyn PetCommandExecuting> = rec.clone();
+        let c = PetConnectorClient::new("ws://h/ws/connector", "nct_1", &ex, make, schedule).with_capabilities(windows(&[]));
+        c.connect();
+        let t = made.lock().unwrap()[0].clone();
+        t.fire(TransportEvent::Opened);
+        c.declare(windows(&["clipboard"])); // between hello and ready: not sent yet
+        assert_eq!(t.sent().len(), 1);
+        t.deliver(r#"{"type":"ready","agent_id":"a"}"#);
+        let frame = json::object_str(&t.sent()[1]).unwrap();
+        assert_eq!(frame.str("type").as_deref(), Some("capabilities"));
+        // Until the barrier comes back the server still shows a card for it: the call is an approved one and runs.
+        get_item(&t, "z");
+        assert_eq!(t.last()["result"]["ok"], true);
+        assert_eq!(rec.commands.lock().unwrap().len(), 1);
     }
 }
