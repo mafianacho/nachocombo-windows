@@ -33,6 +33,7 @@ pub mod placement;
 pub mod reconnect;
 pub mod secrets;
 pub mod selection;
+pub mod selection_watch;
 pub mod server_api;
 pub mod server_models;
 pub mod session;

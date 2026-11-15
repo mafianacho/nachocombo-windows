@@ -291,8 +291,12 @@ fn draw_item(ui: &mut Ui, cx: &mut Cx, item: &PetChatItem, x: f64, y: f64) -> f6
             ui.c.line_text(d, sans(11), Rect::new(x + (w - tw) / 2.0, y, tw, 16.0), pal.tertiary, Align::Center);
             16.0
         }
-        // The selection bar is not part of the Windows pet yet: its items never appear.
-        PetChatItem::RequestChip(_) | PetChatItem::AnswerActions { .. } | PetChatItem::SentContext(_) | PetChatItem::SelectionPreview(_) | PetChatItem::SelectionIntro => 0.0,
+        // The selection bar's pieces (`pet_selection_ui`).
+        PetChatItem::RequestChip(text) => crate::pet_selection_ui::chip(ui, pal, text, x, y, w),
+        PetChatItem::AnswerActions { turn_id, showing_sent } => crate::pet_selection_ui::answer_actions(ui, pal, turn_id, *showing_sent, x, y, &mut cx.clicked),
+        PetChatItem::SentContext(rows) => crate::pet_selection_ui::sent_context(ui, pal, rows, x, y, w),
+        PetChatItem::SelectionPreview(p) => crate::pet_selection_ui::preview(ui, pal, p, x, y, w, &mut cx.clicked),
+        PetChatItem::SelectionIntro => crate::pet_selection_ui::intro(ui, pal, x, y, w, &mut cx.clicked),
     }
 }
 
@@ -389,7 +393,7 @@ fn files_row(ui: &mut Ui, cx: &mut Cx, files: &[PetFileChip], mine: bool, x: f64
     yy - y - space::XS
 }
 
-fn clipboard_text() -> Option<String> {
+pub fn clipboard_text() -> Option<String> {
     use windows::Win32::System::DataExchange::*;
     use windows::Win32::System::Memory::*;
     unsafe {
@@ -467,7 +471,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     let focus_input = ui.st.focus.is_none() || ui.st.focus == Some(ui.id("input"));
     let items = if signed_in {
         let undo = |u: &str| session.as_ref().and_then(|s| s.can_undo_forget(u).then_some(10));
-        let mut v = PetTranscript::items(&st, &undo, &PetSelectionChatState::default(), a.pet.flow.locals(), crate::core::pet::clock::now());
+        let mut v = PetTranscript::items(&st, &undo, &crate::pet_selection::chat_state(), a.pet.flow.locals(), crate::core::pet::clock::now());
         if let Some(n) = notice_line() { v.push(n); }
         v
     } else { vec![] };
@@ -485,13 +489,13 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     let av = Rect::new(space::M, head.y + (HEADER - tok::AVATAR) / 2.0, tok::AVATAR, tok::AVATAR);
     ui.c.circle(av.cx(), av.cy(), av.w / 2.0, pal.accent_soft);
     ui.c.image(&crate::pet_art::key_of("idle"), || crate::pet_art::image("idle").map(|p| (*p).clone()), av.inset(1.0, 1.0), 1.0);
-    let hs = PetTranscript::header_status(&st, &PetSelectionChatState::default());
+    let hs = PetTranscript::header_status(&st, &crate::pet_selection::chat_state());
     let name = if st.chat.agent_name.is_empty() { "나초".to_string() } else { st.chat.agent_name.clone() };
     let right = 2.0 * 28.0 + 4.0 + space::M;
     ui.c.line_text(&name, semi(15), Rect::new(av.right() + space::S, head.y + 4.0, w - right - 50.0, 20.0), pal.text, Align::Left);
     let dot = match hs.dot { HeaderDot::Ok => pal.success, HeaderDot::Busy => pal.accent, HeaderDot::Wait | HeaderDot::Warn => pal.warning, HeaderDot::Off => pal.tertiary };
     ui.c.circle(av.right() + space::S + tok::STATUS_DOT / 2.0, head.y + 31.0, tok::STATUS_DOT / 2.0, dot);
-    ui.c.line_text(&PetTranscript::header_line(&st, &PetSelectionChatState::default()), sans(11), Rect::new(av.right() + space::S + tok::STATUS_DOT + space::XS, head.y + 23.0, w - right - 66.0, 16.0), pal.secondary, Align::Left);
+    ui.c.line_text(&PetTranscript::header_line(&st, &crate::pet_selection::chat_state()), sans(11), Rect::new(av.right() + space::S + tok::STATUS_DOT + space::XS, head.y + 23.0, w - right - 66.0, 16.0), pal.secondary, Align::Left);
     let close_r = Rect::new(w - space::M - 28.0, head.y + (HEADER - 28.0) / 2.0, 28.0, 28.0);
     let more_r = Rect::new(close_r.x - 4.0 - 28.0, close_r.y, 28.0, 28.0);
     for (key, r, glyph) in [("close", close_r, 0xE711u32), ("more", more_r, 0xE712u32)] {
@@ -553,7 +557,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     {
         let c = &mut a.pet.chat;
         if sig != c.sig {
-            if c.pinned || c.sig == 0 { c.stick = true; }
+            if c.pinned || c.sig == 0 { c.stick = true; c.stick_frames = 4; }
             c.sig = sig;
         }
         if (view.h - c.last_view_h).abs() > 0.5 {
@@ -564,7 +568,9 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         if c.stick {
             // Stay at the end until the content stops growing (a card is measured one frame later).
             ui.st.scroll.insert(log_id, 1.0e9);
-            if (content - c.last_content).abs() < 0.5 { c.stick = false; }
+            // A new item is measured a frame after it is first drawn: keep following for a few frames before judging.
+            c.stick_frames = c.stick_frames.saturating_sub(1);
+            if c.stick_frames == 0 && (content - c.last_content).abs() < 0.5 { c.stick = false; }
             ui.st.again = true;
         }
         c.last_content = content;

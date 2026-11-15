@@ -39,6 +39,9 @@ pub fn run(a: &[String]) {
             "reset" => crate::pet_ui::reset_position(),
             "dictate" => crate::pet_ui::dictate_from_wav(arg(a, 2), arg(a, 3) == "hold"),
             "attach" => crate::pet_ui::attach_file(std::path::Path::new(arg(a, 2))),
+            // `petui sel <text>`: shows the selection bar for that text near the pointer, without reading any app.
+            "sel" => crate::pet_selection::present_text(&a[2..].join(" "), None),
+            "selhide" => crate::pet_selection::hide(),
             _ => {}
         },
         "snap" => if let Some(s) = SnapAction::from_id(arg(a, 1)) { snap::run(s); },

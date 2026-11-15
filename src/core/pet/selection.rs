@@ -523,6 +523,8 @@ impl PetSelectionField {
             Self::Language => "language",
         }
     }
+
+    pub fn from_raw(s: &str) -> Option<Self> { Self::ALL.into_iter().find(|f| f.raw() == s) }
 }
 
 /// One row of the preview card (`.ctx .row2`). `symbol` is the mockup's icon name (SF Symbol name on the Mac).
