@@ -266,6 +266,7 @@ impl PetGadgetTools {
         o
     }
 
+    // i18n-exempt:begin (sent to the server as tool text, not drawn)
     fn item_ref() -> Value {
         Self::object(json!({
             "index": {"type": "integer", "description": "목록의 번호(1부터)", "minimum": 1, "maximum": Self::MAX_INDEX},
@@ -301,6 +302,7 @@ impl PetGadgetTools {
         };
         Some((d.to_string(), schema))
     }
+    // i18n-exempt:end
 
     // MARK: parameters (macOS DataGadgetRunner / tool runners: closed lists, unknown fields refused)
 
@@ -400,6 +402,7 @@ impl PetCommandOutcome {
         PetCommandOutcome { ok: false, message: message.into(), gadgets: None, details: d.as_object().cloned() }
     }
 
+    // i18n-exempt:begin (sent to the server as tool text, not drawn)
     pub fn gadget_off(gadget: &str) -> PetCommandOutcome {
         Self::refused("gadget_off", &format!("{} is switched off in Nacho Combo.", PetGadgetTools::display_name(gadget)),
             "ask the user with ask_choice, then call combo_set_gadget",
@@ -424,6 +427,7 @@ impl PetCommandOutcome {
             "do not retry; tell the user this action is not available yet", "이 버전의 나초콤보에서는 아직 쓸 수 없는 기능이에요.", json!({}))
     }
 
+    // i18n-exempt:end
     fn with(ok: bool, message: impl Into<String>, details: Value) -> PetCommandOutcome {
         PetCommandOutcome { ok, message: message.into(), gadgets: None, details: details.as_object().cloned() }
     }

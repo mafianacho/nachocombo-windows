@@ -14,6 +14,7 @@
 //! not ported, so the specs are written out here and the registry's `combo_<gadget>_<action>` names are accepted as
 //! aliases. Descriptions use Windows wording (PC instead of 맥, exe names instead of bundle ids, no Accessibility
 //! permission); the schemas (types, enums, bounds, required fields) are the macOS ones.
+// i18n-exempt:begin (the capabilities' descriptions are read by the server's tool picker, not drawn)
 use super::desktop::{DesktopWorkspaceStore, PetAppMatcher, PetSystemChange, PetWindowPlacement};
 use super::gadget_tools::{PetCaptureMode, PetGadgetTools, PetItemRef};
 use super::json::JsonObject;

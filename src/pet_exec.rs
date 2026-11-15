@@ -382,7 +382,9 @@ fn installed_apps() -> Vec<PetAppEntry> {
     installed_links().into_iter().filter_map(|(lnk, exe)| {
         let name = lnk.file_stem()?.to_string_lossy().to_string();
         let lower = name.to_lowercase();
+        // i18n-exempt:begin (matches an installer link name, not drawn)
         if lower.contains("uninstall") || name.contains("제거") { return None; }
+        // i18n-exempt:end
         let id = exe_name(&exe);
         let stem = id.trim_end_matches(".exe").to_string();
         Some(PetAppEntry { bundle_id: id, names: vec![name, stem], running: false })

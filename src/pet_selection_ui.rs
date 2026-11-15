@@ -64,7 +64,9 @@ fn row_height(ui: &Ui, r: &PetSelectionRow, inner: f64, editable: bool) -> f64 {
     if r.field == PetSelectionField::Selection {
         let tw = inner - ROW_ICON - space::S - if editable { 28.0 } else { 0.0 };
         let (_, qh) = ui.c.measure(&r.value, sans(11), tw);
+        // i18n-exempt:begin (a glyph to measure the line height, not drawn)
         let line = ui.c.measure("가", sans(11), 100.0).1;
+        // i18n-exempt:end
         let mut h = 16.0 + qh.min(2.0 * line);
         if r.warning.is_some() { h += 16.0; }
         h
@@ -97,7 +99,9 @@ fn context_row(ui: &mut Ui, pal: &Pal, r: &PetSelectionRow, x: f64, y: f64, inne
             ui.c.line_text(wn, medium(11), Rect::new(tx + 18.0, cy, tw - 18.0, 16.0), pal.warning, Align::Left);
             cy += 16.0;
         }
+        // i18n-exempt:begin (a glyph to measure the line height, not drawn)
         let line = ui.c.measure("가", sans(11), 100.0).1;
+        // i18n-exempt:end
         let (_, qh) = ui.c.measure(&r.value, sans(11), tw);
         let qr = Rect::new(tx, cy, tw, qh.min(2.0 * line) + 1.0);
         ui.c.clip(qr);

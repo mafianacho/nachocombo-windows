@@ -39,6 +39,8 @@ pub mod server_models;
 pub mod session;
 pub mod settings;
 pub mod trust;
+#[cfg(test)]
+mod i18n_check;
 pub mod socket_transport;
 pub mod transcript;
 pub mod voice;
