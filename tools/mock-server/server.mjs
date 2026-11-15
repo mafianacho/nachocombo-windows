@@ -17,7 +17,7 @@
 // The model is NOT real: replies are canned. Tool use is simulated with keyword rules (see `planTool`) so the
 // connector round trip runs end to end; pictures are "seen" by reading the PNG header (width × height).
 //
-// usage: node tools/mock-server/server.mjs [--port 8787] [--log path.jsonl] [--delay-ms 60] [--access-ttl 300]
+// usage: node tools/mock-server/server.mjs [--port 8787] [--log path.jsonl] [--delay-ms 60] [--access-ttl 300] [--code-ttl 60]
 // magic texts: "/error" -> error frame, "/drop" -> server closes socket mid-stream but finishes and stores the answer,
 // "/long" -> long answer (for stop), "/task …" -> handed to a task (task_update, interim, choice card, task_result),
 // "/remember …" -> memory_update + an answer that used a memory, "/search …" -> tool call with an interim line,
@@ -37,6 +37,7 @@ const HOST = '127.0.0.1';
 const LOG = opt('log', '');
 const DELAY = Number(opt('delay-ms', '60'));
 const ACCESS_TTL = Number(opt('access-ttl', '300'));
+const CODE_TTL = Number(opt('code-ttl', '60')); // seconds a login code stays valid (a slow VM needs more)
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('--port must be 1..65535');
 
 const CLIENT_ID = 'nacho-gadget-app';
@@ -97,7 +98,7 @@ const readBody = (req, limit = 30_000_000) => new Promise((resolve, reject) => {
 // ---- data ----
 const CONNECTIONS = [
   { id: uuid(), user_id: USER, source: 'google_calendar', connect_kind: 'oauth', status: 'connected', enabled: true,
-    label: 'Google 캘린더', account_label: 'm***@example.com', scope_summary: '읽기만 · 모든 캘린더',
+    label: 'Google 캘린더', account_label: 'm***@example.com', scope_summary: '읽기만 · 모든 캘린더', version: 1, granted_scope: { level: 'read' },
     link: `http://${HOST}:${PORT}/mock/manage/google_calendar` },
   { id: uuid(), user_id: USER, source: 'naver_mail', connect_kind: 'app_password', status: 'needs_reauth', enabled: true,
     label: '네이버 메일', account_label: 'n***@naver.com', scope_summary: '읽기만', needs_attention: 'needs_reauth' },
@@ -106,8 +107,8 @@ const CONNECTIONS = [
 ];
 const TOOLS = {
   tools: [
-    { id: uuid(), name: 'get_current_time', search_description: '현재 시각을 알려준다', config: { kind: 'builtin' }, enabled: true },
-    { id: uuid(), name: 'search_web', search_description: '웹을 검색한다', config: { kind: 'builtin' }, enabled: true },
+    { id: uuid(), name: 'get_current_time', search_description: '현재 시각을 알려준다', config: { kind: 'builtin' }, enabled: true, user_enabled: true, locked: true },
+    { id: uuid(), name: 'search_web', search_description: '웹을 검색한다', config: { kind: 'builtin' }, enabled: true, user_enabled: true, locked: false },
     { id: uuid(), name: 'calendar_list_events', search_description: '캘린더 일정을 읽는다', config: { kind: 'connection', source: 'google_calendar' }, source: 'google_calendar', enabled: true },
     { id: uuid(), name: 'mail_search', search_description: '메일을 검색한다', config: { kind: 'connection', source: 'naver_mail' }, source: 'naver_mail', enabled: false },
   ],
@@ -159,7 +160,7 @@ const server = http.createServer(async (req, res) => {
       if (q.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(q.code_challenge || '')) return bad('Missing parameter: code_challenge_method');
       if (!q.state) return bad('missing state');
       const code = 'mock-code-' + rand();
-      codes.set(code, { challenge: q.code_challenge, expires: Date.now() + 60_000 });
+      codes.set(code, { challenge: q.code_challenge, expires: Date.now() + CODE_TTL * 1000 });
       log('oidc', { event: 'authorized', client_id: q.client_id, redirect_uri: q.redirect_uri, code_challenge_method: q.code_challenge_method });
       const loc = `${REDIRECT}?state=${encodeURIComponent(q.state)}&session_state=${uuid()}&code=${encodeURIComponent(code)}`;
       res.writeHead(302, { location: loc });
@@ -321,6 +322,30 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/api/v1/me') return send(200, { id: USER, display_name: '모의 사용자' });
     if (req.method === 'GET' && url.pathname === '/api/v1/connections') return send(200, CONNECTIONS);
+    // The connections tab's switches (nacho-server spec connections.tsp / tools.tsp): tool switch (locked → 409
+    // tool_locked), service on/off and scope with expected_version (stale → 409 version_conflict), disconnect.
+    const toolSwitch = /^\/api\/v1\/tools\/([0-9a-f-]{36})\/switch$/.exec(url.pathname);
+    if (req.method === 'PUT' && toolSwitch) {
+      const t = TOOLS.tools.find((x) => x.id === toolSwitch[1]);
+      if (!t) return send(404, { error: { code: 'not_found', message: 'tool' } });
+      if (t.locked) return send(409, { error: { code: 'conflict', reason: 'tool_locked', message: 'locked' } });
+      let body; try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch { return send(400, { error: { code: 'validation_error', message: 'json' } }); }
+      if (typeof body.enabled !== 'boolean') return send(400, { error: { code: 'validation_error', message: 'enabled' } });
+      t.user_enabled = body.enabled;
+      return send(200, t);
+    }
+    const conn = /^\/api\/v1\/connections\/([0-9a-f-]{36})(\/scope)?$/.exec(url.pathname);
+    if (conn && ['PATCH', 'DELETE'].includes(req.method)) {
+      const c = CONNECTIONS.find((x) => x.id === conn[1]);
+      if (!c) return send(404, { error: { code: 'not_found', message: 'connection' } });
+      if (req.method === 'DELETE') { c.status = 'disconnected'; c.version = (c.version || 0) + 1; res.writeHead(204); return res.end(); }
+      let body; try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch { return send(400, { error: { code: 'validation_error', message: 'json' } }); }
+      if (body.expected_version !== (c.version || 0)) return send(409, { error: { code: 'conflict', reason: 'version_conflict', message: 'stale' } });
+      if (conn[2]) { if (!['read', 'read_write'].includes(body.level)) return send(400, { error: { code: 'validation_error', message: 'level' } }); c.granted_scope = { level: body.level }; }
+      else { if (typeof body.enabled !== 'boolean') return send(400, { error: { code: 'validation_error', message: 'enabled' } }); c.enabled = body.enabled; }
+      c.version = (c.version || 0) + 1;
+      return send(200, c);
+    }
     if (req.method === 'GET' && url.pathname === '/api/v1/tools') {
       return send(200, { ...TOOLS, connector_capabilities: connector ? connector.capabilities : [] });
     }
@@ -504,6 +529,19 @@ const GADGETS = [
 ];
 function planTool(text) {
   if (/가젯 ?목록|list gadgets/i.test(text)) return { name: 'combo_list_gadgets', params: {} };
+  // Gadget tools of the Windows W5a declaration (window grid, data gadgets, desktop tidy, guides, settings).
+  const grid = /창 ?(\d+) ?[x×] ?(\d+)/.exec(text);
+  if (grid) return { name: 'combo_window_tile', params: { rows: Number(grid[1]), cols: Number(grid[2]), all_windows: true },
+                    then: /되돌려/.test(text) ? () => ({ name: 'combo_window_undo', params: {} }) : undefined };
+  if (/창 ?배치 ?되돌려|undo window/i.test(text)) return { name: 'combo_window_undo', params: {} };
+  if (/시스템 ?모니터|PC ?상태/.test(text)) return { name: 'combo_monitor_stats', params: {} };
+  if (/디스크.*(큰|차지)/.test(text)) return { name: 'combo_disk_top_items', params: { count: 5 } };
+  if (/(\S+) ?가젯 ?안내/.test(text)) return { name: 'combo_gadget_guide', params: { gadget: /(\S+) ?가젯 ?안내/.exec(text)[1] } };
+  if (/바탕 ?화면 ?정리 ?계획/.test(text)) return { name: 'combo_desktop_tidy_plan', params: {} };
+  if (/바탕 ?화면 ?정리 ?(되돌려|취소)/.test(text)) return { name: 'combo_desktop_tidy_undo', params: {} };
+  // Like the model: make the plan, then apply it with the plan_id it answered.
+  if (/바탕 ?화면 ?정리해/.test(text)) return { name: 'combo_desktop_tidy_plan', params: {}, then: (r) => r.plan_id ? { name: 'combo_desktop_tidy_apply', params: { plan_id: r.plan_id } } : null };
+  if (/마우스 ?휠 ?반대/.test(text)) return { name: 'combo_mouse_set', params: { reverse_scroll: true } };
   const item = /클립보드 ?(\d+) ?번/.exec(text);
   if (item && /읽|봐|read/i.test(text)) return { name: 'combo_clipboard_get_item', params: { index: Number(item[1]) } };
   if (item && /다시 ?복사|copy again/i.test(text)) return { name: 'combo_clipboard_copy_again', params: { index: Number(item[1]) } };
@@ -590,18 +628,23 @@ function handleChat(socket) {
       return;
     }
     let reply;
-    const tool = planTool(text);
+    let tool = planTool(text);
     if (tool) {
       active = { clientId, turnId, partial: '', timer: null }; // busy while the tool runs
-      activity('tool', clientId, tool.name);
-      const callId = 'call_' + rand(6);
-      out({ type: 'tool_call_started', room_id: ROOM, call_id: callId, name: tool.name, arguments: tool.params, client_id: clientId });
-      const r = await callConnector(tool.name, tool.params);
-      const shown = r.result && typeof r.result.text === 'string' ? { ...r, result: { ...r.result, text: '(redacted)' } } : r; // tests grep the logs for content
-      out({ type: 'tool_call_finished', room_id: ROOM, call_id: callId, name: tool.name, preview: JSON.stringify(shown).slice(0, 200), meta: { source: 'connector', is_error: !!r.error }, client_id: clientId });
-      log('tool', { name: tool.name, params: tool.params, result: r.result && typeof r.result.text === 'string' ? { ...r.result, text: '(redacted)' } : r });
+      const replies = [];
+      while (tool) {
+        activity('tool', clientId, tool.name);
+        const callId = 'call_' + rand(6);
+        out({ type: 'tool_call_started', room_id: ROOM, call_id: callId, name: tool.name, arguments: tool.params, client_id: clientId });
+        const r = await callConnector(tool.name, tool.params);
+        const shown = r.result && typeof r.result.text === 'string' ? { ...r, result: { ...r.result, text: '(redacted)' } } : r; // tests grep the logs for content
+        out({ type: 'tool_call_finished', room_id: ROOM, call_id: callId, name: tool.name, preview: JSON.stringify(shown).slice(0, 200), meta: { source: 'connector', is_error: !!r.error }, client_id: clientId });
+        log('tool', { name: tool.name, params: tool.params, result: r.result && typeof r.result.text === 'string' ? { ...r.result, text: '(redacted)' } : r });
+        replies.push(r.error ? `(모의) ${tool.name} 을 쓰려 했는데 안 됐어요: ${r.error}` : `(모의) ${tool.name} 결과: ${r.result && r.result.message ? r.result.message : JSON.stringify(r.result)}`);
+        tool = !r.error && r.result && r.result.ok && tool.then ? tool.then(r.result) : null;
+      }
       active = null;
-      reply = r.error ? `(모의) ${tool.name} 을 쓰려 했는데 안 됐어요: ${r.error}` : `(모의) ${tool.name} 결과: ${r.result && r.result.message ? r.result.message : JSON.stringify(r.result)}`;
+      reply = replies.join(' ');
     } else if (items.length) {
       const desc = items.map((a) => a.png ? `${a.name} (사진 ${a.png.width}×${a.png.height}, ${a.bytes}바이트)` : a.text !== null ? `${a.name} (글: "${a.text.slice(0, 20)}")` : `${a.name} (${a.mime}, 내용은 못 열어요)`).join(', ');
       reply = `(모의) 받은 첨부: ${desc}. 질문: "${text}"`;

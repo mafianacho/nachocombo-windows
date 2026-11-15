@@ -12,6 +12,7 @@ PORT="${MCP_PORT:-47693}"
 URL="http://127.0.0.1:$PORT/mcp"
 CARGO="${CARGO:-cargo}"
 $CARGO build --locked --example nacho-mcp-harness 2>&1 | tail -1
+[ "${PIPESTATUS[0]}" -eq 0 ] || { echo "FAIL build of the harness"; exit 1; }
 BIN="target/debug/examples/nacho-mcp-harness"
 fail=0
 check() { if [ "$2" -eq 0 ]; then echo "PASS $1" | tee -a "$OUT/summary.txt"; else echo "FAIL $1" | tee -a "$OUT/summary.txt"; fail=1; fi; }

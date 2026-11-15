@@ -18,7 +18,8 @@ use super::settings::McpSettings;
 use super::tools::{McpTool, McpTools};
 use crate::core::pet::commands::{PetCommandOutcome, PetCommands};
 use crate::core::pet::connector_client::PetCommandExecuting;
-use crate::core::pet::gadget_tools::PetToolRisk;
+use crate::core::pet::gadget_guide::{PetGadgetGuides, PetGuideExit};
+use crate::core::pet::gadget_tools::{PetGadgetTools, PetToolRisk};
 use crate::core::settings::ModuleId;
 use serde_json::{json, Value};
 use std::collections::{BTreeSet, VecDeque};
@@ -244,12 +245,21 @@ impl McpService {
             "ping" => ok(json!({})),
             "tools/list" => ok(json!({"tools": self.offered(settings).into_iter().map(McpTool::json).collect::<Vec<_>>()})),
             "tools/call" => Some(self.call_tool(&id, params.as_ref(), key, settings)),
-            // Gadget guides and prompts are not written for Windows yet: the lists are empty.
-            "resources/list" => ok(json!({"resources": []})),
+            // The gadgets' guides (`core::pet::gadget_guide`), with MCP tool names; prompts are not written for Windows.
+            "resources/list" => ok(json!({"resources": PetGadgetGuides::GADGETS.iter().filter(|g| PetGadgetGuides::guide(g).is_some()).map(|g| {
+                let display = if *g == "combo" { "Nacho Combo" } else { PetGadgetTools::display_name(g) };
+                json!({"uri": Self::guide_uri(g), "name": format!("{g}_guide"), "title": format!("{display} guide"),
+                       "description": format!("How to use the {display} tools: what they do, order of calls, examples, limits."), "mimeType": "text/markdown"})
+            }).collect::<Vec<_>>()})),
             "resources/templates/list" => ok(json!({"resourceTemplates": []})),
             "resources/read" => {
                 let Some(uri) = params.as_ref().and_then(|p| p["uri"].as_str()) else { return Some(JsonRpc::error(Some(&id), &RpcError::invalid_params("uri is required"))) };
-                Some(JsonRpc::error(Some(&id), &RpcError::new(RpcError::RESOURCE_NOT_FOUND, format!("Resource not found: {}", cut(uri, 100)))))
+                let on_mcp: Vec<_> = PetGadgetTools::declared(true).into_iter().filter(|t| t.on_mcp()).collect();
+                let text = PetGadgetGuides::GADGETS.iter().find(|g| Self::guide_uri(g) == uri).and_then(|g| PetGadgetGuides::render(g, PetGuideExit::Mcp, &on_mcp));
+                match text {
+                    Some(t) => ok(json!({"contents": [{"uri": uri, "mimeType": "text/markdown", "text": t}]})),
+                    None => Some(JsonRpc::error(Some(&id), &RpcError::new(RpcError::RESOURCE_NOT_FOUND, format!("Resource not found: {}", cut(uri, 100))))),
+                }
             }
             "prompts/list" => ok(json!({"prompts": []})),
             "prompts/get" => {
@@ -259,6 +269,8 @@ impl McpService {
             other => Some(JsonRpc::error(Some(&id), &RpcError::method_not_found(other))),
         }
     }
+
+    pub fn guide_uri(gadget: &str) -> String { format!("nachocombo://gadgets/{gadget}/guide") }
 
     fn tool_result(outcome: &PetCommandOutcome) -> Value {
         let text = serde_json::to_string(&Value::Object(outcome.result_json())).unwrap_or_else(|_| "{}".into());
@@ -285,7 +297,7 @@ impl McpService {
         let answer = |outcome: CallOutcome, o: PetCommandOutcome| { record(outcome); JsonRpc::result(id, Self::tool_result(&o)) };
 
         if !settings.is_gadget_enabled(&tool.gadget) {
-            let gadget = crate::core::pet::gadget_tools::PetGadgetTools::display_name(&tool.gadget);
+            let gadget = PetGadgetTools::display_name(&tool.gadget);
             return answer(CallOutcome::Denied, Self::refused("mcp_gadget_off",
                 &format!("'{}' tool is turned off. Turn on the {gadget} gadget for NachoCombo MCP in Nacho Combo (Settings ▸ MCP) on this PC.", cut(name, 64)),
                 "ask the user to turn the gadget on in Settings ▸ MCP; do not retry until then", "설정 ▸ MCP에서 이 가젯을 켜야 해요"));
@@ -486,11 +498,25 @@ pub(crate) mod tests {
         assert_eq!(r.post(json!({"jsonrpc": "2.0", "method": "notifications/initialized"})).status, 202);
         let batch: Value = serde_json::from_slice(&r.post(json!([{"jsonrpc": "2.0", "id": 1, "method": "ping"}, {"jsonrpc": "2.0", "method": "x"}, {"jsonrpc": "2.0", "id": 2, "method": "ping"}])).body).unwrap();
         assert_eq!(batch.as_array().unwrap().len(), 2);
-        let v = r.rpc("resources/read", json!({"uri": "nachocombo://gadgets/window/guide"}));
+        let v = r.rpc("resources/read", json!({"uri": "nachocombo://gadgets/nope/guide"}));
         assert_eq!(v["error"]["code"], -32002);
-        assert_eq!(r.rpc("resources/list", json!({}))["result"]["resources"], json!([]));
+        assert_eq!(r.rpc("resources/read", json!({}))["error"]["code"], -32602);
         assert_eq!(r.rpc("prompts/list", json!({}))["result"]["prompts"], json!([]));
         assert_eq!(r.rpc("prompts/get", json!({"name": "window_side_by_side"}))["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn guides_are_resources_with_mcp_tool_names() {
+        let r = rig(None);
+        let list = r.rpc("resources/list", json!({}));
+        let uris: Vec<&str> = list["result"]["resources"].as_array().unwrap().iter().map(|g| g["uri"].as_str().unwrap()).collect();
+        assert!(uris.contains(&"nachocombo://gadgets/window/guide") && uris.contains(&"nachocombo://gadgets/clipboard/guide"), "{uris:?}");
+        assert!(!uris.iter().any(|u| u.contains("/computer/")));
+        let v = r.rpc("resources/read", json!({"uri": "nachocombo://gadgets/window/guide"}));
+        let c = &v["result"]["contents"][0];
+        assert_eq!(c["mimeType"], "text/markdown");
+        let text = c["text"].as_str().unwrap();
+        assert!(text.contains("`window_place`") && !text.contains("`combo_window_place`"), "MCP names: {text}");
     }
 
     #[test]

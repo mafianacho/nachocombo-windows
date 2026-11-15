@@ -26,6 +26,7 @@ mod pet_art;
 mod pet_audio;
 mod pet_cards;
 mod pet_chat;
+mod pet_connections;
 mod pet_theme;
 mod pet_ui;
 mod pet_exec;

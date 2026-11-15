@@ -541,6 +541,34 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         return;
     }
 
+    // ---- tabs: 대화 / 연결 ----
+    {
+        use crate::pet_connections::{self as conn, ChatTab};
+        let tabs = [(ChatTab::Talk, "대화"), (ChatTab::Connections, "연결")];
+        let th = 34.0;
+        let cur = a.pet.chat.tab;
+        let tw = (w - 2.0 * space::M) / tabs.len() as f64;
+        for (i, (tab, label)) in tabs.iter().enumerate() {
+            let r = Rect::new(space::M + tw * i as f64, y_top, tw, th);
+            let resp = ui.hit(ui.id(&format!("tab{i}")), r, true);
+            if resp.hover { ui.st.cursor_hand = true; }
+            let on = cur == *tab;
+            ui.c.line_text(&t(label), if on { semi(13) } else { medium(13) }, r, if on || resp.hover { pal.text } else { pal.secondary }, Align::Center);
+            if on { ui.c.round(Rect::new(r.x + tw / 2.0 - 16.0, r.bottom() - 3.0, 32.0, 3.0), 1.5, pal.accent); }
+            if resp.clicked && !on {
+                a.pet.chat.tab = *tab;
+                if *tab == ChatTab::Connections { conn::opened(); }
+                ui.st.again = true;
+            }
+        }
+        ui.c.line(0.0, y_top + th, w, y_top + th, pal.separator, 1.0);
+        y_top += th + 1.0;
+        if a.pet.chat.tab == ChatTab::Connections {
+            conn::draw(ui, &pal, Rect::new(0.0, y_top, w, body.bottom() - y_top));
+            return;
+        }
+    }
+
     // ---- composer (bottom) ----
     let comp_h = 12.0 + tok::COMPOSER_HEIGHT.max(tok::CONTROL) + 8.0;
     let mut bottom = body.bottom() - comp_h;

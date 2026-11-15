@@ -42,6 +42,7 @@ pub fn run(a: &[String]) {
             // `petui sel <text>`: shows the selection bar for that text near the pointer, without reading any app.
             "sel" => crate::pet_selection::present_text(&a[2..].join(" "), None),
             "selhide" => crate::pet_selection::hide(),
+            "tab" => crate::pet_connections::ctl(&a[2..].iter().map(|s| s.as_str()).collect::<Vec<_>>()),
             _ => {}
         },
         "snap" => if let Some(s) = SnapAction::from_id(arg(a, 1)) { snap::run(s); },

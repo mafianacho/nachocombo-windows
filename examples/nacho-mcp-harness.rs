@@ -32,7 +32,7 @@ impl PetCommandExecuting for Gadgets {
                 Ok(i) => PetDataTools::clipboard_content(i + 1, &self.clips[i]),
                 Err(o) => o,
             },
-            PetCommand::DimStatus => PetDimState { paused: false, strength: 0.6 }.outcome(None),
+            PetCommand::DimStatus => PetDimState { paused: false, strength: 0.6, front_app: false, other_displays: true }.outcome(None),
             PetCommand::QuitApp(name) => PetCommandOutcome::new(true, format!("Asked {name} to close (stand-in: nothing was closed).")),
             other => PetCommandOutcome::new(true, format!("{other:?} (stand-in)")),
         })

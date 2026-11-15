@@ -1125,6 +1125,8 @@
   "Select text in any app and a small bar appears. Press Translate, Summarize or Explain, or ask Nacho right away. You see what will be sent before it goes.": "아무 앱에서나 글자를 고르면 작은 바가 떠요. 번역·요약·설명을 누르거나 나초에게 바로 물어볼 수 있어요. 보낼 내용은 보내기 전에 보여 드려요.",
   "Nothing is read until you turn it on, and password fields are never read.": "켜기 전에는 아무것도 읽지 않고, 암호 칸은 켜도 읽지 않아요.",
   "Turn on": "켜기",
+  "Let Nacho use this PC's apps, windows and gadgets": "이 PC의 앱·창·가젯을 나초가 쓰게 하기",
+  "When this is off, Nacho can still chat, but it does not connect to this PC and cannot open apps, move windows or switch gadgets. Nacho never switches the pet itself, and cannot turn this setting on.": "끄면 나초와 대화는 되지만, 이 PC에는 연결하지 않아서 앱을 열거나 창을 옮기거나 가젯을 켜고 끌 수 없어요. 나초는 펫 자신을 켜고 끌 수 없고, 이 설정을 스스로 켤 수도 없어요.",
   "NachoCombo MCP lets MCP clients on this PC (such as Claude Desktop or an AI code editor) use the gadget tools you turn on here. Nacho in the chat does not need it.": "NachoCombo MCP를 켜면 이 PC의 MCP 클라이언트(Claude Desktop, AI 코드 편집기 등)가 여기서 켠 가젯 도구를 쓸 수 있어요. 대화창의 나초에게는 필요 없어요.",
   "NachoCombo MCP Server": "NachoCombo MCP 서버",
   "Running at {}": "{}에서 실행 중",

@@ -1,14 +1,11 @@
 //! The MCP exit of the gadget tool registry (macOS `GadgetTool.mcpName` / `englishDescription` / `exits`). The
-//! connector declaration (`PetCommands::windows_declaration`, `PetGadgetTools`) stays the one list of what Windows can
-//! do; this file only names each tool for MCP clients and describes it in English:
+//! registry (`PetGadgetTools::declared`, W5a) is the one list of what Windows can do and already knows each tool's MCP
+//! name (`window_place`, `combo_<action>` for Nacho Combo itself, the macOS rename table for the 16 first capabilities)
+//! and whether MCP offers it (`on_mcp`: not for tools that need the chat — an approval card on every run or the next
+//! message's attachments). This file adds the English description MCP clients read.
 //!
-//! - MCP name: `<gadget>_<action>` (`combo_<action>` for Nacho Combo itself). The 16 first capabilities keep their old
-//!   connector names, so they map through [`McpTools::LEGACY`] (the macOS rename table).
-//! - Exits: tools that hand something to the next chat message or that need the user's approval on every run
-//!   (`shelf_give`, `capture_ask`, desktop tidy apply/undo, arrange apply) and the connector-only guide are not offered
-//!   to MCP clients, as on macOS ([`McpTools::CONNECTOR_ONLY`]).
-//! - A tool reaches MCP only with an English description here. A connector tool added to the registry without one is
-//!   left out of `tools/list` and fails `every_declared_tool_has_an_mcp_entry` until it gets one.
+//! A tool reaches MCP only with an English description here. A registry tool offered on MCP without one is left out
+//! of `tools/list` and fails `every_declared_tool_has_an_mcp_entry` until it gets one.
 use crate::core::pet::commands::PetCommands;
 use crate::core::pet::gadget_tools::{PetGadgetTools, PetToolRisk};
 use crate::core::settings::ModuleId;
@@ -39,50 +36,11 @@ impl McpTool {
 pub struct McpTools;
 
 impl McpTools {
-    /// The macOS rename table: first-contract connector name → MCP name.
-    pub const LEGACY: [(&'static str, &'static str); 16] = [
-        (PetCommands::ARRANGE_WINDOW, "window_arrange"),
-        (PetCommands::LAYOUT_WINDOWS, "window_layout"),
-        (PetCommands::LIST_WINDOWS, "window_list_windows"),
-        (PetCommands::LIST_APPS, "appswitch_list"),
-        (PetCommands::OPEN_APP, "appswitch_open"),
-        (PetCommands::FOCUS_APP, "appswitch_focus"),
-        (PetCommands::HIDE_APP, "appswitch_hide"),
-        (PetCommands::QUIT_APP, "appswitch_quit"),
-        (PetCommands::SET_SYSTEM, "device_set"),
-        (PetCommands::SET_GADGET, "combo_set_gadget"),
-        (PetCommands::LIST_GADGETS, "combo_list_gadgets"),
-        (PetCommands::SET_DIM_STRENGTH, "dim_set_strength"),
-        (PetCommands::CLEAR_SHELF, "shelf_clear"),
-        (PetCommands::SAVE_WORKSPACE, "combo_workspace_save"),
-        (PetCommands::APPLY_WORKSPACE, "combo_workspace_apply"),
-        (PetCommands::LIST_WORKSPACES, "combo_workspace_list"),
-    ];
-
-    /// Connector only on macOS (`exits: [.connector]`).
-    pub const CONNECTOR_ONLY: [&'static str; 6] = [
-        "combo_shelf_give",
-        "combo_capture_ask",
-        "combo_gadget_guide",
-        "combo_desktop_tidy_apply",
-        "combo_desktop_tidy_undo",
-        "combo_desktop_arrange_apply",
-    ];
-
     /// The gadget ids that can have an MCP switch, in the macOS order (`GadgetID.allCases` without `computer`, whose
     /// tools sit under the Computer Use groups).
     pub const GADGETS: [&'static str; 15] = [
         "combo", "window", "menubar", "monitor", "disk", "clipboard", "shelf", "capture", "dim", "awake", "device", "mouse", "appswitch", "calendar", "desktop",
     ];
-
-    /// The MCP name of a connector name.
-    pub fn mcp_name(connector: &str) -> String {
-        if let Some((_, m)) = Self::LEGACY.iter().find(|(c, _)| *c == connector) { return m.to_string(); }
-        match connector.strip_prefix("combo_") {
-            Some(rest) if Self::GADGETS.iter().any(|g| *g != "combo" && rest.starts_with(&format!("{g}_"))) => rest.to_string(),
-            _ => connector.to_string(),
-        }
-    }
 
     /// English for MCP clients (macOS wording, Windows behaviour: PC, File Explorer, minimize instead of hide …).
     pub fn english(connector: &str) -> Option<&'static str> {
@@ -116,27 +74,49 @@ impl McpTools {
             PetGadgetTools::AWAKE_STATUS => "Reads whether Keep Awake holds the PC awake now, the time left and why (manual, chosen app, battery guard).",
             PetGadgetTools::AWAKE_START => "Keeps the PC awake now: minutes 1-1440 for that long, 0 or omitted until stopped. The battery guard still applies.",
             PetGadgetTools::AWAKE_STOP => "Releases the manual hold so the PC may sleep again. App rules still apply.",
+            PetGadgetTools::WINDOW_DISPLAYS => "Lists the displays (number from the left, name, size, usable area). Use it before placing windows on a specific display.",
+            PetGadgetTools::WINDOW_PLACE => "Free placement, the primitive behind every layout: one rectangle (x, y, w, h) per window inside a display's usable area, top-left origin, 0-1 ratios (default) or pixels. Up to 200 items per call, overlaps and z order allowed; out-of-range values are clamped.",
+            PetGadgetTools::WINDOW_TILE => "Tiles windows into a grid: any rows x cols, fill order, gap, one or several displays (span: per_display or across). all_windows:true tiles every open window. Up to 200 windows per call; cells smaller than an app allows are reported with the applied frame.",
+            PetGadgetTools::WINDOW_SPLIT => "Convenience: splits a display into 2, 3 or 4 equal parts and places the windows in order: horizontal (side by side), vertical (stacked) or quadrant (2x2, needs parts 4). For other shapes use window_tile or window_place.",
+            PetGadgetTools::WINDOW_RATIO => "Convenience: places 2-4 windows in the given proportions, e.g. ratios [70,30] gives 70% and 30% of the width. horizontal (default) or vertical.",
+            PetGadgetTools::WINDOW_MOVE_DISPLAY => "Moves windows to another display keeping their relative position and size. Display numbers come from window_displays.",
+            PetGadgetTools::WINDOW_ARRANGE_APPS => "Places the front window of each listed running app in a preset arrangement: grid, columns, rows, quadrants (up to 4). Up to 200 apps per call.",
+            PetGadgetTools::WINDOW_UNDO => "Restores every window moved by the last placement(s) of these window tools to its position from before, in one call. steps 1-5, default 1.",
+            PetGadgetTools::APPSWITCH_SETTINGS => "Reads the App Switch settings: hide on repeat, and the names of apps that have a shortcut.",
+            PetGadgetTools::APPSWITCH_SET_SETTINGS => "Changes App Switch settings: hide_on_repeat minimizes the front app when its shortcut is pressed again. Shortcuts themselves are not changed.",
+            PetGadgetTools::MENUBAR_STATUS => "Reads the Tray Organizer state: whether the notification area icons are folded, the auto-fold time and how many icons are kept in view.",
+            PetGadgetTools::MENUBAR_LIST_ITEMS => "Lists the notification area icons: program name and whether each is shown or folded away. No tooltips or pictures.",
+            PetGadgetTools::MENUBAR_TIDY => "Tidies the notification area now: folds away every icon that is not kept in view.",
+            PetGadgetTools::MENUBAR_SET_COLLAPSED => "Folds (collapsed=true) or unfolds (false) the notification area icons. Unfolded icons fold again after the auto-fold time.",
+            PetGadgetTools::MONITOR_STATS => "Current System Monitor numbers: CPU %, memory %, network down/up, disk use %, battery, temperatures when the PC reports them, busiest programs. Program names are content, so the user approves every call unless the gadget is always allowed.",
+            PetGadgetTools::DISK_TOP_ITEMS => "The largest folders and files of Disk Map's last scan (rank, name, path, kind, bytes, modified time; at most 50) and when it was scanned. Paths are content, so the user approves every call unless the gadget is always allowed.",
+            PetGadgetTools::DISK_SCAN => "Opens Disk Map and starts scanning (the drive with the user's folder by default). Takes minutes; read the result with disk_top_items. Deletes nothing. The user approves every call unless the gadget is always allowed.",
+            PetGadgetTools::MOUSE_STATUS => "Reads the Mouse Tune settings: reverse wheel, scroll speed, pointer speed and pointer precision.",
+            PetGadgetTools::MOUSE_SET => "Changes Mouse Tune settings (only the given ones): reverse wheel, scroll speed 0.5/1/1.5/2/3, pointer speed from a closed list, precision keep/on/off.",
+            PetGadgetTools::CALENDAR_STATUS => "Reads what the Calendar Clock shows: date, weekday, seconds, hour format and world clocks. Never event contents.",
+            PetGadgetTools::CALENDAR_SET => "Changes the Calendar Clock display (only the given items): date, weekday, seconds, hours (system, twelve, twentyFour) and up to 6 world clock time zones.",
+            PetGadgetTools::DESKTOP_TIDY_PLAN => "Looks at the plain files directly on the desktop and plans where each would go (a tidy folder per category): plan_id, counts per category, up to 50 file names. Moves nothing; applying a plan is only possible for Nacho in the chat, with the user's approval.",
+            PetGadgetTools::DESKTOP_TIDY_HISTORY => "Desktop tidies of the last 30 days: tidy_id, time, number of files, whether undone. No file names.",
+            PetGadgetTools::DESKTOP_ARRANGE_SUGGEST => "Proposes a window arrangement for the apps with open windows (app names only, never window titles): plan_id and the window_arrange_apps arguments. Moves nothing.",
             _ => return None,
         })
     }
 
     /// Every tool Windows can offer on MCP, in the connector hello order (switches not applied).
     pub fn all() -> Vec<McpTool> {
-        let none = BTreeSet::new();
-        PetCommands::windows_declaration(&none, &none, true)
+        PetGadgetTools::declared(true)
             .into_iter()
-            .filter_map(|c| {
-                let connector = c["name"].as_str()?.to_string();
-                if Self::CONNECTOR_ONLY.contains(&connector.as_str()) { return None; }
-                let tool = PetGadgetTools::find(&connector)?;
+            .filter(|t| t.on_mcp())
+            .filter_map(|t| {
+                let (_, input_schema) = PetCommands::spec(t.name)?;
                 Some(McpTool {
-                    name: Self::mcp_name(&connector),
-                    gadget: tool.gadget.to_string(),
-                    risk: tool.risk,
-                    requires: tool.requires,
-                    description: Self::english(&connector)?,
-                    input_schema: c["input_schema"].clone(),
-                    connector,
+                    name: t.mcp_name(),
+                    connector: t.name.to_string(),
+                    gadget: t.gadget.to_string(),
+                    risk: t.risk,
+                    requires: t.requires,
+                    description: Self::english(t.name)?,
+                    input_schema,
                 })
             })
             .collect()
@@ -177,15 +157,11 @@ mod tests {
     }
 
     #[test]
-    fn names_follow_the_macos_rename_table() {
+    fn names_follow_the_macos_registry() {
         let mac = mac_tools();
-        for t in &mac {
-            let connector = t["connector_name"].as_str().unwrap();
-            assert_eq!(McpTools::mcp_name(connector), t["mcp_name"].as_str().unwrap(), "{connector}");
+        for t in McpTools::all() {
+            assert!(mac.iter().any(|m| m["mcp_name"] == json!(t.name) && m["connector_name"] == json!(t.connector)), "{} / {}", t.name, t.connector);
         }
-        assert_eq!(McpTools::mcp_name("combo_window_place"), "window_place");
-        assert_eq!(McpTools::mcp_name("combo_list_gadgets"), "combo_list_gadgets");
-        assert_eq!(McpTools::mcp_name("combo_gadget_guide"), "combo_gadget_guide");
     }
 
     #[test]
@@ -199,6 +175,9 @@ mod tests {
             assert_eq!(m["connector_name"], json!(t.connector), "{}", t.name);
             assert_eq!(m["gadget"], json!(t.gadget), "{}", t.name);
             assert_eq!(m["risk"], json!(t.risk.raw_value()), "{}", t.name);
+            // Mouse Tune and Calendar Clock have Windows options of their own; the connector test
+            // (`gadget_tools::input_schemas_match_the_macos_declaration`) fixes those differences.
+            if [PetGadgetTools::MOUSE_SET, PetGadgetTools::CALENDAR_SET].contains(&t.connector.as_str()) { continue; }
             let (mut theirs, mut ours) = (shape(&m["inputSchema"]), shape(&t.input_schema));
             if t.connector == PetCommands::SET_GADGET {
                 // Each platform's own gadget list (as in the connector test): macOS `menuBar` is Tray Organizer here,
@@ -216,23 +195,22 @@ mod tests {
 
     #[test]
     fn every_declared_tool_has_an_mcp_entry() {
-        let none = BTreeSet::new();
         let offered: BTreeSet<String> = McpTools::all().into_iter().map(|t| t.connector).collect();
-        for c in PetCommands::windows_declaration(&none, &none, true) {
-            let name = c["name"].as_str().unwrap();
-            if McpTools::CONNECTOR_ONLY.contains(&name) { continue; }
-            assert!(offered.contains(name), "{name} is declared to Nacho but has no MCP name/English description in mcp/tools.rs");
+        for t in PetGadgetTools::declared(true).into_iter().filter(|t| t.on_mcp()) {
+            assert!(offered.contains(t.name), "{} is offered on MCP by the registry but has no English description in mcp/tools.rs", t.name);
         }
     }
 
     #[test]
-    fn connector_only_tools_stay_off_mcp() {
-        let names: Vec<String> = McpTools::all().into_iter().map(|t| t.connector).collect();
-        for c in McpTools::CONNECTOR_ONLY { assert!(!names.iter().any(|n| n == c), "{c}"); }
+    fn tools_that_need_the_chat_stay_off_mcp() {
+        let names: Vec<String> = McpTools::all().into_iter().map(|t| t.name).collect();
         let mac_connector_only: BTreeSet<String> = mac_tools().into_iter()
             .filter(|t| !t["exits"].as_array().unwrap().contains(&json!("mcp")))
-            .map(|t| t["connector_name"].as_str().unwrap().to_string()).collect();
-        assert_eq!(mac_connector_only, McpTools::CONNECTOR_ONLY.iter().map(|s| s.to_string()).collect());
+            .map(|t| t["mcp_name"].as_str().unwrap().to_string()).collect();
+        for n in &mac_connector_only { assert!(!names.contains(n), "{n} is connector only on macOS"); }
+        for n in ["shelf_give", "capture_ask", "desktop_tidy_apply", "desktop_tidy_undo", "desktop_arrange_apply", "combo_gadget_guide"] {
+            assert!(mac_connector_only.contains(n), "{n}");
+        }
     }
 
     #[test]
@@ -268,6 +246,6 @@ mod tests {
     #[test]
     fn settings_rows_are_the_gadgets_with_tools() {
         let g = McpTools::gadgets(&McpTools::all());
-        assert_eq!(g, vec!["combo", "window", "clipboard", "shelf", "capture", "dim", "awake", "device", "appswitch"]);
+        assert_eq!(g, vec!["combo", "window", "menubar", "monitor", "disk", "clipboard", "shelf", "capture", "dim", "awake", "device", "mouse", "appswitch", "calendar", "desktop"]);
     }
 }

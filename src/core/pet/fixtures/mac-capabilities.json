@@ -1,633 +1,3372 @@
 {
- "approval_when_always_allowed": {
-  "combo_arrange_window": null,
-  "combo_awake_start": null,
-  "combo_awake_status": null,
-  "combo_awake_stop": null,
-  "combo_capture_ask": null,
-  "combo_capture_list_pinned": null,
-  "combo_clear_shelf": "required",
-  "combo_clipboard_copy_again": null,
-  "combo_clipboard_get_item": null,
-  "combo_clipboard_list": null,
-  "combo_device_set_mic_muted": null,
-  "combo_device_set_volume": null,
-  "combo_device_status": null,
-  "combo_dim_pause": null,
-  "combo_dim_resume": null,
-  "combo_dim_status": null,
-  "combo_focus_app": null,
-  "combo_hide_app": null,
-  "combo_layout_windows": null,
-  "combo_list_apps": null,
-  "combo_list_gadgets": null,
-  "combo_list_windows": null,
-  "combo_open_app": null,
-  "combo_quit_app": "required",
-  "combo_set_dim_strength": null,
-  "combo_set_gadget": null,
-  "combo_set_system": null,
-  "combo_shelf_give": null,
-  "combo_shelf_list": null,
-  "combo_workspace_apply": null,
-  "combo_workspace_list": null,
-  "combo_workspace_save": null
- },
- "capabilities": [
-  {
-   "description": "맨 앞 창(또는 지정한 실행 중 앱의 창) 하나를 화면 왼쪽 반·오른쪽 반·최대화·네 귀퉁이·3분할 등으로 옮겨요. next-display·previous-display는 옆 디스플레이로 옮겨요. 손쉬운 사용 권한이 필요해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "app": {
-      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
-      "maxLength": 100,
-      "type": "string"
-     },
-     "position": {
-      "description": "left=왼쪽 반, right=오른쪽 반, maximize=최대화, top-left=왼쪽 위 1/4, first-third=왼쪽 1/3 …",
-      "enum": [
-       "left",
-       "right",
-       "center-half",
-       "top-half",
-       "bottom-half",
-       "top-left",
-       "top-right",
-       "bottom-left",
-       "bottom-right",
-       "first-third",
-       "center-third",
-       "last-third",
-       "first-two-thirds",
-       "center-two-thirds",
-       "last-two-thirds",
-       "maximize",
-       "almost-maximize",
-       "maximize-height",
-       "center",
-       "smaller",
-       "larger",
-       "restore",
-       "next-display",
-       "previous-display"
-      ],
-      "type": "string"
-     }
-    },
-    "required": [
-     "position"
-    ],
-    "type": "object"
-   },
-   "name": "combo_arrange_window"
+  "approval_when_always_allowed" : {
+    "combo_appswitch_set_settings" : null,
+    "combo_appswitch_settings" : null,
+    "combo_arrange_window" : null,
+    "combo_awake_start" : null,
+    "combo_awake_status" : null,
+    "combo_awake_stop" : null,
+    "combo_calendar_set" : null,
+    "combo_calendar_status" : null,
+    "combo_capture_ask" : null,
+    "combo_capture_close_all" : null,
+    "combo_capture_list_pinned" : null,
+    "combo_clear_shelf" : "required",
+    "combo_clipboard_clear" : "required",
+    "combo_clipboard_copy_again" : null,
+    "combo_clipboard_get_item" : null,
+    "combo_clipboard_list" : null,
+    "combo_computer_click_element" : null,
+    "combo_computer_find_element" : null,
+    "combo_computer_key_press" : null,
+    "combo_computer_mouse_click" : null,
+    "combo_computer_mouse_drag" : null,
+    "combo_computer_mouse_move" : null,
+    "combo_computer_mouse_scroll" : null,
+    "combo_computer_screen_capture" : null,
+    "combo_computer_screen_list_displays" : null,
+    "combo_computer_type_text" : null,
+    "combo_computer_ui_tree" : null,
+    "combo_desktop_arrange_apply" : "required",
+    "combo_desktop_arrange_suggest" : null,
+    "combo_desktop_tidy_apply" : "required",
+    "combo_desktop_tidy_history" : null,
+    "combo_desktop_tidy_plan" : null,
+    "combo_desktop_tidy_undo" : null,
+    "combo_device_set_mic_muted" : null,
+    "combo_device_set_volume" : null,
+    "combo_device_status" : null,
+    "combo_dim_pause" : null,
+    "combo_dim_resume" : null,
+    "combo_dim_status" : null,
+    "combo_disk_scan" : null,
+    "combo_disk_top_items" : null,
+    "combo_focus_app" : null,
+    "combo_gadget_guide" : null,
+    "combo_hide_app" : null,
+    "combo_layout_windows" : null,
+    "combo_list_apps" : null,
+    "combo_list_gadgets" : null,
+    "combo_list_windows" : null,
+    "combo_menubar_list_items" : null,
+    "combo_menubar_set_collapsed" : null,
+    "combo_menubar_show_hidden" : null,
+    "combo_menubar_status" : null,
+    "combo_menubar_tidy" : null,
+    "combo_monitor_stats" : null,
+    "combo_mouse_set" : null,
+    "combo_mouse_status" : null,
+    "combo_open_app" : null,
+    "combo_quit_app" : "required",
+    "combo_set_dim_strength" : null,
+    "combo_set_gadget" : null,
+    "combo_set_system" : null,
+    "combo_shelf_forget" : null,
+    "combo_shelf_give" : null,
+    "combo_shelf_list" : null,
+    "combo_window_arrange_apps" : null,
+    "combo_window_displays" : null,
+    "combo_window_move_display" : null,
+    "combo_window_place" : null,
+    "combo_window_ratio" : null,
+    "combo_window_split" : null,
+    "combo_window_tile" : null,
+    "combo_window_undo" : null,
+    "combo_workspace_apply" : null,
+    "combo_workspace_list" : null,
+    "combo_workspace_save" : null
   },
-  {
-   "description": "여러 앱의 창을 한 번에 이름 붙은 자리(반·4등분·3등분·최대화 등)로 배치해요. 항목마다 앱과 위치, 필요하면 디스플레이 번호를 줘요. 개수 제한은 없어요(한 번에 200개까지). 자유로운 좌표·바둑판은 window_place·window_tile을 써요. 손쉬운 사용 권한이 필요해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "items": {
-      "items": {
-       "additionalProperties": false,
-       "properties": {
-        "app": {
-         "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
-         "maxLength": 100,
-         "type": "string"
+  "capabilities" : [
+    {
+      "description" : "맨 앞 창(또는 지정한 실행 중 앱의 창) 하나를 화면 왼쪽 반·오른쪽 반·최대화·네 귀퉁이·3분할 등으로 옮겨요. next-display·previous-display는 옆 디스플레이로 옮겨요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          },
+          "position" : {
+            "description" : "left=왼쪽 반, right=오른쪽 반, maximize=최대화, top-left=왼쪽 위 1\/4, first-third=왼쪽 1\/3 …",
+            "enum" : [
+              "left",
+              "right",
+              "center-half",
+              "top-half",
+              "bottom-half",
+              "top-left",
+              "top-right",
+              "bottom-left",
+              "bottom-right",
+              "first-third",
+              "center-third",
+              "last-third",
+              "first-two-thirds",
+              "center-two-thirds",
+              "last-two-thirds",
+              "maximize",
+              "almost-maximize",
+              "maximize-height",
+              "center",
+              "smaller",
+              "larger",
+              "restore",
+              "next-display",
+              "previous-display"
+            ],
+            "type" : "string"
+          }
         },
-        "display": {
-         "description": "디스플레이 번호(combo_list_windows 기준, 왼쪽부터 1). 없으면 창이 있는 화면",
-         "maximum": 16,
-         "minimum": 1,
-         "type": "integer"
-        },
-        "position": {
-         "enum": [
-          "left",
-          "right",
-          "center-half",
-          "top-half",
-          "bottom-half",
-          "top-left",
-          "top-right",
-          "bottom-left",
-          "bottom-right",
-          "first-third",
-          "center-third",
-          "last-third",
-          "first-two-thirds",
-          "center-two-thirds",
-          "last-two-thirds",
-          "maximize",
-          "almost-maximize",
-          "maximize-height",
-          "center"
-         ],
-         "type": "string"
-        },
-        "window": {
-         "description": "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1",
-         "maximum": 20,
-         "minimum": 1,
-         "type": "integer"
-        }
-       },
-       "required": [
-        "app",
-        "position"
-       ],
-       "type": "object"
+        "required" : [
+          "position"
+        ],
+        "type" : "object"
       },
-      "maxItems": 200,
-      "minItems": 1,
-      "type": "array"
-     }
+      "name" : "combo_arrange_window"
     },
-    "required": [
-     "items"
-    ],
-    "type": "object"
-   },
-   "name": "combo_layout_windows"
-  },
-  {
-   "description": "맥의 디스플레이 목록(번호·크기)과 앱별 열린 창의 위치·크기·디스플레이 번호를 봐요(창 제목은 보내지 않아요). 여러 창을 배치하거나 다른 화면으로 옮기기 전에 지금 상태를 확인할 때 써요. 손쉬운 사용 권한이 필요해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_list_windows"
-  },
-  {
-   "description": "맥에서 지금 실행 중인 앱 목록(이름·번들 ID·맨 앞인지·숨김인지)을 봐요. installed=true면 설치된 앱 이름도 함께 봐요. 앱 이름이 확실하지 않을 때 열거나 전환하기 전에 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "installed": {
-      "description": "설치된 앱도 포함(기본 false)",
-      "type": "boolean"
-     }
+    {
+      "description" : "여러 앱의 창을 한 번에 이름 붙은 자리(반·4등분·3등분·최대화 등)로 배치해요. 항목마다 앱과 위치, 필요하면 디스플레이 번호를 줘요. 개수 제한은 없어요(한 번에 200개까지). 자유로운 좌표·바둑판은 window_place·window_tile을 써요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "items" : {
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "display" : {
+                  "description" : "디스플레이 번호(combo_list_windows 기준, 왼쪽부터 1). 없으면 창이 있는 화면",
+                  "maximum" : 16,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "position" : {
+                  "enum" : [
+                    "left",
+                    "right",
+                    "center-half",
+                    "top-half",
+                    "bottom-half",
+                    "top-left",
+                    "top-right",
+                    "bottom-left",
+                    "bottom-right",
+                    "first-third",
+                    "center-third",
+                    "last-third",
+                    "first-two-thirds",
+                    "center-two-thirds",
+                    "last-two-thirds",
+                    "maximize",
+                    "almost-maximize",
+                    "maximize-height",
+                    "center"
+                  ],
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "required" : [
+                "app",
+                "position"
+              ],
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "items"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_layout_windows"
     },
-    "type": "object"
-   },
-   "name": "combo_list_apps"
-  },
-  {
-   "description": "맥에 설치된 앱을 열고 맨 앞으로 가져와요(예: \"사파리 열어 줘\", \"메모 켜 줘\"). 이미 실행 중이면 그 앱으로 전환해요. 앱 이름은 한국어 표시 이름·영문 이름·번들 ID 모두 돼요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "app": {
-      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
-      "maxLength": 100,
-      "type": "string"
-     }
+    {
+      "description" : "맥의 디스플레이 목록(번호·크기)과 앱별 열린 창의 위치·크기·디스플레이 번호를 봐요(창 제목은 보내지 않아요). 여러 창을 배치하거나 다른 화면으로 옮기기 전에 지금 상태를 확인할 때 써요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_list_windows"
     },
-    "required": [
-     "app"
-    ],
-    "type": "object"
-   },
-   "name": "combo_open_app"
-  },
-  {
-   "description": "이미 실행 중인 앱으로 전환해 맨 앞에 보여 줘요(숨겨져 있으면 다시 보이게). \"크롬으로 바꿔 줘\"처럼 앱 전환을 원할 때 써요. 실행 중이 아니면 combo_open_app을 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "app": {
-      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
-      "maxLength": 100,
-      "type": "string"
-     }
+    {
+      "description" : "맥에서 지금 실행 중인 앱 목록(이름·번들 ID·맨 앞인지·숨김인지)을 봐요. installed=true면 설치된 앱 이름도 함께 봐요. 앱 이름이 확실하지 않을 때 열거나 전환하기 전에 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "installed" : {
+            "description" : "설치된 앱도 포함(기본 false)",
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_list_apps"
     },
-    "required": [
-     "app"
-    ],
-    "type": "object"
-   },
-   "name": "combo_focus_app"
-  },
-  {
-   "description": "실행 중인 앱의 창을 모두 숨겨요(⌘H와 같고 앱은 종료하지 않아요). \"슬랙 잠깐 가려 줘\"처럼 화면에서 치우고 싶을 때 써요. Finder·나초콤보는 숨기지 않아요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "app": {
-      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
-      "maxLength": 100,
-      "type": "string"
-     }
+    {
+      "description" : "맥에 설치된 앱을 열고 맨 앞으로 가져와요(예: \"사파리 열어 줘\", \"메모 켜 줘\"). 이미 실행 중이면 그 앱으로 전환해요. 앱 이름은 한국어 표시 이름·영문 이름·번들 ID 모두 돼요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_open_app"
     },
-    "required": [
-     "app"
-    ],
-    "type": "object"
-   },
-   "name": "combo_hide_app"
-  },
-  {
-   "approval": "required",
-   "description": "실행 중인 앱을 종료해요(저장하지 않은 내용은 그 앱이 물어봐요). 사용자가 분명히 종료를 원할 때만 쓰고, 실행 전에 사용자 승인이 필요해요. Finder·나초콤보는 종료하지 않아요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "app": {
-      "description": "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
-      "maxLength": 100,
-      "type": "string"
-     }
+    {
+      "description" : "이미 실행 중인 앱으로 전환해 맨 앞에 보여 줘요(숨겨져 있으면 다시 보이게). \"크롬으로 바꿔 줘\"처럼 앱 전환을 원할 때 써요. 실행 중이 아니면 combo_open_app을 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_focus_app"
     },
-    "required": [
-     "app"
-    ],
-    "type": "object"
-   },
-   "name": "combo_quit_app"
-  },
-  {
-   "description": "맥의 소리 크기(0~100), 내장 화면 밝기(0~100), 방해금지 켜기/끄기를 바꿔요. 바꿀 항목만 넣어요. 이 맥에서 지원하지 않는 항목(외장 모니터 밝기·방해금지 등)은 이유와 함께 실패로 알려 줘요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "brightness": {
-      "description": "내장 화면 밝기 %",
-      "maximum": 100,
-      "minimum": 0,
-      "type": "integer"
-     },
-     "dnd": {
-      "description": "방해금지 켜기(true)/끄기(false)",
-      "type": "boolean"
-     },
-     "volume": {
-      "description": "소리 크기 %",
-      "maximum": 100,
-      "minimum": 0,
-      "type": "integer"
-     }
+    {
+      "description" : "실행 중인 앱의 창을 모두 숨겨요(⌘H와 같고 앱은 종료하지 않아요). \"슬랙 잠깐 가려 줘\"처럼 화면에서 치우고 싶을 때 써요. Finder·나초콤보는 숨기지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_hide_app"
     },
-    "type": "object"
-   },
-   "name": "combo_set_system"
-  },
-  {
-   "description": "나초콤보 가젯(창 배치·집중 디밍·잠자기 방지·파일 선반 등) 하나를 켜거나 꺼요. 가젯 이름은 gadget 목록에서 골라요. 권한이 더 필요한 가젯은 사용자가 나초콤보에서 직접 켜야 해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "gadget": {
-      "enum": [
-       "menuBar",
-       "systemMonitor",
-       "windowSnap",
-       "fileShelf",
-       "captureFloat",
-       "focusDim",
-       "keepAwake",
-       "clipboard",
-       "deviceControl",
-       "appSwitch",
-       "mouseTune",
-       "calendarClock",
-       "diskMap"
+    {
+      "approval" : "required",
+      "description" : "실행 중인 앱을 종료해요(저장하지 않은 내용은 그 앱이 물어봐요). 사용자가 분명히 종료를 원할 때만 쓰고, 실행 전에 사용자 승인이 필요해요. Finder·나초콤보는 종료하지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "app"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_quit_app"
+    },
+    {
+      "description" : "맥의 소리 크기(0~100), 내장 화면 밝기(0~100), 방해금지 켜기\/끄기를 바꿔요. 바꿀 항목만 넣어요. 이 맥에서 지원하지 않는 항목(외장 모니터 밝기·방해금지 등)은 이유와 함께 실패로 알려 줘요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "brightness" : {
+            "description" : "내장 화면 밝기 %",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "dnd" : {
+            "description" : "방해금지 켜기(true)\/끄기(false)",
+            "type" : "boolean"
+          },
+          "volume" : {
+            "description" : "소리 크기 %",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_set_system"
+    },
+    {
+      "description" : "나초콤보 가젯(창 배치·집중 디밍·잠자기 방지·파일 선반 등) 하나를 켜거나 꺼요. 가젯 이름은 gadget 목록에서 골라요. 권한이 더 필요한 가젯은 사용자가 나초콤보에서 직접 켜야 해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "gadget" : {
+            "enum" : [
+              "menuBar",
+              "systemMonitor",
+              "windowSnap",
+              "fileShelf",
+              "captureFloat",
+              "focusDim",
+              "keepAwake",
+              "clipboard",
+              "deviceControl",
+              "appSwitch",
+              "mouseTune",
+              "calendarClock",
+              "diskMap"
+            ],
+            "type" : "string"
+          },
+          "on" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "gadget",
+          "on"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_set_gadget"
+    },
+    {
+      "description" : "나초콤보 가젯 목록과 각각 켜져 있는지 봐요. 어떤 가젯이 있는지, 지금 켜져 있는지 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_list_gadgets"
+    },
+    {
+      "description" : "집중 디밍(맨 앞 창만 밝게 두고 나머지 화면을 어둡게 하는 가젯)의 어둡기를 10~90%로 바꿔요. \"디밍 더 어둡게\"처럼 요청할 때 써요. 가젯이 꺼져 있으면 강도만 저장돼요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "percent" : {
+            "maximum" : 90,
+            "minimum" : 10,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "percent"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_set_dim_strength"
+    },
+    {
+      "approval" : "required",
+      "description" : "파일 선반에 올려 둔 항목을 모두 비워요(원본 파일은 지우지 않아요). 매번 사용자 승인을 받아요. \"선반 비워 줘\"처럼 요청할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_clear_shelf"
+    },
+    {
+      "description" : "지금 맥 상태(실행 중인 앱, 창 위치, 가젯 켜짐 상태)를 이름을 붙여 작업 공간으로 저장해요(예: \"업무 모드\"). 같은 이름이 있으면 덮어써요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "name" : {
+            "description" : "작업 공간 이름, 예: 업무 모드",
+            "maxLength" : 40,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_workspace_save"
+    },
+    {
+      "description" : "저장한 작업 공간을 불러와요: 빠진 앱을 열고, 창을 저장한 자리로 옮기고, 가젯을 저장한 대로 켜고 꺼요. 이미 열려 있는 다른 앱은 종료하지 않아요. 이름은 combo_workspace_list로 확인해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "name" : {
+            "description" : "작업 공간 이름, 예: 업무 모드",
+            "maxLength" : 40,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_workspace_apply"
+    },
+    {
+      "description" : "저장된 작업 공간 이름과 각각의 앱·창 수, 저장 시각을 봐요. 어떤 작업 공간이 있는지 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_workspace_list"
+    },
+    {
+      "description" : "가젯 하나의 사용 가이드(할 수 있는 일, 순서, 예시 호출, 제약·권한)를 봐요. 처음 쓰는 가젯이거나 어떤 도구를 어떤 순서로 쓸지 모를 때 먼저 불러요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "gadget" : {
+            "description" : "가젯 id, 예: window",
+            "enum" : [
+              "combo",
+              "window",
+              "menubar",
+              "monitor",
+              "disk",
+              "clipboard",
+              "shelf",
+              "capture",
+              "dim",
+              "awake",
+              "device",
+              "mouse",
+              "appswitch",
+              "calendar",
+              "computer",
+              "desktop"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "gadget"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_gadget_guide"
+    },
+    {
+      "description" : "연결된 디스플레이 목록(번호·이름·전체 크기·창이 놓일 수 있는 영역)을 봐요. 번호는 왼쪽부터 1이에요. 여러 디스플레이에 창을 놓기 전에 어느 화면이 몇 번이고 얼마나 큰지 확인할 때 써요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_window_displays"
+    },
+    {
+      "description" : "창마다 원하는 자리(x, y, w, h)를 줘서 한 번에 놓아요. 개수 제한 없이(한 번에 200개까지) 겹쳐도 되고, z로 앞뒤도 정해요. 다이아몬드·원형·계단 같은 모양은 직접 좌표를 계산해 써요. 부분 실패는 창별 결과로 알려요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "items" : {
+            "description" : "창마다 자리. 겹쳐도 돼요. 목록 순서가 기본 앞뒤 순서(뒤에 있는 항목이 위)",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "display" : {
+                  "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+                  "maximum" : 16,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "h" : {
+                  "description" : "높이(0보다 커야 해요)",
+                  "type" : "number"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2)",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "w" : {
+                  "description" : "너비(0보다 커야 해요)",
+                  "type" : "number"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "x" : {
+                  "description" : "왼쪽 가장자리. 사용 영역 왼쪽 위가 0",
+                  "type" : "number"
+                },
+                "y" : {
+                  "description" : "위쪽 가장자리. 사용 영역 왼쪽 위가 0",
+                  "type" : "number"
+                },
+                "z" : {
+                  "description" : "앞뒤 순서. 클수록 앞. 없으면 목록 순서",
+                  "maximum" : 1000,
+                  "minimum" : -1000,
+                  "type" : "integer"
+                }
+              },
+              "required" : [
+                "x",
+                "y",
+                "w",
+                "h"
+              ],
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "unit" : {
+            "description" : "ratio(기본)=디스플레이 사용 영역의 0~1 비율, pixel=왼쪽 위에서부터의 포인트",
+            "enum" : [
+              "ratio",
+              "pixel"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "items"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_window_place"
+    },
+    {
+      "description" : "창을 바둑판으로 깔아요. rows×cols를 마음대로(예: 10×2), 채우는 순서(fill), 여러 디스플레이 걸치기(span)·디스플레이별, 간격(gap)을 정해요. all_windows:true면 열린 창 전부를 모든 화면에 깔아요. 개수 제한 없음(200개까지). 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "all_windows" : {
+            "description" : "true면 열린 창 전부(모든 앱, 최소화 제외)를 깔아요. 전체 바둑판",
+            "type" : "boolean"
+          },
+          "cols" : {
+            "description" : "가로 칸 수. 없으면 창 수로 정해요",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "displays" : {
+            "description" : "쓸 디스플레이 번호들(window_displays 기준). display와 함께 쓰지 않아요. 없으면 첫 창이 있는 화면",
+            "items" : {
+              "maximum" : 16,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "maxItems" : 16,
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "fill" : {
+            "description" : "row_major(기본)=가로로 먼저, column_major=세로로 먼저",
+            "enum" : [
+              "row_major",
+              "column_major"
+            ],
+            "type" : "string"
+          },
+          "gap" : {
+            "description" : "창 사이·가장자리 간격(포인트). 없으면 앱 설정",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "rows" : {
+            "description" : "세로 칸 수. 없으면 창 수로 정해요",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "span" : {
+            "description" : "per_display(기본)=화면마다 격자, across=모든 화면에 걸친 격자 하나",
+            "enum" : [
+              "per_display",
+              "across"
+            ],
+            "type" : "string"
+          },
+          "windows" : {
+            "description" : "깔 창들. 목록 순서대로 채워요. all_windows와 함께 쓰지 않아요",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_window_tile"
+    },
+    {
+      "description" : "창을 2·3·4등분해서 놓아요. horizontal은 나란히(좌→우), vertical은 위아래, quadrant는 4창을 2x2로 놓아요. 목록 순서대로 왼쪽\/위부터 채워요. 더 많거나 다른 모양은 window_tile·window_place를 써요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "direction" : {
+            "description" : "horizontal=나란히, vertical=위아래, quadrant=2x2(4등분만)",
+            "enum" : [
+              "horizontal",
+              "vertical",
+              "quadrant"
+            ],
+            "type" : "string"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "parts" : {
+            "description" : "몇 등분인지(2, 3, 4)",
+            "maximum" : 4,
+            "minimum" : 2,
+            "type" : "integer"
+          },
+          "windows" : {
+            "description" : "놓을 창들(등분 수 이하). 순서대로 채워요",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 4,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "parts",
+          "direction",
+          "windows"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_window_split"
+    },
+    {
+      "description" : "창 2~4개를 지정한 비율로 나눠 놓아요. 예: ratios [70,30]이면 왼쪽 70%, 오른쪽 30%. direction은 horizontal(나란히)이나 vertical(위아래)이에요. 더 복잡한 비율은 window_place를 써요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "direction" : {
+            "description" : "기본 horizontal",
+            "enum" : [
+              "horizontal",
+              "vertical"
+            ],
+            "type" : "string"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "ratios" : {
+            "description" : "칸 비율 목록. [70,30], [1,2,1] 처럼. 합은 상관없고 서로의 비율만 봐요",
+            "items" : {
+              "maximum" : 100,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "maxItems" : 4,
+            "minItems" : 2,
+            "type" : "array"
+          },
+          "windows" : {
+            "description" : "놓을 창들(비율 개수 이하). 순서대로 채워요",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 4,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "ratios",
+          "windows"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_window_ratio"
+    },
+    {
+      "description" : "창들을 다른 디스플레이로 옮겨요. 화면 안의 위치와 크기 비율은 그대로 유지해요. 디스플레이 번호는 window_displays 기준(왼쪽부터 1)이에요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "display" : {
+            "description" : "목적지 디스플레이 번호(왼쪽부터 1)",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "windows" : {
+            "description" : "옮길 창들",
+            "items" : {
+              "additionalProperties" : false,
+              "properties" : {
+                "app" : {
+                  "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+                  "maxLength" : 100,
+                  "type" : "string"
+                },
+                "id" : {
+                  "description" : "app 대신 쓰는 창 번호표 \"앱#번호\" (예: Safari#2). window_list_windows의 bundle_id 또는 앱 이름과 window 번호",
+                  "maxLength" : 120,
+                  "type" : "string"
+                },
+                "window" : {
+                  "description" : "그 앱의 몇 번째 창인지(앞에서부터 1). 기본 1. window_list_windows의 window 번호",
+                  "maximum" : 20,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "type" : "object"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "windows",
+          "display"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_window_move_display"
+    },
+    {
+      "description" : "앱 묶음(각 앱의 맨 앞 창)을 정해 둔 배치로 한 번에 놓아요. grid=바둑판, columns=나란히, rows=위아래, quadrants=2x2(최대 4개)예요. 개수 제한 없음(200개까지). 실행 중인 앱만 옮겨요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "apps" : {
+            "description" : "앱 이름들(순서대로 왼쪽 위부터 채워요)",
+            "items" : {
+              "description" : "앱 이름(한국어 표시 이름·영문 이름·번들 ID), 예: 사파리, Safari, com.apple.Safari",
+              "maxLength" : 100,
+              "type" : "string"
+            },
+            "maxItems" : 200,
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "arrangement" : {
+            "description" : "기본 grid",
+            "enum" : [
+              "grid",
+              "columns",
+              "rows",
+              "quadrants"
+            ],
+            "type" : "string"
+          },
+          "display" : {
+            "description" : "디스플레이 번호(window_displays 기준, 왼쪽부터 1). 없으면 첫 창이 있는 화면",
+            "maximum" : 16,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "apps"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_window_arrange_apps"
+    },
+    {
+      "description" : "직전 창 배치(자유 배치·바둑판·등분·비율·디스플레이 이동·앱 묶음)를 한 번에 되돌려 창을 배치 전 위치와 크기로 복원해요. steps로 최대 5번의 배치까지 되돌려요. 닫힌 창은 건너뛰어요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "steps" : {
+            "description" : "몇 번의 배치를 되돌릴지(1~5, 기본 1)",
+            "maximum" : 5,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_window_undo"
+    },
+    {
+      "description" : "앱 전환 가젯의 설정을 봐요: 같은 단축키를 다시 누르면 숨길지, 단축키를 정해 둔 앱 이름 목록. 설정을 바꾸기 전에 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_appswitch_settings"
+    },
+    {
+      "description" : "앱 전환 설정을 바꿔요: hide_on_repeat=true면 이미 맨 앞인 앱의 단축키를 다시 누를 때 그 앱을 숨겨요. 단축키 자체는 바꾸지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "hide_on_repeat" : {
+            "description" : "같은 단축키를 다시 누르면 숨기기",
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "hide_on_repeat"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_appswitch_set_settings"
+    },
+    {
+      "description" : "지금 소리 출력 장치 이름·소리 크기와 마이크 음소거 여부를 봐요. 소리나 마이크를 바꾸기 전에 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_device_status"
+    },
+    {
+      "description" : "지금 소리 출력의 크기(0~100)나 음소거(muted)를 바꿔요. 둘 중 하나 이상 넣어요. 장치를 바꾸거나 외장 모니터는 건드리지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "muted" : {
+            "description" : "음소거(true)\/해제(false)",
+            "type" : "boolean"
+          },
+          "volume" : {
+            "description" : "소리 크기 %",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_device_set_volume"
+    },
+    {
+      "description" : "마이크를 음소거(true)하거나 켜요(false). 화상 회의 전후에 써요. 음소거 중에는 메뉴 막대에 빨간 마이크가 떠요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "muted" : {
+            "description" : "true=음소거, false=켜기",
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "muted"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_device_set_mic_muted"
+    },
+    {
+      "description" : "집중 디밍이 지금 화면을 어둡게 하는지(잠시 멈춤인지), 어둡기와 범위 설정을 봐요. 조절하기 전에 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_dim_status"
+    },
+    {
+      "description" : "집중 디밍을 잠시 멈춰 화면을 원래 밝기로 보여 줘요(가젯은 켜진 채). 다시 어둡게 하려면 dim_resume을 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_dim_pause"
+    },
+    {
+      "description" : "멈춰 둔 집중 디밍을 다시 시작해 맨 앞 창만 밝게 두고 나머지를 어둡게 해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_dim_resume"
+    },
+    {
+      "description" : "파일 선반에 올려 둔 항목 목록을 봐요: 번호·id·이름·종류(파일·그림·글·링크)·크기만 보여 주고 내용은 없어요. 선반에 무엇이 있는지 물을 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_shelf_list"
+    },
+    {
+      "approval" : "required",
+      "description" : "파일 선반의 N번 항목을 나초 대화의 다음 메시지에 첨부해요. 사용자가 보내기를 누르면 나초에게 가요. 파일이 맥 밖으로 나가므로 매번 승인을 받아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_shelf_give"
+    },
+    {
+      "description" : "파일 선반에서 N번 항목을 빼요. 원본 파일은 그대로 두고, 선반에서 되돌리기 할 수 있어요. \"선반에서 그거 빼 줘\"에 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_shelf_forget"
+    },
+    {
+      "description" : "메뉴 막대 정리 가젯의 지금 상태를 봐요: 접혀 있는지, 자동으로 다시 접는 시간, 항상 숨김 구역을 쓰는지. 접기·펼치기 전에 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_menubar_status"
+    },
+    {
+      "description" : "메뉴 막대에 올라 있는 앱 아이콘(상태 항목)의 앱 이름·제목·위치와 구역(보임·숨김·항상 숨김)을 읽어요. 손쉬운 사용 권한이 필요해요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_menubar_list_items"
+    },
+    {
+      "description" : "지금 메뉴 막대를 정리해요: 구분선 왼쪽 아이콘을 접어 숨겨요(항상 숨김 구역도 다시 접어요). 아이콘이 어수선할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_menubar_tidy"
+    },
+    {
+      "description" : "메뉴 막대 아이콘을 접거나(collapsed=true) 펼쳐요(false). 펼치면 설정한 시간 뒤 다시 접혀요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "collapsed" : {
+            "description" : "true=접기, false=펼치기",
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "collapsed"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_menubar_set_collapsed"
+    },
+    {
+      "description" : "항상 숨김 구역까지 모든 아이콘을 잠깐 보여 줘요. 다음에 접을 때까지 보여요. 숨겨 둔 아이콘을 눌러야 할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_menubar_show_hidden"
+    },
+    {
+      "description" : "시스템 모니터의 지금 수치를 봐요: CPU·메모리(압력·스왑)·네트워크 속도·디스크 사용률·배터리·온도(있으면). \"맥이 느려\", \"배터리 얼마나 남았어\"처럼 지금 상태를 물을 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_monitor_stats"
+    },
+    {
+      "description" : "디스크 지도의 마지막 스캔에서 가장 큰 폴더·파일 상위 N개(이름·경로·크기·수정 시각)와 스캔 시각을 봐요. \"뭐가 디스크를 차지해?\"에 써요. 읽기만 하고 지우지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "count" : {
+            "description" : "몇 개(1–50, 기본 10)",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "kind" : {
+            "description" : "both=폴더와 파일, folders=폴더만, files=파일만 (기본 both)",
+            "enum" : [
+              "both",
+              "folders",
+              "files"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_disk_top_items"
+    },
+    {
+      "description" : "디스크 지도 창을 열고 홈 폴더(또는 홈 안의 지정한 폴더)를 스캔하기 시작해요. 몇 분 걸릴 수 있고, 끝나면 top_items로 결과를 봐요. 아무것도 지우지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "path" : {
+            "description" : "홈 안의 폴더: ~, ~\/Downloads 또는 홈 폴더 아래의 절대 경로 (기본 ~)",
+            "maxLength" : 1024,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_disk_scan"
+    },
+    {
+      "description" : "클립보드 기록 목록을 봐요: 번호·id·종류(글·링크·그림·파일)·길이·복사한 시각·고정 여부만 보여 주고 내용 미리보기는 없어요. 내용이 필요하면 번호로 get_item을 불러요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_clipboard_list"
+    },
+    {
+      "approval" : "required",
+      "description" : "클립보드 기록에서 N번 항목의 내용(글·링크·파일 경로)을 읽어요. 내용이 맥 밖으로 나가므로 매번 사용자 승인을 받아요. 사용자가 그 항목을 보라고 할 때만 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_clipboard_get_item"
+    },
+    {
+      "description" : "클립보드 기록의 N번 항목을 다시 복사해 지금 클립보드에 올려요(목록 맨 위로 와요). \"아까 복사한 거 다시 붙여 넣게 해 줘\"에 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "description" : "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
+            "maxLength" : 8,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "index" : {
+            "description" : "목록의 번호(1부터)",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "index"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_clipboard_copy_again"
+    },
+    {
+      "approval" : "required",
+      "description" : "클립보드 기록을 비워요. 고정한 항목은 남아요. 되돌릴 수 없어서 매번 사용자 승인을 받아요. 사용자가 기록을 지워 달라고 할 때만 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_clipboard_clear"
+    },
+    {
+      "approval" : "required",
+      "description" : "화면을 캡처해 나초 대화의 다음 메시지에 첨부해요. area는 사용자가 영역을 드래그하고, screen은 포인터가 있는 화면 전체예요. 화면 내용이 나가므로 매번 승인을 받아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "mode" : {
+            "description" : "area=사용자가 드래그한 영역(기본), screen=포인터가 있는 화면 전체",
+            "enum" : [
+              "area",
+              "screen"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_capture_ask"
+    },
+    {
+      "description" : "화면에 떠 있는 고정 캡처 창의 개수와 크기(픽셀)를 봐요. 그림 내용은 보내지 않아요. 고정 캡처가 몇 개 열려 있는지 물을 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_capture_list_pinned"
+    },
+    {
+      "description" : "화면에 떠 있는 고정 캡처 창을 모두 닫아요. \"떠 있는 캡처 다 닫아 줘\"에 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_capture_close_all"
+    },
+    {
+      "description" : "잠자기 방지가 지금 맥을 깨워 두고 있는지, 남은 시간과 이유(수동·정한 앱·전원 규칙)를 봐요. 켜기 전에 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_awake_status"
+    },
+    {
+      "description" : "맥이 잠들지 않게 지금 붙잡아요. minutes에 분(1~1440)을 넣으면 그 시간만, 0이거나 생략하면 끌 때까지 유지해요. 발표나 긴 작업 전에 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "minutes" : {
+            "description" : "유지할 분. 0=끌 때까지",
+            "maximum" : 1440,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_awake_start"
+    },
+    {
+      "description" : "수동으로 붙잡은 깨어 있기를 풀어 맥이 평소처럼 잠들 수 있게 해요. 정한 앱·전원 규칙은 그대로 따라요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_awake_stop"
+    },
+    {
+      "description" : "마우스 조정 가젯의 설정을 봐요: 스크롤 반대로, 부드러운 스크롤, 속도, 옆 버튼, 가운데 버튼 동작. 바꾸기 전에 확인할 때 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_mouse_status"
+    },
+    {
+      "description" : "마우스 조정 설정을 바꿔요(바꿀 항목만). 스크롤 반대로·부드러운 스크롤·옆 버튼은 true\/false, 속도는 0.5·1·1.5·2·3, 가운데 버튼은 click 또는 missionControl.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "middle_button" : {
+            "description" : "가운데 버튼 동작",
+            "enum" : [
+              "click",
+              "missionControl"
+            ],
+            "type" : "string"
+          },
+          "reverse_scroll" : {
+            "description" : "마우스 스크롤 방향 반대로",
+            "type" : "boolean"
+          },
+          "side_buttons" : {
+            "description" : "옆 버튼을 뒤로\/앞으로로 쓰기",
+            "type" : "boolean"
+          },
+          "smooth_scroll" : {
+            "description" : "부드러운 스크롤",
+            "type" : "boolean"
+          },
+          "speed" : {
+            "description" : "스크롤 속도 배율: 0.5, 1, 1.5, 2, 3 중 하나",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_mouse_set"
+    },
+    {
+      "description" : "달력 시계가 메뉴 막대에 무엇을 보여 주는지 봐요: 날짜·요일·초·12\/24시간·다음 일정 표시 여부와 세계 시계 목록. 일정 내용은 읽지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_calendar_status"
+    },
+    {
+      "description" : "달력 시계 표시를 바꿔요(바꿀 항목만): 날짜·요일·초·다음 일정 표시, hours(system·twelve·twentyFour), 세계 시계(시간대 ID 최대 6개).",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "hours" : {
+            "description" : "시간 표기",
+            "enum" : [
+              "system",
+              "twelve",
+              "twentyFour"
+            ],
+            "type" : "string"
+          },
+          "show_date" : {
+            "description" : "날짜 표시",
+            "type" : "boolean"
+          },
+          "show_next_event" : {
+            "description" : "다음 일정 표시(켜면 캘린더 권한을 써요)",
+            "type" : "boolean"
+          },
+          "show_seconds" : {
+            "description" : "초 표시",
+            "type" : "boolean"
+          },
+          "show_weekday" : {
+            "description" : "요일 표시",
+            "type" : "boolean"
+          },
+          "world_clocks" : {
+            "description" : "세계 시계 시간대 ID 목록(예: Asia\/Seoul), 최대 6개. 빈 목록이면 모두 지움",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_calendar_set"
+    },
+    {
+      "description" : "연결된 디스플레이 목록(아이디·크기·배율·주 디스플레이인지)을 돌려줘요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_computer_screen_list_displays"
+    },
+    {
+      "approval" : "required",
+      "description" : "화면을 PNG로 찍어 돌려줘요. 디스플레이 전체, 창 하나, 지정한 영역 중에서 골라요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "displayId" : {
+            "description" : "Display ID (main display if omitted)",
+            "type" : "integer"
+          },
+          "height" : {
+            "description" : "Region height",
+            "type" : "number"
+          },
+          "maxWidth" : {
+            "description" : "Wider images are scaled down keeping the aspect ratio (default 1568)",
+            "type" : "integer"
+          },
+          "target" : {
+            "description" : "What to capture",
+            "enum" : [
+              "display",
+              "window",
+              "region"
+            ],
+            "type" : "string"
+          },
+          "width" : {
+            "description" : "Region width",
+            "type" : "number"
+          },
+          "windowId" : {
+            "description" : "Window ID (windowId from window_list)",
+            "type" : "integer"
+          },
+          "x" : {
+            "description" : "Region top-left x",
+            "type" : "number"
+          },
+          "y" : {
+            "description" : "Region top-left y",
+            "type" : "number"
+          }
+        },
+        "required" : [
+          "target"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_computer_screen_capture"
+    },
+    {
+      "approval" : "required",
+      "description" : "마우스 포인터를 화면 좌표(포인트, 주 디스플레이 왼쪽 위가 0,0)로 옮겨요. 클릭하지는 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "x" : {
+            "description" : "x",
+            "type" : "number"
+          },
+          "y" : {
+            "description" : "y",
+            "type" : "number"
+          }
+        },
+        "required" : [
+          "x",
+          "y"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_computer_mouse_move"
+    },
+    {
+      "approval" : "required",
+      "description" : "지정한 좌표를 클릭해요(왼쪽·오른쪽·가운데 버튼, 1~3번).",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "button" : {
+            "description" : "Default left",
+            "enum" : [
+              "left",
+              "right",
+              "middle"
+            ],
+            "type" : "string"
+          },
+          "clickCount" : {
+            "description" : "1 to 3, default 1",
+            "type" : "integer"
+          },
+          "x" : {
+            "description" : "x",
+            "type" : "number"
+          },
+          "y" : {
+            "description" : "y",
+            "type" : "number"
+          }
+        },
+        "required" : [
+          "x",
+          "y"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_computer_mouse_click"
+    },
+    {
+      "approval" : "required",
+      "description" : "마우스로 화면의 한 점에서 다른 점까지 끌어다 놓아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "fromX" : {
+            "description" : "Start x",
+            "type" : "number"
+          },
+          "fromY" : {
+            "description" : "Start y",
+            "type" : "number"
+          },
+          "toX" : {
+            "description" : "End x",
+            "type" : "number"
+          },
+          "toY" : {
+            "description" : "End y",
+            "type" : "number"
+          }
+        },
+        "required" : [
+          "fromX",
+          "fromY",
+          "toX",
+          "toY"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_computer_mouse_drag"
+    },
+    {
+      "approval" : "required",
+      "description" : "픽셀 단위로 스크롤해요. 좌표를 주면 먼저 그 자리로 포인터를 옮겨요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "deltaX" : {
+            "description" : "Horizontal",
+            "type" : "integer"
+          },
+          "deltaY" : {
+            "description" : "Vertical (positive = up)",
+            "type" : "integer"
+          },
+          "x" : {
+            "description" : "x",
+            "type" : "number"
+          },
+          "y" : {
+            "description" : "y",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_computer_mouse_scroll"
+    },
+    {
+      "approval" : "required",
+      "description" : "키 하나를 눌러요(수정 키와 함께). 예: 키 c와 커맨드.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "key" : {
+            "description" : "Key name",
+            "type" : "string"
+          },
+          "modifiers" : {
+            "description" : "cmd, shift, option(alt), control(ctrl), fn",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [
+          "key"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_computer_key_press"
+    },
+    {
+      "approval" : "required",
+      "description" : "지금 초점이 있는 입력 칸에 글을 입력해요(최대 4000자). 먼저 그 칸을 클릭해 초점을 옮겨요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "text" : {
+            "description" : "Text to type",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "text"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_computer_type_text"
+    },
+    {
+      "approval" : "required",
+      "description" : "맨 앞 창(또는 지정한 앱)의 화면 요소를 손쉬운 사용 트리로 읽어요. 역할·제목·값·위치와 요소 아이디를 돌려줘요. 깊이·개수·글자 수 상한이 있고 암호 칸 값은 보내지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "App name or bundle id (default: the frontmost app)",
+            "maxLength" : 100,
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maxDepth" : {
+            "description" : "How deep to read (1-25, default 8)",
+            "maximum" : 25,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "maxNodes" : {
+            "description" : "At most this many elements (1-500, default 200)",
+            "maximum" : 500,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "maxTextLength" : {
+            "description" : "Texts are cut to this many characters (10-200, default 80)",
+            "maximum" : 200,
+            "minimum" : 10,
+            "type" : "integer"
+          },
+          "pid" : {
+            "description" : "Process id of the app (from computer_app_list), instead of app",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "scope" : {
+            "description" : "window = the app's front window (default), app = menu bar and every window",
+            "enum" : [
+              "window",
+              "app"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_computer_ui_tree"
+    },
+    {
+      "approval" : "required",
+      "description" : "맨 앞 창(또는 지정한 앱)에서 역할(버튼·글 칸 등)이나 제목·이름으로 화면 요소를 찾아 아이디와 위치를 돌려줘요. 누를 버튼이나 입력 칸을 찾을 때 트리 전체 대신 써요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "app" : {
+            "description" : "App name or bundle id (default: the frontmost app)",
+            "maxLength" : 100,
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maxResults" : {
+            "description" : "1-30, default 10",
+            "maximum" : 30,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "pid" : {
+            "description" : "Process id of the app (from computer_app_list), instead of app",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "role" : {
+            "description" : "Role, e.g. button, textField, checkBox, menuItem (AX prefix optional)",
+            "maxLength" : 60,
+            "type" : "string"
+          },
+          "scope" : {
+            "description" : "window = the app's front window (default), app = menu bar and every window",
+            "enum" : [
+              "window",
+              "app"
+            ],
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "Text the title, label or value contains (case-insensitive)",
+            "maxLength" : 100,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_computer_find_element"
+    },
+    {
+      "approval" : "required",
+      "description" : "트리나 찾기 결과의 요소 아이디로 그 요소 가운데를 클릭해요(press면 기본 동작 실행). 아이디 대신 화면 좌표도 돼요. 요소가 바뀌었으면 클릭하지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "button" : {
+            "description" : "Default left",
+            "enum" : [
+              "left",
+              "right",
+              "middle"
+            ],
+            "type" : "string"
+          },
+          "clickCount" : {
+            "description" : "1 to 3, default 1",
+            "maximum" : 3,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "Element id, e.g. t3.12",
+            "maxLength" : 20,
+            "type" : "string"
+          },
+          "press" : {
+            "description" : "true = run the element's default action (AXPress) instead of a mouse click",
+            "type" : "boolean"
+          },
+          "x" : {
+            "description" : "Screen x in points (instead of id)",
+            "type" : "number"
+          },
+          "y" : {
+            "description" : "Screen y in points (instead of id)",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_computer_click_element"
+    },
+    {
+      "description" : "바탕화면의 파일을 훑어 스크린샷·이미지·문서·압축·설치 파일·기타로 나눈 이동 계획을 만들어요. plan_id와 분류별 개수, 파일 이름(최대 50개)을 줘요. 아무것도 옮기지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_desktop_tidy_plan"
+    },
+    {
+      "approval" : "required",
+      "description" : "승인받은 정리 계획(plan_id)을 실행해 바탕화면 파일을 정리됨 폴더로 옮겨요. 사용자 승인을 매번 받아요. 지우거나 덮어쓰지 않고, tidy_undo로 되돌릴 수 있어요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "plan_id" : {
+            "description" : "계획 번호(plan_id). 계획을 만든 답에 들어 있어요",
+            "maxLength" : 32,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "plan_id"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_desktop_tidy_apply"
+    },
+    {
+      "description" : "가장 최근 바탕화면 정리(또는 tidy_id)를 원래 자리로 되돌려요. 원래 자리에 다른 파일이 있으면 덮어쓰지 않고 \"되돌리지 못함\"으로 알려요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "tidy_id" : {
+            "description" : "되돌릴 정리 번호(기본: 가장 최근)",
+            "maxLength" : 32,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "name" : "combo_desktop_tidy_undo"
+    },
+    {
+      "description" : "30일 안의 바탕화면 정리 기록(일시, 옮긴 개수, 되돌렸는지)을 봐요. 파일 이름은 담지 않아요.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_desktop_tidy_history"
+    },
+    {
+      "description" : "열린 창(앱 이름만, 창 제목은 안 봐요)으로 배치안과 plan_id를 만들어요. 아무것도 옮기지 않아요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+
+        },
+        "type" : "object"
+      },
+      "name" : "combo_desktop_arrange_suggest"
+    },
+    {
+      "approval" : "required",
+      "description" : "승인받은 배치안(plan_id)을 기존 창 배치(WindowTiling)로 적용해요. 사용자 승인을 매번 받아요. 되돌리기는 window_undo를 써요. 권한: 손쉬운 사용.",
+      "input_schema" : {
+        "additionalProperties" : false,
+        "properties" : {
+          "plan_id" : {
+            "description" : "계획 번호(plan_id). 계획을 만든 답에 들어 있어요",
+            "maxLength" : 32,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "plan_id"
+        ],
+        "type" : "object"
+      },
+      "name" : "combo_desktop_arrange_apply"
+    }
+  ],
+  "registry" : [
+    {
+      "action" : "arrange",
+      "aliases" : [
+        "combo_arrange_window",
+        "combo_window_arrange"
       ],
-      "type": "string"
-     },
-     "on": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "gadget",
-     "on"
-    ],
-    "type": "object"
-   },
-   "name": "combo_set_gadget"
-  },
-  {
-   "description": "나초콤보 가젯 목록과 각각 켜져 있는지 봐요. 어떤 가젯이 있는지, 지금 켜져 있는지 확인할 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_list_gadgets"
-  },
-  {
-   "description": "집중 디밍(맨 앞 창만 밝게 두고 나머지 화면을 어둡게 하는 가젯)의 어둡기를 10~90%로 바꿔요. \"디밍 더 어둡게\"처럼 요청할 때 써요. 가젯이 꺼져 있으면 강도만 저장돼요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "percent": {
-      "maximum": 90,
-      "minimum": 10,
-      "type": "integer"
-     }
-    },
-    "required": [
-     "percent"
-    ],
-    "type": "object"
-   },
-   "name": "combo_set_dim_strength"
-  },
-  {
-   "approval": "required",
-   "description": "파일 선반에 올려 둔 항목을 모두 비워요(원본 파일은 지우지 않아요). 매번 사용자 승인을 받아요. \"선반 비워 줘\"처럼 요청할 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_clear_shelf"
-  },
-  {
-   "description": "지금 맥 상태(실행 중인 앱, 창 위치, 가젯 켜짐 상태)를 이름을 붙여 작업 공간으로 저장해요(예: \"업무 모드\"). 같은 이름이 있으면 덮어써요. 손쉬운 사용 권한이 필요해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "name": {
-      "description": "작업 공간 이름, 예: 업무 모드",
-      "maxLength": 40,
-      "minLength": 1,
-      "type": "string"
-     }
-    },
-    "required": [
-     "name"
-    ],
-    "type": "object"
-   },
-   "name": "combo_workspace_save"
-  },
-  {
-   "description": "저장한 작업 공간을 불러와요: 빠진 앱을 열고, 창을 저장한 자리로 옮기고, 가젯을 저장한 대로 켜고 꺼요. 이미 열려 있는 다른 앱은 종료하지 않아요. 이름은 combo_workspace_list로 확인해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "name": {
-      "description": "작업 공간 이름, 예: 업무 모드",
-      "maxLength": 40,
-      "minLength": 1,
-      "type": "string"
-     }
-    },
-    "required": [
-     "name"
-    ],
-    "type": "object"
-   },
-   "name": "combo_workspace_apply"
-  },
-  {
-   "description": "저장된 작업 공간 이름과 각각의 앱·창 수, 저장 시각을 봐요. 어떤 작업 공간이 있는지 확인할 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_workspace_list"
-  },
-  {
-   "description": "지금 소리 출력 장치 이름·소리 크기와 마이크 음소거 여부를 봐요. 소리나 마이크를 바꾸기 전에 확인할 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_device_status"
-  },
-  {
-   "description": "지금 소리 출력의 크기(0~100)나 음소거(muted)를 바꿔요. 둘 중 하나 이상 넣어요. 장치를 바꾸거나 외장 모니터는 건드리지 않아요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "muted": {
-      "description": "음소거(true)/해제(false)",
-      "type": "boolean"
-     },
-     "volume": {
-      "description": "소리 크기 %",
-      "maximum": 100,
-      "minimum": 0,
-      "type": "integer"
-     }
-    },
-    "type": "object"
-   },
-   "name": "combo_device_set_volume"
-  },
-  {
-   "description": "마이크를 음소거(true)하거나 켜요(false). 화상 회의 전후에 써요. 음소거 중에는 메뉴 막대에 빨간 마이크가 떠요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "muted": {
-      "description": "true=음소거, false=켜기",
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "muted"
-    ],
-    "type": "object"
-   },
-   "name": "combo_device_set_mic_muted"
-  },
-  {
-   "description": "집중 디밍이 지금 화면을 어둡게 하는지(잠시 멈춤인지), 어둡기와 범위 설정을 봐요. 조절하기 전에 확인할 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_dim_status"
-  },
-  {
-   "description": "집중 디밍을 잠시 멈춰 화면을 원래 밝기로 보여 줘요(가젯은 켜진 채). 다시 어둡게 하려면 dim_resume을 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_dim_pause"
-  },
-  {
-   "description": "멈춰 둔 집중 디밍을 다시 시작해 맨 앞 창만 밝게 두고 나머지를 어둡게 해요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_dim_resume"
-  },
-  {
-   "description": "파일 선반에 올려 둔 항목 목록을 봐요: 번호·id·이름·종류(파일·그림·글·링크)·크기만 보여 주고 내용은 없어요. 선반에 무엇이 있는지 물을 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_shelf_list"
-  },
-  {
-   "approval": "required",
-   "description": "파일 선반의 N번 항목을 나초 대화의 다음 메시지에 첨부해요. 사용자가 보내기를 누르면 나초에게 가요. 파일이 맥 밖으로 나가므로 매번 승인을 받아요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "id": {
-      "description": "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
-      "maxLength": 8,
-      "minLength": 8,
-      "type": "string"
-     },
-     "index": {
-      "description": "목록의 번호(1부터)",
-      "maximum": 200,
-      "minimum": 1,
-      "type": "integer"
-     }
-    },
-    "required": [
-     "index"
-    ],
-    "type": "object"
-   },
-   "name": "combo_shelf_give"
-  },
-  {
-   "description": "클립보드 기록 목록을 봐요: 번호·id·종류(글·링크·그림·파일)·길이·복사한 시각·고정 여부만 보여 주고 내용 미리보기는 없어요. 내용이 필요하면 번호로 get_item을 불러요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_clipboard_list"
-  },
-  {
-   "approval": "required",
-   "description": "클립보드 기록에서 N번 항목의 내용(글·링크·파일 경로)을 읽어요. 내용이 맥 밖으로 나가므로 매번 사용자 승인을 받아요. 사용자가 그 항목을 보라고 할 때만 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "id": {
-      "description": "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
-      "maxLength": 8,
-      "minLength": 8,
-      "type": "string"
-     },
-     "index": {
-      "description": "목록의 번호(1부터)",
-      "maximum": 200,
-      "minimum": 1,
-      "type": "integer"
-     }
-    },
-    "required": [
-     "index"
-    ],
-    "type": "object"
-   },
-   "name": "combo_clipboard_get_item"
-  },
-  {
-   "description": "클립보드 기록의 N번 항목을 다시 복사해 지금 클립보드에 올려요(목록 맨 위로 와요). \"아까 복사한 거 다시 붙여 넣게 해 줘\"에 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "id": {
-      "description": "목록의 id(8자리). 주면 목록이 바뀌었는지 확인해요",
-      "maxLength": 8,
-      "minLength": 8,
-      "type": "string"
-     },
-     "index": {
-      "description": "목록의 번호(1부터)",
-      "maximum": 200,
-      "minimum": 1,
-      "type": "integer"
-     }
-    },
-    "required": [
-     "index"
-    ],
-    "type": "object"
-   },
-   "name": "combo_clipboard_copy_again"
-  },
-  {
-   "approval": "required",
-   "description": "화면을 캡처해 나초 대화의 다음 메시지에 첨부해요. area는 사용자가 영역을 드래그하고, screen은 포인터가 있는 화면 전체예요. 화면 내용이 나가므로 매번 승인을 받아요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "mode": {
-      "description": "area=사용자가 드래그한 영역(기본), screen=포인터가 있는 화면 전체",
-      "enum": [
-       "area",
-       "screen"
+      "always_requires_approval" : false,
+      "connector_name" : "combo_arrange_window",
+      "exits" : [
+        "connector",
+        "mcp"
       ],
-      "type": "string"
-     }
+      "gadget" : "window",
+      "mcp_name" : "window_arrange",
+      "requires_gadget_on" : false,
+      "risk" : "change"
     },
-    "type": "object"
-   },
-   "name": "combo_capture_ask"
-  },
-  {
-   "description": "화면에 떠 있는 고정 캡처 창의 개수와 크기(픽셀)를 봐요. 그림 내용은 보내지 않아요. 고정 캡처가 몇 개 열려 있는지 물을 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_capture_list_pinned"
-  },
-  {
-   "description": "잠자기 방지가 지금 맥을 깨워 두고 있는지, 남은 시간과 이유(수동·정한 앱·전원 규칙)를 봐요. 켜기 전에 확인할 때 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_awake_status"
-  },
-  {
-   "description": "맥이 잠들지 않게 지금 붙잡아요. minutes에 분(1~1440)을 넣으면 그 시간만, 0이거나 생략하면 끌 때까지 유지해요. 발표나 긴 작업 전에 써요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "minutes": {
-      "description": "유지할 분. 0=끌 때까지",
-      "maximum": 1440,
-      "minimum": 0,
-      "type": "integer"
-     }
+    {
+      "action" : "layout",
+      "aliases" : [
+        "combo_layout_windows",
+        "combo_window_layout"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_layout_windows",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_layout",
+      "requires_gadget_on" : false,
+      "risk" : "change"
     },
-    "type": "object"
-   },
-   "name": "combo_awake_start"
-  },
-  {
-   "description": "수동으로 붙잡은 깨어 있기를 풀어 맥이 평소처럼 잠들 수 있게 해요. 정한 앱·전원 규칙은 그대로 따라요.",
-   "input_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "type": "object"
-   },
-   "name": "combo_awake_stop"
-  }
- ],
- "source": "nachocombo (macOS) main b794bfa, PetCommands.capabilities(allowQuit: true, alwaysAllowed: [], disabled: []) printed by a Swift program on Linux; only the names the Windows catalog knows are kept",
- "trustable_gadgets": [
-  "capture",
-  "clipboard",
-  "computer",
-  "shelf"
- ]
+    {
+      "action" : "list_windows",
+      "aliases" : [
+        "combo_list_windows",
+        "combo_window_list_windows"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_list_windows",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_list_windows",
+      "requires_gadget_on" : false,
+      "risk" : "read"
+    },
+    {
+      "action" : "list",
+      "aliases" : [
+        "combo_appswitch_list",
+        "combo_list_apps"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_list_apps",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_list",
+      "requires_gadget_on" : false,
+      "risk" : "read"
+    },
+    {
+      "action" : "open",
+      "aliases" : [
+        "combo_appswitch_open",
+        "combo_open_app"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_open_app",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_open",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "focus",
+      "aliases" : [
+        "combo_appswitch_focus",
+        "combo_focus_app"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_focus_app",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_focus",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "hide",
+      "aliases" : [
+        "combo_appswitch_hide",
+        "combo_hide_app"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_hide_app",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_hide",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "quit",
+      "aliases" : [
+        "combo_appswitch_quit",
+        "combo_quit_app"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_quit_app",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_quit",
+      "requires_gadget_on" : false,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "set",
+      "aliases" : [
+        "combo_device_set",
+        "combo_set_system"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_set_system",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "mcp_name" : "device_set",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "set_gadget",
+      "aliases" : [
+        "combo_set_gadget"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_set_gadget",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "mcp_name" : "combo_set_gadget",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "list_gadgets",
+      "aliases" : [
+        "combo_list_gadgets"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_list_gadgets",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "mcp_name" : "combo_list_gadgets",
+      "requires_gadget_on" : false,
+      "risk" : "read"
+    },
+    {
+      "action" : "set_strength",
+      "aliases" : [
+        "combo_dim_set_strength",
+        "combo_set_dim_strength"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_set_dim_strength",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "mcp_name" : "dim_set_strength",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "clear",
+      "aliases" : [
+        "combo_clear_shelf",
+        "combo_shelf_clear"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clear_shelf",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "shelf",
+      "mcp_name" : "shelf_clear",
+      "requires_gadget_on" : false,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "workspace_save",
+      "aliases" : [
+        "combo_workspace_save"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_workspace_save",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "mcp_name" : "combo_workspace_save",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "workspace_apply",
+      "aliases" : [
+        "combo_workspace_apply"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_workspace_apply",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "mcp_name" : "combo_workspace_apply",
+      "requires_gadget_on" : false,
+      "risk" : "change"
+    },
+    {
+      "action" : "workspace_list",
+      "aliases" : [
+        "combo_workspace_list"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_workspace_list",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "combo",
+      "mcp_name" : "combo_workspace_list",
+      "requires_gadget_on" : false,
+      "risk" : "read"
+    },
+    {
+      "action" : "gadget_guide",
+      "aliases" : [
+        "combo_gadget_guide"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_gadget_guide",
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "combo",
+      "mcp_name" : "combo_gadget_guide",
+      "requires_gadget_on" : false,
+      "risk" : "read"
+    },
+    {
+      "action" : "displays",
+      "aliases" : [
+        "combo_window_displays"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_displays",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_displays",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "place",
+      "aliases" : [
+        "combo_window_place"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_place",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_place",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "tile",
+      "aliases" : [
+        "combo_window_tile"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_tile",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_tile",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "split",
+      "aliases" : [
+        "combo_window_split"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_split",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_split",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "ratio",
+      "aliases" : [
+        "combo_window_ratio"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_ratio",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_ratio",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "move_display",
+      "aliases" : [
+        "combo_window_move_display"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_move_display",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_move_display",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "arrange_apps",
+      "aliases" : [
+        "combo_window_arrange_apps"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_arrange_apps",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_arrange_apps",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "undo",
+      "aliases" : [
+        "combo_window_undo"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_window_undo",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "window",
+      "mcp_name" : "window_undo",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "settings",
+      "aliases" : [
+        "combo_appswitch_settings"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_appswitch_settings",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_settings",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "set_settings",
+      "aliases" : [
+        "combo_appswitch_set_settings"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_appswitch_set_settings",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "appswitch",
+      "mcp_name" : "appswitch_set_settings",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "status",
+      "aliases" : [
+        "combo_device_status"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_device_status",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "mcp_name" : "device_status",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "set_volume",
+      "aliases" : [
+        "combo_device_set_volume"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_device_set_volume",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "mcp_name" : "device_set_volume",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "set_mic_muted",
+      "aliases" : [
+        "combo_device_set_mic_muted"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_device_set_mic_muted",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "device",
+      "mcp_name" : "device_set_mic_muted",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "status",
+      "aliases" : [
+        "combo_dim_status"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_dim_status",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "mcp_name" : "dim_status",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "pause",
+      "aliases" : [
+        "combo_dim_pause"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_dim_pause",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "mcp_name" : "dim_pause",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "resume",
+      "aliases" : [
+        "combo_dim_resume"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_dim_resume",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "dim",
+      "mcp_name" : "dim_resume",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "list",
+      "aliases" : [
+        "combo_shelf_list"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_shelf_list",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "shelf",
+      "mcp_name" : "shelf_list",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "give",
+      "aliases" : [
+        "combo_shelf_give"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_shelf_give",
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "shelf",
+      "mcp_name" : "shelf_give",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "forget",
+      "aliases" : [
+        "combo_shelf_forget"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_shelf_forget",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "shelf",
+      "mcp_name" : "shelf_forget",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "status",
+      "aliases" : [
+        "combo_menubar_status"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_status",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "mcp_name" : "menubar_status",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "list_items",
+      "aliases" : [
+        "combo_menubar_list_items"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_list_items",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "mcp_name" : "menubar_list_items",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "tidy",
+      "aliases" : [
+        "combo_menubar_tidy"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_tidy",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "mcp_name" : "menubar_tidy",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "set_collapsed",
+      "aliases" : [
+        "combo_menubar_set_collapsed"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_set_collapsed",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "mcp_name" : "menubar_set_collapsed",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "show_hidden",
+      "aliases" : [
+        "combo_menubar_show_hidden"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_menubar_show_hidden",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "menubar",
+      "mcp_name" : "menubar_show_hidden",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "stats",
+      "aliases" : [
+        "combo_monitor_stats"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_monitor_stats",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "monitor",
+      "mcp_name" : "monitor_stats",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "top_items",
+      "aliases" : [
+        "combo_disk_top_items"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_disk_top_items",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "disk",
+      "mcp_name" : "disk_top_items",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "scan",
+      "aliases" : [
+        "combo_disk_scan"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_disk_scan",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "disk",
+      "mcp_name" : "disk_scan",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "list",
+      "aliases" : [
+        "combo_clipboard_list"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_list",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "mcp_name" : "clipboard_list",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "get_item",
+      "aliases" : [
+        "combo_clipboard_get_item"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_get_item",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "mcp_name" : "clipboard_get_item",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "copy_again",
+      "aliases" : [
+        "combo_clipboard_copy_again"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_copy_again",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "mcp_name" : "clipboard_copy_again",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "clear",
+      "aliases" : [
+        "combo_clipboard_clear"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_clipboard_clear",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "clipboard",
+      "mcp_name" : "clipboard_clear",
+      "requires_gadget_on" : true,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "ask",
+      "aliases" : [
+        "combo_capture_ask"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_capture_ask",
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "capture",
+      "mcp_name" : "capture_ask",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "list_pinned",
+      "aliases" : [
+        "combo_capture_list_pinned"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_capture_list_pinned",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "capture",
+      "mcp_name" : "capture_list_pinned",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "close_all",
+      "aliases" : [
+        "combo_capture_close_all"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_capture_close_all",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "capture",
+      "mcp_name" : "capture_close_all",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "status",
+      "aliases" : [
+        "combo_awake_status"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_awake_status",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "awake",
+      "mcp_name" : "awake_status",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "start",
+      "aliases" : [
+        "combo_awake_start"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_awake_start",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "awake",
+      "mcp_name" : "awake_start",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "stop",
+      "aliases" : [
+        "combo_awake_stop"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_awake_stop",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "awake",
+      "mcp_name" : "awake_stop",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "status",
+      "aliases" : [
+        "combo_mouse_status"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_mouse_status",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "mouse",
+      "mcp_name" : "mouse_status",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "set",
+      "aliases" : [
+        "combo_mouse_set"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_mouse_set",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "mouse",
+      "mcp_name" : "mouse_set",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "status",
+      "aliases" : [
+        "combo_calendar_status"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_calendar_status",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "calendar",
+      "mcp_name" : "calendar_status",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "set",
+      "aliases" : [
+        "combo_calendar_set"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_calendar_set",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "calendar",
+      "mcp_name" : "calendar_set",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "screen_list_displays",
+      "aliases" : [
+        "combo_computer_screen_list_displays"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_screen_list_displays",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_screen_list_displays",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "screen_capture",
+      "aliases" : [
+        "combo_computer_screen_capture"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_screen_capture",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_screen_capture",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "app_list",
+      "aliases" : [
+        "combo_computer_app_list"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_app_list",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_app_list",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "app_open",
+      "aliases" : [
+        "combo_computer_app_open"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_app_open",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_app_open",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "app_activate",
+      "aliases" : [
+        "combo_computer_app_activate"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_app_activate",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_app_activate",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "app_quit",
+      "aliases" : [
+        "combo_computer_app_quit"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_app_quit",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_app_quit",
+      "requires_gadget_on" : true,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "window_list",
+      "aliases" : [
+        "combo_computer_window_list"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_window_list",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_window_list",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "window_set_frame",
+      "aliases" : [
+        "combo_computer_window_set_frame"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_window_set_frame",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_window_set_frame",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "window_minimize",
+      "aliases" : [
+        "combo_computer_window_minimize"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_window_minimize",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_window_minimize",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "mouse_move",
+      "aliases" : [
+        "combo_computer_mouse_move"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_mouse_move",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_mouse_move",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "mouse_click",
+      "aliases" : [
+        "combo_computer_mouse_click"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_mouse_click",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_mouse_click",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "mouse_drag",
+      "aliases" : [
+        "combo_computer_mouse_drag"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_mouse_drag",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_mouse_drag",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "mouse_scroll",
+      "aliases" : [
+        "combo_computer_mouse_scroll"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_mouse_scroll",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_mouse_scroll",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "key_press",
+      "aliases" : [
+        "combo_computer_key_press"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_key_press",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_key_press",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "type_text",
+      "aliases" : [
+        "combo_computer_type_text"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_type_text",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_type_text",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "clipboard_read",
+      "aliases" : [
+        "combo_computer_clipboard_read"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_clipboard_read",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_clipboard_read",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "clipboard_write",
+      "aliases" : [
+        "combo_computer_clipboard_write"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_clipboard_write",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_clipboard_write",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "open_url",
+      "aliases" : [
+        "combo_computer_open_url"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_open_url",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_open_url",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "open_file",
+      "aliases" : [
+        "combo_computer_open_file"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_open_file",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_open_file",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "system_info",
+      "aliases" : [
+        "combo_computer_system_info"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_system_info",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_system_info",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "process_list",
+      "aliases" : [
+        "combo_computer_process_list"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_process_list",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_process_list",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "applescript_run",
+      "aliases" : [
+        "combo_computer_applescript_run"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_applescript_run",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_applescript_run",
+      "requires_gadget_on" : true,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "shell_run",
+      "aliases" : [
+        "combo_computer_shell_run"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_shell_run",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_shell_run",
+      "requires_gadget_on" : true,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "file_read",
+      "aliases" : [
+        "combo_computer_file_read"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_file_read",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_file_read",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "file_write",
+      "aliases" : [
+        "combo_computer_file_write"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_file_write",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_file_write",
+      "requires_gadget_on" : true,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "process_kill",
+      "aliases" : [
+        "combo_computer_process_kill"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_process_kill",
+      "exits" : [
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_process_kill",
+      "requires_gadget_on" : true,
+      "risk" : "destructive"
+    },
+    {
+      "action" : "ui_tree",
+      "aliases" : [
+        "combo_computer_ui_tree"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_ui_tree",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_ui_tree",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "find_element",
+      "aliases" : [
+        "combo_computer_find_element"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_find_element",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_find_element",
+      "requires_gadget_on" : true,
+      "risk" : "content_out"
+    },
+    {
+      "action" : "click_element",
+      "aliases" : [
+        "combo_computer_click_element"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_computer_click_element",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "computer",
+      "mcp_name" : "computer_click_element",
+      "requires_gadget_on" : true,
+      "risk" : "input_inject"
+    },
+    {
+      "action" : "tidy_plan",
+      "aliases" : [
+        "combo_desktop_tidy_plan"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_tidy_plan",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "desktop",
+      "mcp_name" : "desktop_tidy_plan",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "tidy_apply",
+      "aliases" : [
+        "combo_desktop_tidy_apply"
+      ],
+      "always_requires_approval" : true,
+      "connector_name" : "combo_desktop_tidy_apply",
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "desktop",
+      "mcp_name" : "desktop_tidy_apply",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "tidy_undo",
+      "aliases" : [
+        "combo_desktop_tidy_undo"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_tidy_undo",
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "desktop",
+      "mcp_name" : "desktop_tidy_undo",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    },
+    {
+      "action" : "tidy_history",
+      "aliases" : [
+        "combo_desktop_tidy_history"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_tidy_history",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "desktop",
+      "mcp_name" : "desktop_tidy_history",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "arrange_suggest",
+      "aliases" : [
+        "combo_desktop_arrange_suggest"
+      ],
+      "always_requires_approval" : false,
+      "connector_name" : "combo_desktop_arrange_suggest",
+      "exits" : [
+        "connector",
+        "mcp"
+      ],
+      "gadget" : "desktop",
+      "mcp_name" : "desktop_arrange_suggest",
+      "requires_gadget_on" : true,
+      "risk" : "read"
+    },
+    {
+      "action" : "arrange_apply",
+      "aliases" : [
+        "combo_desktop_arrange_apply"
+      ],
+      "always_requires_approval" : true,
+      "connector_name" : "combo_desktop_arrange_apply",
+      "exits" : [
+        "connector"
+      ],
+      "gadget" : "desktop",
+      "mcp_name" : "desktop_arrange_apply",
+      "requires_gadget_on" : true,
+      "risk" : "change"
+    }
+  ],
+  "source" : "nachocombo (macOS) main a2e4d76, PetCommands.capabilities(allowQuit: true, alwaysAllowed: [], disabled: []) and GadgetToolRegistry.all printed by a Swift program on Linux",
+  "trustable_gadgets" : [
+    "capture",
+    "clipboard",
+    "computer",
+    "shelf"
+  ]
 }
