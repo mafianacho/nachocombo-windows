@@ -190,10 +190,13 @@ mod tests {
 
     #[test]
     fn windows_switches_follow_what_windows_declares() {
-        assert_eq!(GadgetTrust::for_windows(false).trustable(), &BTreeSet::from(["clipboard".to_string()]));
-        assert_eq!(GadgetTrust::for_windows(true).trustable().len(), 3);
+        // System Monitor and Disk Map send program names and paths, so Windows asks for them too (W5a).
+        assert_eq!(GadgetTrust::for_windows(false).trustable(), &["clipboard", "disk", "monitor"].iter().map(|s| s.to_string()).collect());
+        assert_eq!(GadgetTrust::for_windows(true).trustable().len(), 5);
         let rows = GadgetTrust::for_windows(true).rows();
-        assert_eq!(rows.iter().map(|r| r.gadget.as_str()).collect::<Vec<_>>(), ["clipboard", "shelf", "capture"]);
+        assert_eq!(rows.iter().map(|r| r.gadget.as_str()).collect::<Vec<_>>(), ["clipboard", "shelf", "capture", "disk", "monitor"]);
+        assert_eq!(rows[3].korean_name, "디스크 지도");
+        assert!(!GadgetTrust::for_windows(true).set_always_allowed("desktop", true), "desktop tidy asks every time");
         assert_eq!(rows[0].korean_name, "클립보드 기록");
         assert!(rows.iter().all(|r| !r.on));
     }
