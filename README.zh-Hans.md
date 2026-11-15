@@ -95,3 +95,5 @@ exe 暂未进行代码签名，首次运行时 SmartScreen 可能会提示“Win
 ## 许可证
 
 [MIT](LICENSE) © 2026 Mafianacho。“Nacho Combo”名称和图标不在此许可证范围内。
+
+**商标与 Nacho 角色。** 源代码采用 MIT 许可。Nacho 角色图片（`assets/nacho/`）、应用图标和标志，以及 Nacho Combo™、Nacho™、Mafianacho™ 名称**不是**开源内容，也不在 MIT 许可范围内，详见 [TRADEMARKS.md](TRADEMARKS.md)。分叉版本必须使用自己的名称和图片。
