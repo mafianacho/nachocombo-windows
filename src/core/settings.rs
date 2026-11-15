@@ -8,17 +8,17 @@ use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock, MouseTune }
+pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock, MouseTune, NachoPet }
 
 impl ModuleId {
-    pub const ALL: [ModuleId; 13] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
-        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock, ModuleId::MouseTune];
+    pub const ALL: [ModuleId; 14] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
+        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock, ModuleId::MouseTune, ModuleId::NachoPet];
     pub fn name(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "Tray Organizer", ModuleId::SystemMonitor => "System Monitor", ModuleId::WindowSnap => "Window Snap",
             ModuleId::FileShelf => "File Shelf", ModuleId::CaptureFloat => "Capture Float", ModuleId::FocusDim => "Focus Dim",
             ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map", ModuleId::AppSwitch => "App Switch",
-            ModuleId::CalendarClock => "Calendar Clock", ModuleId::MouseTune => "Mouse Tune",
+            ModuleId::CalendarClock => "Calendar Clock", ModuleId::MouseTune => "Mouse Tune", ModuleId::NachoPet => "Nacho Pet",
         }
     }
     pub fn key(self) -> &'static str {
@@ -26,7 +26,7 @@ impl ModuleId {
             ModuleId::TrayOrganizer => "tray", ModuleId::SystemMonitor => "monitor", ModuleId::WindowSnap => "snap",
             ModuleId::FileShelf => "shelf", ModuleId::CaptureFloat => "capture", ModuleId::FocusDim => "dim",
             ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap", ModuleId::AppSwitch => "appswitch",
-            ModuleId::CalendarClock => "clock", ModuleId::MouseTune => "mouse",
+            ModuleId::CalendarClock => "clock", ModuleId::MouseTune => "mouse", ModuleId::NachoPet => "pet",
         }
     }
     pub fn from_key(k: &str) -> Option<ModuleId> { Self::ALL.into_iter().find(|m| m.key() == k) }

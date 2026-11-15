@@ -20,6 +20,12 @@ mod mouse;
 mod pages;
 mod panel;
 mod peek;
+mod pet_art;
+mod pet_audio;
+mod pet_cards;
+mod pet_chat;
+mod pet_theme;
+mod pet_ui;
 mod pet_win;
 mod shelf;
 mod snap;
@@ -50,9 +56,19 @@ fn main() {
         let mutex = CreateMutexW(None, true, w!("Local\\NachoComboSingleInstance"));
         // Opening the app again brings the running copy's window back.
         if GetLastError() == ERROR_ALREADY_EXISTS {
-            if let Ok(h) = FindWindowW(app::MAIN_CLASS, None) { let _ = PostMessageW(Some(h), app::WM_WAKE, WPARAM(0), LPARAM(0)); }
+            if let Ok(h) = FindWindowW(app::MAIN_CLASS, None) {
+                // Windows started this copy for the `nachogadget:` login link: it goes to the running one, which waits for it.
+                if let Some(url) = core::pet::login_browser::callback_from_arguments(&args) {
+                    let cd = windows::Win32::System::DataExchange::COPYDATASTRUCT { dwData: pet_ui::CALLBACK_TAG, cbData: url.len() as u32, lpData: url.as_ptr() as *mut _ };
+                    let _ = SendMessageW(h, WM_COPYDATA, None, Some(LPARAM(&cd as *const _ as isize)));
+                } else {
+                    let _ = PostMessageW(Some(h), app::WM_WAKE, WPARAM(0), LPARAM(0));
+                }
+            }
             return;
         }
+        // A login link with no running app has nothing waiting for it.
+        if core::pet::login_browser::callback_from_arguments(&args).is_some() { return; }
         let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         let _ = windows::Win32::System::Ole::OleInitialize(None);
         if let Err(e) = gfx::init() {

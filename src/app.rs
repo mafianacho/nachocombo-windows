@@ -26,6 +26,8 @@ pub const WM_OCR_DONE: u32 = WM_APP + 6;
 pub const WM_PUBLIC_IP: u32 = WM_APP + 7;
 pub const WM_DEVICES: u32 = WM_APP + 8;
 pub const WM_PEEK: u32 = WM_APP + 9;
+/// Results the pet's worker threads handed over.
+pub const WM_PET: u32 = WM_APP + 10;
 
 pub const TIMER_MONITOR: usize = 1;
 pub const TIMER_TRAY: usize = 2;
@@ -68,6 +70,7 @@ pub struct App {
     pub devices: devices::Devices,
     pub appswitch: appswitch::AppSwitch,
     pub clock: clock::Clock,
+    pub pet: crate::pet_ui::PetUi,
     pub settings_window: pages::SettingsWindow,
     pub panel: panel::Panel,
     pub updater: update::Updater,
@@ -154,6 +157,7 @@ impl App {
             ModuleId::AppSwitch => appswitch::start(),
             ModuleId::CalendarClock => clock::start(),
             ModuleId::MouseTune => mouse::start(),
+            ModuleId::NachoPet => crate::pet_ui::start(),
         };
         self.states.insert(id, match r { Ok(()) => State::Running, Err(e) => State::Failed(e) });
         hooks::sync();
@@ -176,6 +180,7 @@ impl App {
             ModuleId::AppSwitch => appswitch::stop(),
             ModuleId::CalendarClock => clock::stop(),
             ModuleId::MouseTune => mouse::stop(),
+            ModuleId::NachoPet => crate::pet_ui::stop(),
         }
         self.states.insert(id, State::Off);
         hooks::sync();
@@ -269,6 +274,7 @@ impl App {
             "appswitch.hideOthers" => appswitch::hide_others(),
             "clock.show" => clock::show(),
             "mouse.reverse" => mouse::toggle_reverse(),
+            "pet.chat" => crate::pet_ui::open_chat(),
             _ => {}
         }
     }
@@ -332,6 +338,7 @@ impl App {
             "appShortcutsFailed": self.hotkey_clashes.iter().filter(|i| i.starts_with("app:")).collect::<Vec<_>>(),
             "diskmap": crate::diskmap::diagnostics(),
             "clock": self.clock.diagnostics(),
+            "pet": crate::pet_ui::diagnostics(),
             "mouse": mouse::diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
@@ -363,6 +370,7 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
         WM_PUBLIC_IP => { monitor::on_public_ip(lp.0 as *mut String); LRESULT(0) }
         WM_DEVICES => { devices::on_change(wp.0 == 1); LRESULT(0) }
         WM_PEEK => { crate::peek::on_space(); LRESULT(0) }
+        WM_PET => { crate::pet_ui::on_message(); LRESULT(0) }
         update::WM_UPDATE => { update::on_message(lp); LRESULT(0) }
         crate::diskmap::WM_DISKMAP => { crate::diskmap::on_message(wp, lp); LRESULT(0) }
         clipboard::WM_CLIPBOARDUPDATE => { clipboard::on_update(); LRESULT(0) }
@@ -388,8 +396,16 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
         }
         WM_DISPLAYCHANGE => { dim::displays_changed(); snap::displays_changed(); a.changed(); DefWindowProcW(hwnd, msg, wp, lp) }
         WM_COPYDATA => {
-            if !a.debug_ctl { return LRESULT(0); }
             let cd = &*(lp.0 as *const COPYDATASTRUCT);
+            // The login redirect from the second copy that Windows started for the `nachogadget:` link.
+            if cd.dwData == crate::pet_ui::CALLBACK_TAG {
+                if cd.cbData > 0 && cd.cbData <= 8192 {
+                    let url = String::from_utf8_lossy(std::slice::from_raw_parts(cd.lpData as *const u8, cd.cbData as usize)).to_string();
+                    crate::pet_ui::deliver_callback(&url);
+                }
+                return LRESULT(1);
+            }
+            if !a.debug_ctl { return LRESULT(0); }
             let bytes = std::slice::from_raw_parts(cd.lpData as *const u8, cd.cbData as usize);
             let text = String::from_utf8_lossy(bytes).to_string();
             crate::ctl::run(&text.split('\u{1f}').map(String::from).collect::<Vec<_>>());
@@ -416,7 +432,7 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         crate::i18n::set_language(settings.language.as_deref());
         let boxed = Box::leak(Box::new(App { settings, dir, states: BTreeMap::new(), main, debug_ctl, later: vec![], hotkey_ids: vec![], hotkey_clashes: BTreeSet::new(),
             tray: tray::Tray::default(), snap: Default::default(), dim: Default::default(), organizer: Default::default(), shelf: Default::default(), capture: Default::default(),
-            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), settings_window: Default::default(), panel: Default::default(), updater: Default::default(), undo: None }));
+            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), pet: Default::default(), settings_window: Default::default(), panel: Default::default(), updater: Default::default(), undo: None }));
         APP.with(|c| c.set(boxed));
         let a = app();
         // A version that failed its first launches is replaced before anything starts.

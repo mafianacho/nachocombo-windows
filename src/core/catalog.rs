@@ -57,6 +57,7 @@ pub fn actions() -> Vec<Action> {
     add("appswitch.hideOthers", AppSwitch, "Hide Other Windows", None);
     add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
+    add("pet.chat", NachoPet, "Open Nacho Chat", None);
     add("mouse.reverse", MouseTune, "Reverse Mouse Scrolling On / Off", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
     for item in MonitorItem::ALL {
@@ -293,6 +294,23 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "Windows has no place for text in the taskbar corner, so the clock is the icon's tooltip and the icon shows today's date. The taskbar's own clock stays; hide its date in Settings ▸ Personalization ▸ Taskbar if you do not want two.",
                 "Your calendar events, the countdown to the next meeting and the Join button are not here: Windows has no calendar every app shares.",
                 "World clocks know the daylight-saving rules of the listed cities as they are today; a city that changes its rules needs an update of this app.",
+            ],
+        },
+        ModuleId::NachoPet => &Info {
+            tagline: "Nacho, the character, sits on your desktop. Click it to chat; sign in once with your Nacho account.",
+            features: &[
+                f!("Nacho on Your Desktop", "Drag the character anywhere, on any monitor. It remembers where you left it and comes back to the corner if that monitor is gone."),
+                f!("Chat", "A chat bubble follows Nacho. Send a message while Nacho is still answering and it goes out when the answer ends."),
+                f!("Approve and Choose", "Approval and choice cards appear in the chat; answer them with a click or with the number keys."),
+                f!("Hold to Talk", "Hold the character for two seconds and speak; let go and your words are written down and sent."),
+                f!("Sign In Once", "The login page opens in your browser. Nacho never sees your password, and the login is kept on this PC until you sign out."),
+            ],
+            tips: &[t!("", "Click Nacho", "Open or close the chat"), t!("", "Hold Nacho", "Speak a message"), t!("", "Drag Nacho", "Move the character")],
+            note: "No administrator rights needed. Nothing connects to the Nacho server until you open the chat. The link that brings the login back to this app is registered for your user account only, and only when you press the sign-in button.",
+            limits: &[
+                "Hold to talk and the microphone button record through Windows' microphone settings (Settings ▸ Privacy ▸ Microphone must allow desktop apps).",
+                "Spoken replies, the selection bar and the Connections tab of the Mac app are not here yet.",
+                "Windows has no menu bar, so the character's menu opens with a right click.",
             ],
         },
         ModuleId::MouseTune => &Info {

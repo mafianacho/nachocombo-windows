@@ -135,6 +135,7 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::AppSwitch => (rgb(0xB9C4FF), rgb(0x3C4FC4), white),
         ModuleId::CalendarClock => (rgb(0xFF9F9A), rgb(0xD9382F), white),
         ModuleId::MouseTune => (rgb(0xFF9A8A), rgb(0xC8321F), white),
+        ModuleId::NachoPet => (rgb(0xFFD36B), rgb(0xE8870E), white),
     }
 }
 
@@ -310,6 +311,7 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
             ModuleId::CalendarClock => a.clock.status(),
             ModuleId::MouseTune => if a.settings.options.mouse_reverse { "Wheel reversed".into() } else { "Wheel as Windows has it".into() },
+            ModuleId::NachoPet => crate::pet_ui::status_text(),
             ModuleId::DeviceControl => {
                 let out = a.devices.outputs.iter().find(|d| d.default).map_or("No output".to_string(), |d| d.name.clone());
                 if a.devices.mic_muted { format!("Mic muted · {out}") } else { out }
@@ -702,6 +704,7 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 y = ny;
                 y += ui.label("Your own pointer and scroll settings come back when you switch this off or quit.", sans(12), x + 18.0, y + 6.0, w - 36.0, th.ink2) + 14.0;
             }
+            ModuleId::NachoPet => { y = crate::pet_ui::settings_controls(ui, x, y, w); }
             ModuleId::DiskMap => {
                 y += ui.label("Disk Map has no options: it scans when you open it.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;
             }
