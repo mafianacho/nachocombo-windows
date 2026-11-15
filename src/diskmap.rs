@@ -68,6 +68,8 @@ struct DiskMap {
     forget_timer: usize,
     scans: u32,
     recycled: u32,
+    /// When the map in `tree` was finished (seconds since 1970), for the pet's disk tools.
+    finished_at: f64,
 }
 
 thread_local! { static DM: RefCell<DiskMap> = RefCell::new(DiskMap::default()); }
@@ -146,6 +148,7 @@ pub fn on_message(wp: WPARAM, lp: LPARAM) {
             let Some(p) = d.scan.as_ref() else { return };
             if gen != d.gen || p.cancel.load(Relaxed) { return; }
             d.summary = Some(Summary { drive: d.drive.clone(), files: p.files.load(Relaxed), bytes: tree[0].size, locked: p.locked.load(Relaxed), secs });
+            d.finished_at = crate::core::pet::clock::now();
             d.tree = tree;
             d.scan = None;
             d.view = 0;
@@ -180,6 +183,47 @@ fn start_scan(d: &mut DiskMap) {
     let spawned = std::thread::Builder::new().name("disk-map".into()).stack_size(16 << 20).spawn(move || scan(root, gen, q, main));
     if spawned.is_ok() { d.scan = Some(p); } else { d.note = "The scan could not start.".into(); }
 }
+
+// ---------- for the pet's disk tools (`combo_disk_*`): read only, nothing here deletes ----------
+
+/// Folders (two levels are enough for the tools, deeper ones count for their files) and big files of the map.
+pub fn tool_state() -> crate::core::pet::data_tools::PetDiskState {
+    use crate::core::pet::data_tools::{PetDiskEntry, PetDiskState};
+    with(|d| {
+        if d.scan.is_some() { return PetDiskState::Scanning { drive: d.drive.clone() }; }
+        if d.tree.is_empty() { return PetDiskState::Empty; }
+        let mut entries = vec![];
+        let mut stack: Vec<(u32, u32)> = vec![(0, 0)];
+        while let Some((i, depth)) = stack.pop() {
+            if entries.len() >= 300_000 { break; }
+            for &k in &d.tree[i as usize].kids {
+                let n = &d.tree[k as usize];
+                let folder = matches!(n.kind, Kind::Folder | Kind::Locked);
+                if !folder && n.kind != Kind::File { continue; } // "Smaller files" sums are not items
+                // FILETIME (100 ns since 1601) to seconds since 1970.
+                let modified = (n.changed > 0).then(|| n.changed as f64 / 1e7 - 11_644_473_600.0);
+                entries.push(PetDiskEntry { name: n.name.to_string(), path: d.path_of(k), folder, bytes: n.size, depth: depth + 1, modified });
+                if folder { stack.push((k, depth + 1)); }
+            }
+        }
+        PetDiskState::Ready { drive: d.drive.clone(), bytes: d.tree[0].size, scanned_at: d.finished_at, entries }
+    })
+}
+
+/// Opens Disk Map on `drive` (`C:\`) and scans it. true when that drive is being scanned already.
+pub fn tool_scan(drive: &str) -> bool {
+    let already = with(|d| d.scan.is_some() && d.drive.eq_ignore_ascii_case(drive));
+    if already { return true; }
+    // A scan of another drive stops first, so its result is never filed under this drive.
+    with(|d| { cancel(d); d.drive = drive.to_string(); d.tree = Vec::new(); d.view = 0; d.sel = None; d.confirm = None; });
+    open();
+    with(|d| if d.scan.is_none() { start_scan(d); });
+    repaint();
+    false
+}
+
+/// The fixed drives Disk Map can read.
+pub fn tool_drives() -> Vec<String> { fixed_drives() }
 
 // ---------- drives ----------
 
