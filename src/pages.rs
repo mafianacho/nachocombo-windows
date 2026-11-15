@@ -1199,7 +1199,7 @@ pub fn ctl(a: &[String]) {
 /// `ctl snapshot settings|panel|monitor <file.png>`: the window's picture without capturing the screen.
 pub fn snapshot(which: &str, path: &std::path::Path) {
     let a = app();
-    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), _ => None };
+    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), "board" => crate::board::hwnd(), _ => None };
     let Some(h) = h else { return };
     let ptr = unsafe { GetWindowLongPtrW(HWND(h as *mut _), GWLP_USERDATA) } as *mut UiWindow;
     if !ptr.is_null() { if let Err(e) = unsafe { &mut *ptr }.snapshot(path) { let _ = std::fs::write(a.dir.join("snapshot-error.txt"), format!("{e:?}")); } }

@@ -81,6 +81,30 @@ pub fn show() {
     win.show();
 }
 
+/// Closes the window; the gadget stays on.
+pub fn close() { if let Some(h) = app().board.win { unsafe { let _ = DestroyWindow(HWND(h as *mut _)); } } }
+
+/// The window's handle, for `ctl` snapshots.
+pub fn hwnd() -> Option<isize> { app().board.win }
+
+/// `ctl board …`: drives the board without a mouse, for pictures and checks.
+pub fn ctl(a: &[&str]) {
+    let arg = |i: usize| a.get(i).copied().unwrap_or("");
+    let m = ModuleId::from_key(arg(1));
+    match (arg(0), m) {
+        ("show", _) => show(),
+        ("close", _) => close(),
+        ("edit", _) => { app().board.edit = arg(1) == "on"; app().board.invalidate(); }
+        ("size", Some(m)) => { let s = BentoSize::ALL.into_iter().find(|s| s.name().eq_ignore_ascii_case(arg(2))); if let Some(s) = s { edit(|b| b.set_size(m, s)); } }
+        ("hide", Some(m)) => edit(|b| b.set_hidden(m, true)),
+        ("unhide", Some(m)) => edit(|b| b.set_hidden(m, false)),
+        ("move", Some(m)) => edit(|b| b.move_before(m, ModuleId::from_key(arg(2)))),
+        ("reset", _) => app().update(|s| s.bento = None),
+        _ => {}
+    }
+    app().board.invalidate();
+}
+
 /// Saves a change of the board. Never touches which gadgets are on.
 fn edit(f: impl FnOnce(&mut BentoLayout)) {
     app().update(|s| { let mut b = s.board_layout(); f(&mut b); s.bento = Some(b); });
