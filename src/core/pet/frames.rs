@@ -44,6 +44,8 @@ pub struct ErrorInfo {
     pub reason: Option<String>,
 }
 
+/// A whole message or card rides in its variant (frames are short-lived, so no boxing).
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ServerEvent {
     Ready(ReadyInfo),

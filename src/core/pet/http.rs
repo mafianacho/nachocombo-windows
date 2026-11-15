@@ -111,6 +111,7 @@ impl PetServerError {
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) mod testing {
     //! A fake network for tests: records requests, answers from a queue (or holds them until `release`).
     use super::*;
@@ -162,7 +163,7 @@ mod tests {
         assert_eq!(PetHTTPRequest::form_escape("나"), "%EB%82%98");
         let f = BTreeMap::from([("z".to_string(), "1".to_string()), ("a".to_string(), "x y".to_string())]);
         let r = PetHTTPRequest::post_form("https://e.test/t", &f);
-        assert_eq!(String::from_utf8(r.body.unwrap()).unwrap(), "a=x%20y&z=1");
+        assert_eq!(String::from_utf8(r.body.clone().unwrap()).unwrap(), "a=x%20y&z=1");
         assert_eq!(r.header("content-type"), Some("application/x-www-form-urlencoded"));
     }
 
