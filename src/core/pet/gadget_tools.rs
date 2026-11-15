@@ -248,6 +248,8 @@ impl PetGadgetTools {
             ModuleId::DiskMap => "disk",
             ModuleId::MouseTune => "mouse",
             ModuleId::CalendarClock => "calendar",
+            // Windows only (macOS keeps its widget board as a layout, not a gadget switch).
+            ModuleId::WidgetBoard => "board",
         })
     }
 
@@ -878,7 +880,10 @@ mod mac_contract {
                     let e = v["properties"]["gadget"]["enum"].take();
                     e.as_array().unwrap().iter().map(|x| x.as_str().unwrap().replace("menuBar", "trayOrganizer")).collect()
                 };
-                assert_eq!(set(&mut ours), set(&mut theirs), "set_gadget gadgets");
+                // Windows-only gadgets: Widget Board (macOS keeps its widget board as a layout, not a switch).
+                let windows_only: BTreeSet<String> = ["widgetBoard".to_string()].into();
+                let ours_set: BTreeSet<String> = set(&mut ours).difference(&windows_only).cloned().collect();
+                assert_eq!(ours_set, set(&mut theirs), "set_gadget gadgets");
             }
             assert_eq!(ours, theirs, "{name}: input schema differs from macOS");
         }

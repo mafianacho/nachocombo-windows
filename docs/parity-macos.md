@@ -105,7 +105,7 @@ NachoCombo for Windows가 [Nacho Combo for macOS](https://github.com/mafianacho/
 | `combo_hide_app` | 앱 숨기기(Finder·나초콤보 제외) | 있음 — 선언·실행(W3) | Windows에는 앱 숨기기가 없어 그 앱의 창을 모두 최소화. 탐색기·나초콤보 보호 | W3 |
 | `combo_quit_app` | 앱에 종료 요청(저장 안 한 작업은 앱이 물음). `approval:"required"` | 있음 — 선언·실행(W3), 늘 승인 | 창에 닫기 요청(WM_CLOSE)으로. 강제 종료는 하지 않음. 탐색기·나초콤보 보호. 맥은 3초 뒤 종료됐는지 확인하지만 Windows는 요청만 알림 | W3 |
 | `combo_set_system` | 소리 크기 0–100, 내장 화면 밝기 0–100, 방해금지 | 부분 — 선언·실행(W3) | 소리: Core Audio(기기 제어 가젯이 꺼져 있어도 됨). 밝기: **기기 제어 가젯과 같은 DDC/CI 모니터만**(맥은 내장 화면만). 노트북 내장 화면(WMI)은 아직 없어 이유와 함께 실패. 방해금지: 공개 API가 없어 이유와 함께 실패(맥도 같은 방식) | W3 |
-| `combo_set_gadget` | 가젯 켜기/끄기(펫·컴퓨터 사용 제외, 권한이 남은 가젯은 안 켬) | 있음 — 선언·실행(W3) | 같은 camelCase ID와 표시 이름. 목록(enum)은 Windows 가젯 13개. 맥 `menuBar`는 `trayOrganizer`로 받아 줌(별칭) | W3 |
+| `combo_set_gadget` | 가젯 켜기/끄기(펫·컴퓨터 사용 제외, 권한이 남은 가젯은 안 켬) | 있음 — 선언·실행(W3) | 같은 camelCase ID와 표시 이름. 목록(enum)은 Windows 가젯 전부(맥에 없는 `widgetBoard` 포함). 맥 `menuBar`는 `trayOrganizer`로 받아 줌(별칭) | W3 |
 | `combo_list_gadgets` | 가젯 목록과 켜짐 상태 | 있음 — 선언·실행(W3) | 상태는 `on`/`off`/`failed` | W3 |
 | `combo_set_dim_strength` | Focus Dim 강도 10–90% | 있음 — 선언·실행(W3) | 같음(꺼져 있으면 강도만 저장) | W3 |
 | `combo_clear_shelf` | File Shelf 비우기. 맥 `main`에서는 destructive라 늘 승인 | **선언 안 함**(W3 결정) | 삭제형 행동이라 넣지 않음(선반이 만든 복사본을 버림). core 목록·스키마는 맥과 같게 남겨 두고 Windows 선언에서만 뺌. 요청이 와도 "선언하지 않음"으로 거절 | W3 |
