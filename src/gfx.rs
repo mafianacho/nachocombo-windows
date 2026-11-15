@@ -78,6 +78,12 @@ thread_local! { static GFX: RefCell<Option<std::rc::Rc<Gfx>>> = const { RefCell:
 
 pub fn gfx() -> std::rc::Rc<Gfx> { GFX.with(|g| g.borrow().clone().expect("gfx::init was not called")) }
 
+/// Releases the factories once the message loop has ended, while the process is still whole. Left to the thread-local
+/// destructor, the last Direct2D reference went at process exit: the factory keeps the Direct3D device its window
+/// targets used, and on a PC without a GPU driver (WARP: VMs, basic display) destroying that device flushes work to a
+/// thread pool that exit has already torn down, which ends in `0xC000000D` from ntdll. No drawing after this.
+pub fn shutdown() { let g = GFX.with(|g| g.borrow_mut().take()); drop(g); }
+
 const FONT_FILES: [&[u8]; 7] = [
     include_bytes!("../assets/fonts/Anton-Regular.ttf"),
     include_bytes!("../assets/fonts/IBMPlexSans-Regular.ttf"),

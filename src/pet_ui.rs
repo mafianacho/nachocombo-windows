@@ -263,13 +263,14 @@ pub fn stop() {
     if !a.pet.started { return; }
     crate::pet_selection::stop();
     let p = &mut a.pet;
+    // The session first: sockets closed and no more calls back, so nothing is handed to the windows closed below.
+    // The stored login stays for the next time the pet is on.
+    if let Some(s) = p.session.take() { s.shutdown(); }
     if let Some(r) = p.recorder.take() { r.cancel(); }
     if let Some(b) = &p.browser { b.cancel(); }
     p.dictation.stop();
     close_chat();
     if let Some(w) = p.pet.take() { unsafe { let _ = KillTimer(Some(w.hwnd), T_FRAME); let _ = KillTimer(Some(w.hwnd), T_SLOW); let _ = DestroyWindow(w.hwnd); } }
-    // Closes the sockets; the stored login stays for the next time the pet is on.
-    if let Some(s) = p.session.take() { s.shutdown(); }
     pet_art::stop_server_art();
     if let Some(t) = p.trust_watch.take() { crate::pet_exec::trust().remove_observer(t); }
     p.executor = None;
