@@ -1519,7 +1519,6 @@
   "Only the tools of the gadgets switched on here are listed to MCP clients, and only while the gadget itself is on.": "ここでオンにしたガジェットのツールだけが、そのガジェットがオンの間だけ MCP クライアントに表示されます。",
   "{} tools": "ツール {} 個",
   "{} ask on Nacho Pet's card": "{} 個はナチョペットのカードで確認",
-  "the gadget is off, so its tools are hidden": "ガジェットがオフなのでツールは隠れています",
   "API Keys": "API キー",
   "A client sends its key as \"Authorization: Bearer <key>\". A key is shown once when it is made; only its fingerprint (SHA-256) is kept. Up to 8 keys.": "クライアントはキーを \"Authorization: Bearer <キー>\" として送ります。キーは作成時に一度だけ表示され、指紋（SHA-256）だけが保存されます。最大 8 個。",
   "No keys yet.": "まだキーはありません。",
@@ -1543,5 +1542,7 @@
   "Give the key a name of 1 to 40 characters.": "キーに 1〜40 文字の名前を付けてください。",
   "There are already 8 keys. Delete one first.": "キーはすでに 8 個あります。先に 1 つ削除してください。",
   "That key is gone.": "そのキーはもうありません。",
-  "The key file could not be written.": "キーファイルを書き込めませんでした。"
+  "The key file could not be written.": "キーファイルを書き込めませんでした。",
+  "1 tool": "ツール 1 個",
+  "{} hidden while the gadget is off": "ガジェットがオフのため {} 個非表示"
 }

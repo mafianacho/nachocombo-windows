@@ -1297,11 +1297,13 @@ fn mcp_page(ui: &mut Ui, x: f64, y: f64, w: f64) -> f64 {
             let name = if g == "combo" { "Nacho Combo" } else { PetGadgetTools::display_name(g) };
             ui.c.line_text(name, sans(14), Rect::new(x + 18.0, y, w * 0.5, 30.0), th.ink, Align::Left);
             let module = ModuleId::ALL.into_iter().find(|m| PetGadgetTools::gadget_of_module(*m) == Some(g));
-            let module_off = mine.iter().any(|t| t.requires.is_some()) && module.is_some_and(|m| a.state(m) != State::Running);
+            // Tools that need the gadget itself are hidden while it is off (the first contract keeps working).
+            let hidden = if module.is_some_and(|m| a.state(m) != State::Running) { mine.iter().filter(|t| t.requires.is_some()).count() } else { 0 };
+            let module_off = hidden > 0;
             let asks = mine.iter().filter(|t| crate::core::mcp::tools::McpTools::needs_approval(t, &Default::default())).count();
-            let mut detail = format!("{} tools", mine.len());
+            let mut detail = if mine.len() == 1 { "1 tool".to_string() } else { format!("{} tools", mine.len()) };
             if asks > 0 { detail.push_str(&format!(" · {asks} ask on Nacho Pet's card")); }
-            if module_off { detail.push_str(" · the gadget is off, so its tools are hidden"); }
+            if module_off { detail.push_str(&format!(" · {hidden} hidden while the gadget is off")); }
             ui.c.line_text(&detail, sans(12), Rect::new(x + 18.0, y + 24.0, w - 120.0, 18.0), if module_off { th.salsa } else { th.ink2 }, Align::Left);
             let on = cfg.is_gadget_enabled(g);
             if ui.switch(&format!("mcpg-{g}"), x + w - 62.0, y + 14.0, on) { let g = g.to_string(); later(move || crate::mcp::set_gadget(&g, !on)); }

@@ -1135,7 +1135,6 @@
   "Only the tools of the gadgets switched on here are listed to MCP clients, and only while the gadget itself is on.": "여기서 켠 가젯의 도구만, 그리고 그 가젯이 켜져 있을 때만 MCP 클라이언트에 보여요.",
   "{} tools": "도구 {}개",
   "{} ask on Nacho Pet's card": "{}개는 나초 펫 카드로 물어요",
-  "the gadget is off, so its tools are hidden": "가젯이 꺼져 있어 도구가 숨겨져 있어요",
   "API Keys": "API 키",
   "A client sends its key as \"Authorization: Bearer <key>\". A key is shown once when it is made; only its fingerprint (SHA-256) is kept. Up to 8 keys.": "클라이언트는 키를 \"Authorization: Bearer <키>\"로 보내요. 키는 만들 때 한 번만 보이고, 지문(SHA-256)만 저장해요. 최대 8개.",
   "No keys yet.": "아직 키가 없어요.",
@@ -1159,5 +1158,7 @@
   "Give the key a name of 1 to 40 characters.": "키 이름을 1~40자로 지어 주세요.",
   "There are already 8 keys. Delete one first.": "키가 이미 8개예요. 하나를 먼저 지워 주세요.",
   "That key is gone.": "그 키는 이미 없어요.",
-  "The key file could not be written.": "키 파일을 쓰지 못했어요."
+  "The key file could not be written.": "키 파일을 쓰지 못했어요.",
+  "1 tool": "도구 1개",
+  "{} hidden while the gadget is off": "가젯이 꺼져 있어 {}개 숨김"
 }

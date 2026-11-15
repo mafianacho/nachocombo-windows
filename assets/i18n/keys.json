@@ -1100,7 +1100,6 @@
  "Only the tools of the gadgets switched on here are listed to MCP clients, and only while the gadget itself is on.",
  "{} tools",
  "{} ask on Nacho Pet's card",
- "the gadget is off, so its tools are hidden",
  "API Keys",
  "A client sends its key as \"Authorization: Bearer <key>\". A key is shown once when it is made; only its fingerprint (SHA-256) is kept. Up to 8 keys.",
  "No keys yet.",
@@ -1124,5 +1123,7 @@
  "Give the key a name of 1 to 40 characters.",
  "There are already 8 keys. Delete one first.",
  "That key is gone.",
- "The key file could not be written."
+ "The key file could not be written.",
+ "1 tool",
+ "{} hidden while the gadget is off"
 ]

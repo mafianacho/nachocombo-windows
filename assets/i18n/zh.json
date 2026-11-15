@@ -1519,7 +1519,6 @@
   "Only the tools of the gadgets switched on here are listed to MCP clients, and only while the gadget itself is on.": "只有在这里打开的小工具的工具，并且仅在该小工具打开时，才会列给 MCP 客户端。",
   "{} tools": "{} 个工具",
   "{} ask on Nacho Pet's card": "{} 个通过 Nacho 宠物卡片询问",
-  "the gadget is off, so its tools are hidden": "小工具已关闭，其工具已隐藏",
   "API Keys": "API 密钥",
   "A client sends its key as \"Authorization: Bearer <key>\". A key is shown once when it is made; only its fingerprint (SHA-256) is kept. Up to 8 keys.": "客户端以 \"Authorization: Bearer <密钥>\" 发送密钥。密钥只在创建时显示一次，只保存其指纹（SHA-256）。最多 8 个。",
   "No keys yet.": "还没有密钥。",
@@ -1543,5 +1542,7 @@
   "Give the key a name of 1 to 40 characters.": "请为密钥取一个 1 到 40 个字符的名称。",
   "There are already 8 keys. Delete one first.": "已有 8 个密钥。请先删除一个。",
   "That key is gone.": "该密钥已不存在。",
-  "The key file could not be written.": "无法写入密钥文件。"
+  "The key file could not be written.": "无法写入密钥文件。",
+  "1 tool": "1 个工具",
+  "{} hidden while the gadget is off": "小工具已关闭，隐藏 {} 个"
 }
