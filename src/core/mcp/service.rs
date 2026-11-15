@@ -8,7 +8,15 @@
 //! (destructive always; content_out / input_inject unless the gadget is "always allowed") is not run for an MCP
 //! client until the user allows it on the pet's approval card. macOS runs MCP calls under the switches alone.
 //!
+//! Computer Use (experimental, W5d) sits on the same endpoint, as on macOS: its tools (`computer_<name>`, the old
+//! `<name>` accepted) are listed only while Computer Use and their tool group are on and the emergency stop has not
+//! fired. A Computer Use call goes: emergency stop → Computer Use on → group switch → closed argument check →
+//! **approval card, every call** (Windows; "always allow" never lifts it) → emergency stop again → the backend, one
+//! call at a time.
+//!
 //! The call log keeps the name the client used, the key's label, the time and the outcome — never arguments or results.
+use crate::core::computer::tools::{ComputerTool, ComputerTools};
+use crate::core::computer::{ComputerBackend, EmergencyStop, ToolResult};
 use super::http::{HttpRequest, HttpResponse};
 use super::jsonrpc::{cut, JsonRpc, RpcError, RpcInbound, RpcParsed};
 use super::keys::{KeyRecord, KeyStore};
@@ -96,8 +104,19 @@ pub struct McpSources {
     pub module_on: Arc<dyn Fn(ModuleId) -> bool + Send + Sync>,
 }
 
+/// What Computer Use needs from the shell.
+#[derive(Clone)]
+pub struct ComputerParts {
+    pub backend: Arc<dyn ComputerBackend>,
+    pub stop: Arc<EmergencyStop>,
+    /// Err(reason) while Computer Use cannot be served (the emergency stop shortcut could not be registered).
+    pub ready: Arc<dyn Fn() -> Result<(), String> + Send + Sync>,
+}
+
 pub struct McpService {
     pub call_log: Arc<CallLog>,
+    computer: Option<ComputerParts>,
+    execution: Mutex<()>,
     sources: McpSources,
     keys: Arc<KeyStore>,
     executor: Arc<dyn PetCommandExecuting>,
@@ -121,11 +140,14 @@ impl McpService {
     pub const SERVER_NAME: &'static str = "NachoCombo MCP";
     pub const INSTRUCTIONS: &'static str = "NachoCombo MCP: tools of the Nacho Combo gadgets on this Windows PC. Only the tools of the gadgets the user turned on for MCP are listed. \
         Tools that close apps or read content (such as clipboard text) wait until the user allows the call in Nacho Combo; a declined call answers ok:false with reason approval_denied. \
+        Computer Use (experimental, computer_* tools) is listed only for the tool groups the user turned on, and every Computer Use call waits for the user's approval. \
         Window positions and sizes are screen pixels.";
 
     pub fn new(sources: McpSources, keys: Arc<KeyStore>, executor: Arc<dyn PetCommandExecuting>, approver: Arc<dyn McpApproving>, now: Clock) -> Self {
         Self {
             call_log: Arc::new(CallLog::default()),
+            computer: None,
+            execution: Mutex::new(()),
             sources,
             keys,
             executor,
@@ -152,20 +174,35 @@ impl McpService {
         self
     }
 
+    /// Adds Computer Use (its tools still need its switch and their group switches).
+    pub fn with_computer(mut self, parts: ComputerParts) -> Self { self.computer = Some(parts); self }
+
     pub fn tools(&self) -> &[McpTool] { &self.tools }
+
+    fn stopped(&self) -> bool { self.computer.as_ref().is_some_and(|c| c.stop.is_active()) }
+
+    /// The Computer Use tools `tools/list` offers right now.
+    pub fn offered_computer(&self, settings: &McpSettings) -> Vec<&'static ComputerTool> {
+        let Some(c) = &self.computer else { return vec![] };
+        if c.stop.is_active() || (c.ready)().is_err() { return vec![]; }
+        let groups = settings.served_groups();
+        ComputerTools::ALL.iter().filter(|t| t.is_available() && groups.contains(&t.group)).collect()
+    }
 
     /// After this every request is refused with 503 (the server is being switched off).
     pub fn stop(&self) { self.accepting.store(false, Ordering::SeqCst); }
 
     /// Counters only: no keys, no content.
     pub fn diagnostics(&self) -> Value {
-        json!({"accepting": self.accepting.load(Ordering::SeqCst), "authFailures": self.auth_failures.load(Ordering::SeqCst),
+        json!({"accepting": self.accepting.load(Ordering::SeqCst), "emergencyStopped": self.stopped(), "authFailures": self.auth_failures.load(Ordering::SeqCst),
                "toolCalls": self.tool_calls.load(Ordering::SeqCst), "activeKeys": self.keys.records().len()})
     }
 
     /// The tools `tools/list` offers right now: the gadget's MCP switch is on and, for a tool that needs its module,
     /// the gadget itself is on.
     pub fn offered(&self, settings: &McpSettings) -> Vec<&McpTool> {
+        // Nothing at all while the emergency stop holds (macOS: the server is closed then).
+        if self.stopped() { return vec![]; }
         self.tools.iter().filter(|t| settings.is_gadget_enabled(&t.gadget) && self.module_ready(t)).collect()
     }
 
@@ -243,7 +280,11 @@ impl McpService {
                 }))
             }
             "ping" => ok(json!({})),
-            "tools/list" => ok(json!({"tools": self.offered(settings).into_iter().map(McpTool::json).collect::<Vec<_>>()})),
+            "tools/list" => {
+                let mut tools: Vec<Value> = self.offered(settings).into_iter().map(McpTool::json).collect();
+                tools.extend(self.offered_computer(settings).into_iter().map(ComputerTool::json));
+                ok(json!({"tools": tools}))
+            }
             "tools/call" => Some(self.call_tool(&id, params.as_ref(), key, settings)),
             // The gadgets' guides (`core::pet::gadget_guide`), with MCP tool names; prompts are not written for Windows.
             "resources/list" => ok(json!({"resources": PetGadgetGuides::GADGETS.iter().filter(|g| PetGadgetGuides::guide(g).is_some()).map(|g| {
@@ -289,13 +330,19 @@ impl McpService {
             Some(v @ Value::Object(_)) => Some(v.clone()),
             Some(_) => return err(RpcError::invalid_params("arguments must be an object")),
         };
-        let Some(tool) = McpTools::find(name, &self.tools).cloned() else { return err(RpcError::invalid_params(format!("Unknown tool: {}", cut(name, 64)))) };
+        let Some(tool) = McpTools::find(name, &self.tools).cloned() else {
+            return match ComputerTools::find(name) {
+                Some(t) => self.call_computer(id, name, t, arguments.as_ref(), key, settings),
+                None => err(RpcError::invalid_params(format!("Unknown tool: {}", cut(name, 64)))),
+            };
+        };
         self.tool_calls.fetch_add(1, Ordering::SeqCst);
         let record = |outcome: CallOutcome| self.call_log.append(CallLogEntry {
             time: (self.now)(), tool: cut(name, 64), key_label: key.label.clone(), outcome, high_risk: tool.risk == PetToolRisk::Destructive,
         });
         let answer = |outcome: CallOutcome, o: PetCommandOutcome| { record(outcome); JsonRpc::result(id, Self::tool_result(&o)) };
 
+        if self.stopped() { return answer(CallOutcome::Denied, Self::emergency_refusal()); }
         if !settings.is_gadget_enabled(&tool.gadget) {
             let gadget = PetGadgetTools::display_name(&tool.gadget);
             return answer(CallOutcome::Denied, Self::refused("mcp_gadget_off",
@@ -329,11 +376,65 @@ impl McpService {
         }
     }
 
+    fn emergency_refusal() -> PetCommandOutcome {
+        Self::refused("emergency_stop", "Emergency stop is active. The user has to turn Computer Use and the MCP server back on in Nacho Combo.",
+            "do not retry", "비상 정지가 켜져 있어요")
+    }
+
+    /// A Computer Use call (see the module comment for the order).
+    fn call_computer(&self, id: &Value, name: &str, tool: &'static ComputerTool, arguments: Option<&Value>, key: &KeyRecord, settings: &McpSettings) -> Value {
+        self.tool_calls.fetch_add(1, Ordering::SeqCst);
+        let record = |outcome: CallOutcome| self.call_log.append(CallLogEntry {
+            time: (self.now)(), tool: cut(name, 64), key_label: key.label.clone(), outcome, high_risk: tool.high_risk(),
+        });
+        let refuse = |o: PetCommandOutcome| { record(CallOutcome::Denied); JsonRpc::result(id, Self::tool_result(&o)) };
+        let Some(c) = self.computer.clone() else {
+            return refuse(Self::refused("computer_off", "Computer Use is not part of this Nacho Combo.", "do not retry", "컴퓨터 사용이 없어요"));
+        };
+        if c.stop.is_active() { return refuse(Self::emergency_refusal()); }
+        if !settings.computer_enabled {
+            return refuse(Self::refused("computer_off", "Computer Use is off. The user turns it on in Nacho Combo (Settings ▸ MCP ▸ Computer Use) on this PC.",
+                "ask the user; do not retry until then", "설정 ▸ MCP에서 컴퓨터 사용을 켜야 해요"));
+        }
+        if let Err(why) = (c.ready)() { return refuse(Self::refused("computer_unavailable", &why, "ask the user to check Settings ▸ MCP", "컴퓨터 사용을 지금 쓸 수 없어요")); }
+        if !tool.is_available() {
+            return refuse(Self::refused("not_available", &format!("'{}' is not available on Windows.", cut(name, 64)), "use another tool", "Windows에는 없는 도구예요"));
+        }
+        if !settings.is_group_enabled(tool.group) {
+            return refuse(Self::refused("mcp_group_off",
+                &format!("'{}' tool is turned off. Turn on the {} tool group in Nacho Combo (Settings ▸ MCP ▸ Computer Use) on this PC.", cut(name, 64), tool.group.display_name()),
+                "ask the user to turn the group on; do not retry until then", "설정 ▸ MCP에서 이 도구 묶음을 켜야 해요"));
+        }
+        let args = match ComputerTools::check_arguments(tool.name, arguments) {
+            Ok(a) => a,
+            Err(e) => { record(CallOutcome::Error); return JsonRpc::result(id, ToolResult::error(format!("bad parameters: {e}")).json()); }
+        };
+        let generation = c.stop.generation();
+        let request = |rid| McpApprovalRequest { id: rid, tool: cut(name, 64), connector: tool.connector_name(), gadget: "computer".into(), risk: tool.risk, key_label: key.label.clone() };
+        match self.ask_request(request) {
+            Some(McpApproval::Allowed) => {}
+            Some(McpApproval::Denied) => return refuse(Self::refused("approval_denied", "The user declined this call in Nacho Combo.", "do not retry unless the user asks again", "사용자가 나초콤보에서 거절했어요")),
+            Some(McpApproval::Unavailable) => return refuse(Self::refused("approval_unavailable",
+                "Computer Use calls need the user's approval in Nacho Combo, and Nacho Pet is not on to ask.", "ask the user to turn on Nacho Pet, then call again", "이 도구는 나초 펫 승인 카드가 있어야 해요. 나초 펫을 켜 주세요")),
+            None => return refuse(Self::refused("approval_timeout", "Nobody answered the approval card in Nacho Combo in time.", "call again when the user is at the PC", "승인 카드에 답이 없어 취소했어요")),
+        }
+        // One call at a time; the stop may have fired while the card waited or another call ran.
+        let _turn = self.execution.lock().unwrap_or_else(|e| e.into_inner());
+        if c.stop.is_active() || c.stop.generation() != generation { return refuse(Self::emergency_refusal()); }
+        let result = c.backend.execute(tool.name, &args);
+        record(if result.is_error { CallOutcome::Error } else { CallOutcome::Ok });
+        JsonRpc::result(id, result.json())
+    }
+
     /// None: nobody answered in time (the card is taken away).
     fn ask(&self, tool: &McpTool, name: &str, key: &KeyRecord) -> Option<McpApproval> {
+        self.ask_request(|id| McpApprovalRequest { id, tool: cut(name, 64), connector: tool.connector.clone(), gadget: tool.gadget.clone(), risk: tool.risk, key_label: key.label.clone() })
+    }
+
+    fn ask_request(&self, make: impl FnOnce(u64) -> McpApprovalRequest) -> Option<McpApproval> {
         let id = self.next_approval.fetch_add(1, Ordering::SeqCst);
         let (tx, rx) = mpsc::channel();
-        let request = McpApprovalRequest { id, tool: cut(name, 64), connector: tool.connector.clone(), gadget: tool.gadget.clone(), risk: tool.risk, key_label: key.label.clone() };
+        let request = make(id);
         self.approver.ask(request, Box::new(move |a| { let _ = tx.send(a); }));
         match rx.recv_timeout(self.approval_timeout) {
             Ok(a) => Some(a),
@@ -632,5 +733,234 @@ pub(crate) mod tests {
         r.enable("appswitch");
         r.call("appswitch_quit", json!({"app": "x"}));
         assert!(r.service.call_log.entries()[1].high_risk);
+    }
+}
+
+/// Computer Use on the MCP endpoint (W5d): listing by switch and group, the emergency stop, every call approved,
+/// one call at a time, closed arguments and the macOS names.
+#[cfg(test)]
+mod computer_tests {
+    use super::tests::{rig, Rig};
+    use super::*;
+    use crate::core::computer::tools::ToolGroup;
+    use crate::core::computer::ToolContent;
+    use serde_json::Map;
+    use std::sync::atomic::AtomicBool;
+
+    /// Records what ran; `screen_capture` answers a picture.
+    #[derive(Default)]
+    struct FakeComputer { ran: Mutex<Vec<String>> }
+    impl ComputerBackend for FakeComputer {
+        fn execute(&self, tool: &str, arguments: &Map<String, Value>) -> ToolResult {
+            self.ran.lock().unwrap().push(format!("{tool} {}", Value::Object(arguments.clone())));
+            if tool == "screen_capture" { return ToolResult { content: vec![ToolContent::Image { base64: "iVBORw0KGgo=".into(), mime: "image/png".into() }], is_error: false }; }
+            ToolResult::object(json!({"ok": true, "tool": tool}))
+        }
+    }
+
+    struct CRig { r: Rig, backend: Arc<FakeComputer>, stop: Arc<EmergencyStop>, ready: Arc<Mutex<Result<(), String>>> }
+
+    fn crig(answer: Option<McpApproval>) -> CRig {
+        let mut r = rig(answer);
+        let backend = Arc::new(FakeComputer::default());
+        let stop = Arc::new(EmergencyStop::default());
+        let ready = Arc::new(Mutex::new(Ok(())));
+        let rd = ready.clone();
+        let parts = ComputerParts { backend: backend.clone(), stop: stop.clone(), ready: Arc::new(move || rd.lock().unwrap().clone()) };
+        let s = std::mem::replace(&mut r.service, rig(None).service);
+        r.service = s.with_computer(parts);
+        CRig { r, backend, stop, ready }
+    }
+
+    impl CRig {
+        fn on(&self, groups: &[ToolGroup]) {
+            let mut s = self.r.settings.lock().unwrap();
+            s.computer_enabled = true;
+            for g in groups { s.set_group_enabled(*g, true); }
+        }
+        /// tools/call → (result object, isError).
+        fn call(&self, name: &str, arguments: Value) -> Value { self.r.rpc("tools/call", json!({"name": name, "arguments": arguments}))["result"].clone() }
+        fn text(v: &Value) -> Value { serde_json::from_str(v["content"][0]["text"].as_str().unwrap()).unwrap_or(Value::Null) }
+        fn ran(&self) -> Vec<String> { self.backend.ran.lock().unwrap().clone() }
+    }
+
+    #[test]
+    fn nothing_is_listed_until_computer_use_and_a_group_are_on() {
+        let c = crig(Some(McpApproval::Allowed));
+        assert!(!c.r.listed().iter().any(|n| n.starts_with("computer_")));
+        c.r.settings.lock().unwrap().set_group_enabled(ToolGroup::Screen, true);
+        assert!(!c.r.listed().iter().any(|n| n.starts_with("computer_")), "a group alone does nothing while Computer Use is off");
+        c.on(&[ToolGroup::Screen]);
+        let listed = c.r.listed();
+        assert!(listed.contains(&"computer_screen_capture".to_string()) && listed.contains(&"computer_screen_list_displays".to_string()));
+        assert!(!listed.contains(&"computer_mouse_click".to_string()), "Input is still off");
+        // AppleScript is never listed, even if a settings file says on.
+        c.r.settings.lock().unwrap().enabled_groups.insert("appleScript".into(), true);
+        assert!(!c.r.listed().contains(&"computer_applescript_run".to_string()));
+        // The shortcut could not be registered: Computer Use is not served.
+        *c.ready.lock().unwrap() = Err("The emergency stop shortcut Ctrl+Alt+Win+. is taken by another app.".into());
+        assert!(!c.r.listed().iter().any(|n| n.starts_with("computer_")));
+        let v = c.call("computer_screen_capture", json!({"target": "display"}));
+        assert_eq!(CRig::text(&v)["reason"], "computer_unavailable");
+    }
+
+    #[test]
+    fn every_call_waits_for_the_card_and_runs_once_allowed() {
+        let c = crig(Some(McpApproval::Allowed));
+        c.on(&[ToolGroup::Screen, ToolGroup::SystemInfo]);
+        // Read-only tools ask too ("always allow" never lifts Computer Use).
+        c.r.trust.lock().unwrap().insert("computer".into());
+        let v = c.call("computer_screen_list_displays", json!({}));
+        assert_eq!(v["isError"], false);
+        let asked = c.r.approver.asked.lock().unwrap().clone();
+        assert_eq!(asked.len(), 1);
+        assert_eq!((asked[0].gadget.as_str(), asked[0].connector.as_str(), asked[0].risk), ("computer", "combo_computer_screen_list_displays", PetToolRisk::Read));
+        let v = c.call("computer_screen_capture", json!({"target": "display", "maxWidth": 800}));
+        assert_eq!(v["content"][0]["type"], "image");
+        assert_eq!(v["content"][0]["mimeType"], "image/png");
+        // The old Computer Use name works too.
+        let v = c.call("process_list", json!(null));
+        assert_eq!(v["isError"], false);
+        assert_eq!(c.r.approver.asked.lock().unwrap().len(), 3);
+        assert_eq!(c.ran(), vec!["screen_list_displays {}".to_string(), "screen_capture {\"maxWidth\":800,\"target\":\"display\"}".into(), "process_list {}".into()]);
+        let log = c.r.service.call_log.entries();
+        assert_eq!(log.iter().map(|e| e.tool.as_str()).collect::<Vec<_>>(), vec!["computer_screen_list_displays", "computer_screen_capture", "process_list"]);
+        assert!(log.iter().all(|e| e.outcome == CallOutcome::Ok && !e.high_risk));
+    }
+
+    #[test]
+    fn declined_unavailable_and_unanswered_cards_run_nothing() {
+        for (answer, reason) in [(Some(McpApproval::Denied), "approval_denied"), (Some(McpApproval::Unavailable), "approval_unavailable"), (None, "approval_timeout")] {
+            let c = crig(answer);
+            c.on(&[ToolGroup::Input]);
+            let v = c.call("computer_type_text", json!({"text": "hello"}));
+            assert_eq!(v["isError"], true);
+            assert_eq!(CRig::text(&v)["reason"], reason);
+            assert!(c.ran().is_empty(), "{reason}");
+            assert_eq!(c.r.service.call_log.entries()[0].outcome, CallOutcome::Denied);
+        }
+        let c = crig(None);
+        c.on(&[ToolGroup::Input]);
+        c.call("computer_mouse_move", json!({"x": 1, "y": 2}));
+        assert_eq!(c.r.approver.cancelled.lock().unwrap().len(), 1, "the unanswered card is taken away");
+    }
+
+    #[test]
+    fn switches_and_groups_are_checked_before_the_card() {
+        let c = crig(Some(McpApproval::Allowed));
+        let v = c.call("computer_mouse_click", json!({"x": 1, "y": 1}));
+        assert_eq!(CRig::text(&v)["reason"], "computer_off");
+        c.on(&[ToolGroup::Screen]);
+        let v = c.call("computer_mouse_click", json!({"x": 1, "y": 1}));
+        assert_eq!(CRig::text(&v)["reason"], "mcp_group_off");
+        c.r.settings.lock().unwrap().enabled_groups.insert("appleScript".into(), true);
+        let v = c.call("computer_applescript_run", json!({"script": "beep"}));
+        assert_eq!(CRig::text(&v)["reason"], "not_available");
+        assert!(c.r.approver.asked.lock().unwrap().is_empty(), "no card for a call that cannot run");
+        assert!(c.ran().is_empty());
+    }
+
+    #[test]
+    fn arguments_are_closed() {
+        let c = crig(Some(McpApproval::Allowed));
+        c.on(&[ToolGroup::Input]);
+        let v = c.call("computer_mouse_click", json!({"x": 1, "y": 1, "button": "left", "extra": true}));
+        assert_eq!(v["isError"], true);
+        assert!(v["content"][0]["text"].as_str().unwrap().contains("unknown argument extra"));
+        let v = c.call("computer_key_press", json!({}));
+        assert!(v["content"][0]["text"].as_str().unwrap().contains("Missing required argument 'key'"));
+        assert!(c.r.approver.asked.lock().unwrap().is_empty());
+        assert!(c.ran().is_empty());
+        let r = c.r.rpc("tools/call", json!({"name": "computer_teleport", "arguments": {}}));
+        assert_eq!(r["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn the_emergency_stop_refuses_everything_and_lists_nothing() {
+        let c = crig(Some(McpApproval::Allowed));
+        c.on(&[ToolGroup::Screen, ToolGroup::Shell]);
+        c.r.enable("dim");
+        assert!(c.r.listed().contains(&"dim_status".to_string()));
+        c.stop.fire();
+        assert!(c.r.listed().is_empty(), "nothing is listed while the stop holds");
+        for (name, args) in [("computer_shell_run", json!({"command": "Get-Date"})), ("dim_status", json!({}))] {
+            let v = c.call(name, args);
+            assert_eq!(CRig::text(&v)["reason"], "emergency_stop", "{name}");
+        }
+        assert!(c.ran().is_empty() && c.r.executor.ran.lock().unwrap().is_empty());
+        assert!(c.r.approver.asked.lock().unwrap().is_empty());
+        assert_eq!(c.r.service.diagnostics()["emergencyStopped"], true);
+        c.stop.clear();
+        assert_eq!(c.call("computer_screen_list_displays", json!({}))["isError"], false);
+    }
+
+    #[test]
+    fn a_stop_while_the_card_waits_refuses_the_allowed_call() {
+        // The approver allows only after the stop fired (the user pressed the shortcut while the card was open).
+        struct LateApprover(Arc<EmergencyStop>);
+        impl McpApproving for LateApprover {
+            fn ask(&self, _: McpApprovalRequest, done: Box<dyn FnOnce(McpApproval) + Send>) { self.0.fire(); self.0.clear(); done(McpApproval::Allowed) }
+            fn cancel(&self, _: u64) {}
+        }
+        let c = crig(None);
+        c.on(&[ToolGroup::Input]);
+        let rig2 = rig(None);
+        let parts = ComputerParts { backend: c.backend.clone(), stop: c.stop.clone(), ready: Arc::new(|| Ok(())) };
+        let sources = McpSources { settings: { let s = c.r.settings.clone(); Arc::new(move || s.lock().unwrap().clone()) }, always_allowed: Arc::new(BTreeSet::new),
+                                   module_on: Arc::new(|_| true) };
+        let keys = Arc::new(KeyStore::new(None, crate::core::mcp::keys::tests::counting(), c.r.clock.clock()));
+        let token = keys.create("t").unwrap().token;
+        let svc = McpService::new(sources, keys, rig2.executor.clone(), Arc::new(LateApprover(c.stop.clone())), c.r.clock.clock()).with_computer(parts);
+        let body = serde_json::to_vec(&json!({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "computer_type_text", "arguments": {"text": "x"}}})).unwrap();
+        let headers = [("host".to_string(), "127.0.0.1:47653".to_string()), ("authorization".to_string(), format!("Bearer {token}"))].into_iter().collect();
+        let resp = svc.handle(&HttpRequest { method: "POST".into(), path: "/mcp".into(), headers, body }, "127.0.0.1");
+        let v: Value = serde_json::from_slice(&resp.body).unwrap();
+        assert_eq!(CRig::text(&v["result"])["reason"], "emergency_stop");
+        assert!(c.ran().is_empty(), "a stop between the card and the run wins");
+    }
+
+    #[test]
+    fn high_risk_calls_are_marked_in_the_log() {
+        let c = crig(Some(McpApproval::Allowed));
+        c.on(&[ToolGroup::Shell, ToolGroup::FileAccess]);
+        c.call("computer_shell_run", json!({"command": "Get-Date", "timeoutSeconds": 5}));
+        c.call("computer_file_read", json!({"path": "C:\\Users\\me\\a.txt"}));
+        let log = c.r.service.call_log.entries();
+        assert!(log.iter().all(|e| e.high_risk), "{log:?}");
+        // The log never holds the arguments.
+        assert!(log.iter().all(|e| !e.tool.contains("Get-Date") && !e.tool.contains("a.txt")));
+    }
+
+    #[test]
+    fn calls_run_one_at_a_time() {
+        // A slow backend: two calls at once never overlap.
+        struct Slow { inside: AtomicBool, overlapped: AtomicBool }
+        impl ComputerBackend for Slow {
+            fn execute(&self, _: &str, _: &Map<String, Value>) -> ToolResult {
+                if self.inside.swap(true, Ordering::SeqCst) { self.overlapped.store(true, Ordering::SeqCst); }
+                std::thread::sleep(Duration::from_millis(30));
+                self.inside.store(false, Ordering::SeqCst);
+                ToolResult::text("ok")
+            }
+        }
+        let c = crig(Some(McpApproval::Allowed));
+        c.on(&[ToolGroup::Input]);
+        let slow = Arc::new(Slow { inside: AtomicBool::new(false), overlapped: AtomicBool::new(false) });
+        let parts = ComputerParts { backend: slow.clone(), stop: Arc::new(EmergencyStop::default()), ready: Arc::new(|| Ok(())) };
+        let CRig { mut r, .. } = c;
+        let s = std::mem::replace(&mut r.service, rig(None).service);
+        r.service = s.with_computer(parts);
+        let r = Arc::new(r);
+        let threads: Vec<_> = (0..3).map(|_| { let r = r.clone(); std::thread::spawn(move || r.rpc("tools/call", json!({"name": "computer_mouse_move", "arguments": {"x": 1, "y": 1}}))) }).collect();
+        for t in threads { assert_eq!(t.join().unwrap()["result"]["isError"], false); }
+        assert!(!slow.overlapped.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn computer_names_never_shadow_gadget_tools() {
+        let gadget: BTreeSet<String> = McpTools::all().into_iter().map(|t| t.name).collect();
+        for t in &ComputerTools::ALL {
+            assert!(!gadget.contains(&t.mcp_name()) && !gadget.contains(t.name), "{} collides with a gadget tool", t.name);
+        }
     }
 }
