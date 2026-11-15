@@ -407,13 +407,15 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
                 // Edit controls.
                 if edit_mode {
                     let y = r.bottom() - 32.0;
+                    // A small tile is 150 wide: the size picker and the three buttons share it.
+                    let (seg_w, btn_w, btn_gap) = if item.size == BentoSize::Small { (62.0, 20.0, 2.0) } else { (84.0, 24.0, 4.0) };
                     let opts: Vec<String> = BentoSize::ALL.iter().map(|s| s.name().chars().next().map(|c| c.to_string()).unwrap_or_default()).collect();
                     let cur = BentoSize::ALL.iter().position(|s| *s == item.size);
-                    if let Some(i) = ui.segments("size", &opts, cur, Rect::new(r.x + 10.0, y, 84.0, 24.0), false) { let s = BentoSize::ALL[i]; later(move || edit(|b| b.set_size(m, s))); }
-                    let sx = r.right() - 10.0 - 24.0 * 3.0 - 8.0;
-                    if ui.button_rect("left", "‹", Rect::new(sx, y, 24.0, 24.0), Btn::Secondary, true, true) { later(move || edit(|b| b.step(m, -1))); }
-                    if ui.button_rect("right", "›", Rect::new(sx + 28.0, y, 24.0, 24.0), Btn::Secondary, true, true) { later(move || edit(|b| b.step(m, 1))); }
-                    if ui.button_rect("hide", "×", Rect::new(sx + 56.0, y, 24.0, 24.0), Btn::Secondary, true, true) { later(move || edit(|b| b.set_hidden(m, true))); }
+                    if let Some(i) = ui.segments("size", &opts, cur, Rect::new(r.x + 10.0, y, seg_w, 24.0), false) { let s = BentoSize::ALL[i]; later(move || edit(|b| b.set_size(m, s))); }
+                    let sx = r.right() - 10.0 - btn_w * 3.0 - btn_gap * 2.0;
+                    if ui.button_rect("left", "‹", Rect::new(sx, y, btn_w, 24.0), Btn::Secondary, true, true) { later(move || edit(|b| b.step(m, -1))); }
+                    if ui.button_rect("right", "›", Rect::new(sx + btn_w + btn_gap, y, btn_w, 24.0), Btn::Secondary, true, true) { later(move || edit(|b| b.step(m, 1))); }
+                    if ui.button_rect("hide", "×", Rect::new(sx + (btn_w + btn_gap) * 2.0, y, btn_w, 24.0), Btn::Secondary, true, true) { later(move || edit(|b| b.set_hidden(m, true))); }
                 }
             });
         }
