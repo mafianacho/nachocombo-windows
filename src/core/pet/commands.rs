@@ -16,14 +16,18 @@
 //! permission); the schemas (types, enums, bounds, required fields) are the macOS ones.
 // i18n-exempt:begin (the capabilities' descriptions are read by the server's tool picker, not drawn)
 use super::desktop::{DesktopWorkspaceStore, PetAppMatcher, PetSystemChange, PetWindowPlacement};
+use super::data_tools::PetDiskTopKind;
+use super::desktop_tidy::PetDesktopArgs;
 use super::gadget_tools::{PetCaptureMode, PetGadgetTools, PetItemRef};
+use super::settings_tools::{PetClockChange, PetMouseChange};
+use super::window_tools::PetWindowToolRequest;
 use super::json::JsonObject;
 use crate::core::layout::SnapAction;
 use crate::core::settings::ModuleId;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PetCommand {
     /// Snap the front window (or the front window of the named running app) to a position.
     ArrangeWindow(SnapAction, Option<String>),
@@ -69,6 +73,28 @@ pub enum PetCommand {
     /// 0 = until stopped.
     AwakeStart { minutes: i64 },
     AwakeStop,
+    /// The usage guide of one gadget (macOS gadget id).
+    GadgetGuide(String),
+    /// Window Snap's placement tools (`combo_window_place`, `_tile`, `_split`, `_ratio`, `_move_display`,
+    /// `_arrange_apps`, `_undo`, `_displays`).
+    Window(PetWindowToolRequest),
+    AppSwitchSettings,
+    AppSwitchSetSettings(bool),
+    /// Tray Organizer (the macOS Menu Bar Organizer's tools).
+    TrayStatus,
+    TrayListItems,
+    TrayTidy,
+    TraySetCollapsed(bool),
+    MonitorStats,
+    DiskTopItems { count: i64, kind: PetDiskTopKind },
+    /// The raw path; the shell picks the drive.
+    DiskScan(Option<String>),
+    MouseStatus,
+    MouseSet(PetMouseChange),
+    CalendarStatus,
+    CalendarSet(PetClockChange),
+    /// Desktop tidy-up and arrangement proposals: the tool's declared name and its checked arguments.
+    Desktop(&'static str, PetDesktopArgs),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -369,13 +395,7 @@ impl PetCommands {
     /// What the Windows app declares: [`PetGadgetTools::WINDOWS`] (plus the chat handoff tools once the pet's chat
     /// window can take an attachment).
     pub fn windows_declaration(always_allowed: &BTreeSet<String>, disabled: &BTreeSet<String>, chat_handoff: bool) -> Vec<Value> {
-        let mut names: Vec<&str> = PetGadgetTools::WINDOWS.to_vec();
-        if chat_handoff {
-            let at = names.iter().position(|n| *n == PetGadgetTools::CLIPBOARD_LIST).unwrap_or(names.len());
-            names.insert(at, PetGadgetTools::SHELF_GIVE); // macOS order: shelf list, give, …, capture ask, list pinned
-            let at = names.iter().position(|n| *n == PetGadgetTools::CAPTURE_LIST_PINNED).unwrap_or(names.len());
-            names.insert(at, PetGadgetTools::CAPTURE_ASK);
-        }
+        let names: Vec<&str> = PetGadgetTools::declared(chat_handoff).iter().map(|t| t.name).collect();
         Self::declaration(&names, Self::DECLARES_QUIT_APP, always_allowed, disabled)
     }
 

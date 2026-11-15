@@ -18,7 +18,11 @@ use crate::core::pet::connector_client::PetCommandExecuting;
 use crate::core::pet::desktop::{DesktopWorkspaceStore, PetAppEntry, PetAppMatcher, PetPartResult, PetPermissionHelp, PetSystemChange, SaveResult, WorkspaceApplyReport};
 use crate::core::pet::desktop_runner::{exe_name, PetDesktopRunner, PetWindowInfo};
 use crate::core::pet::gadget_tools::*;
+use crate::core::pet::data_tools::{self, PetMonitorStats, PetProcessUsage};
+use crate::core::pet::desktop_tidy::{DesktopTidyEngine, PetDesktopTools};
+use crate::core::pet::settings_tools::{self, PetClockState, PetMouseState};
 use crate::core::pet::trust::GadgetTrust;
+use crate::core::pet::window_tools::{PetDisplayInfo, PetWindowToolRequest, PetWindowTools, PetWindowUndoStack};
 use crate::core::settings::ModuleId;
 use crate::core::shelf::Kind;
 use serde_json::{json, Value};
@@ -38,10 +42,18 @@ type Done = Box<dyn FnOnce(PetCommandOutcome) + Send>;
 static MAIN: AtomicIsize = AtomicIsize::new(0);
 static JOBS: Mutex<Vec<Job>> = Mutex::new(Vec::new());
 static TRUST: OnceLock<Arc<GadgetTrust>> = OnceLock::new();
+static DIR: OnceLock<PathBuf> = OnceLock::new();
+static DESKTOP: OnceLock<PetDesktopTools> = OnceLock::new();
+
+thread_local! {
+    /// The last placements of the window tools, for `combo_window_undo` (UI thread; gone when the app quits).
+    static UNDO: std::cell::RefCell<PetWindowUndoStack> = std::cell::RefCell::new(PetWindowUndoStack::default());
+}
 
 /// At start: the window that receives the hops, and the "always allow" switches read from the app's folder.
 pub fn init(main: HWND, dir: &Path) {
     MAIN.store(main.0 as isize, Ordering::SeqCst);
+    let _ = DIR.set(dir.to_path_buf());
     trust().attach(&dir.join(GadgetTrust::FILE_NAME));
 }
 
@@ -76,6 +88,22 @@ pub struct WindowsPetExecutor;
 
 impl PetCommandExecuting for WindowsPetExecutor {
     fn execute(&self, command: PetCommand, done: Done) {
+        // Desktop tidy reads and moves files: off the UI thread (it needs nothing of the UI).
+        if let PetCommand::Desktop(name, args) = &command {
+            if let Some(action) = tidy_action(name) {
+                let args = args.clone();
+                let slot: Arc<Mutex<Option<Done>>> = Arc::new(Mutex::new(Some(done)));
+                let s = slot.clone();
+                let spawned = std::thread::Builder::new().name("desktop-tidy".into()).spawn(move || {
+                    let outcome = desktop().run_tidy(action, &args);
+                    if let Some(d) = s.lock().unwrap().take() { d(outcome) }
+                });
+                if spawned.is_err() {
+                    if let Some(d) = slot.lock().unwrap().take() { d(PetCommandOutcome::new(false, "Nacho Combo could not start the desktop tidy.")) }
+                }
+                return;
+            }
+        }
         let slot: Arc<Mutex<Option<Done>>> = Arc::new(Mutex::new(Some(done)));
         let s = slot.clone();
         let posted = hop(Box::new(move || {
@@ -195,7 +223,203 @@ pub fn run(command: PetCommand) -> PetCommandOutcome {
             crate::awake::set(false, None);
             awake_state().outcome(Some("Stopped."))
         }
+        GadgetGuide(g) => PetGadgetTools::guide_outcome(&g, false),
+        Window(req) => window_tool(req),
+        AppSwitchSettings => appswitch_outcome("App Switch settings."),
+        AppSwitchSetSettings(v) => {
+            app().update(|s| s.options.app_hide_on_repeat = v);
+            appswitch_outcome("App Switch settings changed.")
+        }
+        TrayStatus => settings_tools::tray_status(&crate::trayorg::tool_state()),
+        TrayListItems => settings_tools::tray_items(&crate::trayorg::tool_items(), app().settings.tray_collapsed),
+        TrayTidy | TraySetCollapsed(_) => {
+            let want = !matches!(command, TraySetCollapsed(false));
+            let changed = app().settings.tray_collapsed != want;
+            crate::trayorg::set_collapsed(want);
+            settings_tools::tray_changed(&crate::trayorg::tool_state(), changed)
+        }
+        MonitorStats => data_tools::monitor_outcome(monitor_stats().as_ref()),
+        DiskTopItems { count, kind } => data_tools::disk_top_outcome(&crate::diskmap::tool_state(), count, kind, crate::core::pet::clock::now()),
+        DiskScan(path) => {
+            let profile = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".into());
+            match data_tools::scan_drive(path.as_deref(), &profile, &crate::diskmap::tool_drives(), |p| Path::new(p).is_dir()) {
+                Ok(drive) => { let already = crate::diskmap::tool_scan(&drive); data_tools::scan_started(&drive, already) }
+                Err(o) => o,
+            }
+        }
+        MouseStatus => settings_tools::mouse_outcome(&mouse_state(), "Mouse Tune settings."),
+        MouseSet(c) => {
+            app().update(|s| {
+                let o = &mut s.options;
+                if let Some(v) = c.reverse_scroll { o.mouse_reverse = v; }
+                if let Some(v) = c.speed { o.mouse_speed = v; }
+                if let Some(v) = c.pointer_speed { o.mouse_pointer = v; }
+                if let Some(v) = c.precision { o.mouse_precision = v; }
+            });
+            crate::mouse::options_changed();
+            settings_tools::mouse_outcome(&mouse_state(), "Mouse Tune settings changed.")
+        }
+        CalendarStatus => settings_tools::calendar_outcome(&clock_state(), "Calendar Clock settings."),
+        CalendarSet(c) => {
+            app().update(|s| {
+                let o = &mut s.options;
+                if let Some(v) = c.show_date { o.clock_date = v; }
+                if let Some(v) = c.show_weekday { o.clock_weekday = v; }
+                if let Some(v) = c.show_seconds { o.clock_seconds = v; }
+                if let Some(v) = c.hours { o.clock_hours = v; }
+                if let Some(v) = c.world_clocks.clone() { o.world_clocks = v; }
+            });
+            crate::clock::options_changed();
+            settings_tools::calendar_outcome(&clock_state(), "Calendar Clock settings changed.")
+        }
+        Desktop(name, args) => match name {
+            PetGadgetTools::DESKTOP_ARRANGE_SUGGEST => {
+                let names: Vec<String> = windows().into_iter().filter(|w| !w.minimized).map(|w| w.app).collect();
+                desktop().suggest(Some(names))
+            }
+            PetGadgetTools::DESKTOP_ARRANGE_APPLY => match desktop().take_arrange_plan(args.plan_id.as_deref().unwrap_or("")) {
+                Err(o) => o,
+                Ok((apps, arrangement)) => match PetWindowTools::parse("arrange_apps", Some(&json!({"apps": apps, "arrangement": arrangement}))) {
+                    Ok(req) => PetDesktopTools::arrange_applied(window_tool(req)),
+                    Err(p) => PetCommandOutcome::new(false, p.message()),
+                },
+            },
+            // Tidy actions normally run on their own thread (`execute`); `ctl pet` comes here.
+            n => match tidy_action(n) { Some(a) => desktop().run_tidy(a, &args), None => PetCommandOutcome::unavailable(n) },
+        },
     }
+}
+
+// MARK: window tools (Window Snap's placement tools)
+
+fn displays() -> Vec<PetDisplayInfo> {
+    use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MONITORINFO, MONITORINFOEXW};
+    crate::snap::monitors().into_iter().map(|(h, frame, work)| {
+        let mut mi = MONITORINFOEXW { monitorInfo: MONITORINFO { cbSize: std::mem::size_of::<MONITORINFOEXW>() as u32, ..Default::default() }, ..Default::default() };
+        let ok = unsafe { GetMonitorInfoW(h, &mut mi as *mut MONITORINFOEXW as *mut MONITORINFO).as_bool() };
+        let device = if ok { String::from_utf16_lossy(&mi.szDevice[..mi.szDevice.iter().position(|c| *c == 0).unwrap_or(0)]) } else { String::new() };
+        // `\\.\DISPLAY1` → `DISPLAY1`
+        PetDisplayInfo { frame, work, name: device.trim_start_matches(['\\', '.']).to_string() }
+    }).collect()
+}
+
+/// Moves one window (restoring it from maximized first), brings it to the front and reads where it ended up.
+/// None: Windows refused (a window of an app running as administrator).
+fn move_window(id: isize, r: Rect) -> Option<Rect> {
+    let h = HWND(id as *mut _);
+    if !crate::snap::place(h, r) { return None; }
+    unsafe { let _ = SetWindowPos(h, Some(HWND_TOP), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE); }
+    crate::snap::visible_frame(h)
+}
+
+fn window_tool(req: PetWindowToolRequest) -> PetCommandOutcome {
+    let ds = displays();
+    match &req {
+        PetWindowToolRequest::Displays => return PetWindowTools::displays(&ds),
+        PetWindowToolRequest::Undo { steps } => {
+            let snaps = UNDO.with(|u| u.borrow_mut().pop(*steps));
+            let plan = PetWindowTools::undo_plan(&snaps, &windows(), &ds);
+            let restored: Vec<(String, Option<Rect>)> = plan.moves.iter().map(|m| (m.label.clone(), move_window(m.id, m.requested))).collect();
+            return PetWindowTools::undo_outcome(&restored, &plan.missing, snaps.len(), &ds);
+        }
+        _ => {}
+    }
+    let plan = match PetWindowTools::plan(&req, &windows(), &ds, gap()) { Ok(p) => p, Err(o) => return o };
+    let applied: Vec<Option<Rect>> = plan.moves.iter().map(|m| move_window(m.id, m.requested)).collect();
+    UNDO.with(|u| u.borrow_mut().push(PetWindowTools::undo_snapshot(&plan, &applied)));
+    PetWindowTools::outcome(&plan, &applied)
+}
+
+// MARK: settings tools
+
+fn appswitch_outcome(lead: &str) -> PetCommandOutcome {
+    let o = &app().settings.options;
+    let names: Vec<String> = o.app_shortcuts.iter().filter(|a| a.shortcut.is_some()).map(|a| a.name.clone()).collect();
+    settings_tools::appswitch_outcome(o.app_hide_on_repeat, &names, lead)
+}
+
+fn mouse_state() -> PetMouseState {
+    let o = &app().settings.options;
+    PetMouseState { reverse_scroll: o.mouse_reverse, speed: o.mouse_speed, pointer_speed: o.mouse_pointer, precision: o.mouse_precision }
+}
+
+fn clock_state() -> PetClockState {
+    let o = &app().settings.options;
+    PetClockState { show_date: o.clock_date, show_weekday: o.clock_weekday, show_seconds: o.clock_seconds, hours: o.clock_hours, world_clocks: o.world_clocks.clone() }
+}
+
+// MARK: data tools
+
+/// The monitor's last sample; None before the first one.
+fn monitor_stats() -> Option<PetMonitorStats> {
+    let m = &app().monitor;
+    if m.ticks == 0 { return None; }
+    let s = &m.last;
+    let system = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".into());
+    let disk = s.volumes.iter().find(|v| v.root.to_ascii_uppercase().starts_with(&system.to_ascii_uppercase()))
+        .filter(|v| v.total > 0.0).map(|v| (v.total - v.free) / v.total * 100.0);
+    let temp = s.temps.iter().map(|t| t.1).fold(None, |a: Option<f64>, t| Some(a.map_or(t, |a| a.max(t))));
+    Some(PetMonitorStats {
+        cpu_percent: Some(s.cpu_user + s.cpu_system),
+        memory_percent: (s.mem_total > 0.0).then_some(s.mem_load),
+        memory_used_bytes: (s.mem_total > 0.0).then_some(s.mem_used as u64),
+        memory_total_bytes: (s.mem_total > 0.0).then_some(s.mem_total as u64),
+        memory_pressure_percent: (s.commit_limit > 0.0).then(|| s.commit_used / s.commit_limit * 100.0),
+        swap_used_bytes: None,
+        network_down_bytes_per_second: Some(s.net_down),
+        network_up_bytes_per_second: Some(s.net_up),
+        disk_used_percent: disk,
+        battery_percent: s.battery.as_ref().map(|b| b.percent),
+        battery_charging: s.battery.as_ref().map(|b| b.charging),
+        on_power_adapter: s.battery.as_ref().map(|b| b.on_ac),
+        cpu_temperature_celsius: temp,
+        gpu_temperature_celsius: None,
+        gpu_percent: s.gpu,
+        processor_queue: s.queue,
+        top_processes: m.processes.iter().map(|p| PetProcessUsage { name: p.name.clone(), cpu_percent: p.cpu, memory_bytes: p.mem.max(0.0) as u64 }).collect(),
+    })
+}
+
+// MARK: desktop tidy
+
+fn tidy_action(name: &str) -> Option<&'static str> {
+    match name {
+        PetGadgetTools::DESKTOP_TIDY_PLAN => Some("tidy_plan"),
+        PetGadgetTools::DESKTOP_TIDY_APPLY => Some("tidy_apply"),
+        PetGadgetTools::DESKTOP_TIDY_UNDO => Some("tidy_undo"),
+        PetGadgetTools::DESKTOP_TIDY_HISTORY => Some("tidy_history"),
+        _ => None,
+    }
+}
+
+/// The user's Desktop folder as Windows knows it (moved by OneDrive backup, or by the user, included).
+fn desktop_folder() -> PathBuf {
+    use windows::Win32::System::Com::CoTaskMemFree;
+    use windows::Win32::UI::Shell::{FOLDERID_Desktop, SHGetKnownFolderPath, KNOWN_FOLDER_FLAG};
+    unsafe {
+        if let Ok(p) = SHGetKnownFolderPath(&FOLDERID_Desktop, KNOWN_FOLDER_FLAG(0), None) {
+            let s = p.to_string().unwrap_or_default();
+            CoTaskMemFree(Some(p.0 as *const _));
+            if !s.is_empty() { return PathBuf::from(s); }
+        }
+    }
+    PathBuf::from(std::env::var("USERPROFILE").unwrap_or_default()).join("Desktop")
+}
+
+/// A move that fails when something is at `to` (never replaces) and never copies across drives.
+fn move_file(from: &Path, to: &Path) -> std::io::Result<()> {
+    use windows::Win32::Storage::FileSystem::{MoveFileExW, MOVE_FILE_FLAGS};
+    unsafe { MoveFileExW(&HSTRING::from(from.as_os_str()), &HSTRING::from(to.as_os_str()), MOVE_FILE_FLAGS(0)) }
+        .map_err(|e| std::io::Error::from_raw_os_error(e.code().0 & 0xFFFF))
+}
+
+fn desktop() -> &'static PetDesktopTools {
+    DESKTOP.get_or_init(|| {
+        let dir = DIR.get().cloned().unwrap_or_else(|| PathBuf::from("."));
+        let engine = DesktopTidyEngine::new(desktop_folder(), dir.join("desktop-tidy.json"), Box::new(crate::core::pet::clock::now))
+            .with_mover(Box::new(move_file));
+        PetDesktopTools::new(engine)
+    })
 }
 
 // MARK: gadgets
@@ -235,7 +459,11 @@ fn awake_state() -> PetAwakeState {
     }
 }
 
-fn dim_state() -> PetDimState { PetDimState { paused: app().dim.paused, strength: app().settings.dim_intensity } }
+fn dim_state() -> PetDimState {
+    let o = &app().settings.options;
+    PetDimState { paused: app().dim.paused, strength: app().settings.dim_intensity, front_app: o.dim_scope == crate::core::settings::DimScope::FrontApp,
+                  other_displays: o.dim_other_displays }
+}
 
 fn device_state() -> PetDeviceState {
     let d = &app().devices;
