@@ -9,9 +9,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 // ---------- layout ----------
 
 /// How big a tile is: one cell, two cells side by side, or two by two.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum BentoSize { Small, Wide, Large }
+pub enum BentoSize { #[default] Small, Wide, Large }
 
 impl BentoSize {
     pub const ALL: [BentoSize; 3] = [BentoSize::Small, BentoSize::Wide, BentoSize::Large];
@@ -25,8 +25,6 @@ fn lenient<'de, D: Deserializer<'de>, T: serde::de::DeserializeOwned + Default>(
     let v = serde_json::Value::deserialize(d)?;
     Ok(serde_json::from_value(v).unwrap_or_default())
 }
-
-impl Default for BentoSize { fn default() -> Self { BentoSize::Small } }
 
 /// One tile, in board order. `id` is a gadget's key (a string, so a file from a newer version with more gadgets decodes).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -385,6 +383,7 @@ pub mod build {
 
     /// A timed hold (`until`, `held_since` as seconds since 1970), an open-ended one (`manual`), awake because of a rule
     /// (`reason`), or asleep allowed.
+    #[allow(clippy::too_many_arguments)]
     pub fn keep_awake(running: bool, holds: bool, manual: bool, until: Option<f64>, held_since: Option<f64>, reason: Option<&str>, preset_minutes: i32, now: f64) -> BentoBody {
         if !running { return basic(ModuleId::KeepAwake); }
         if holds {
