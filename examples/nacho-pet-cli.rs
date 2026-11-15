@@ -227,6 +227,8 @@ fn auth_name(a: &PetAuthPhase) -> String {
 
 /// What a command decides on each state change: keep waiting, or finish with an exit code.
 type Step = Box<dyn FnMut(&PetSessionState, &Arc<PetSession>) -> Option<i32> + Send>;
+/// What starts the command once `on_change` is set (sign in, open the chat).
+type Start = Box<dyn FnOnce(&PetSession)>;
 
 fn main() {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
@@ -278,7 +280,7 @@ fn main() {
     let signed_in = session.snapshot().auth == PetAuthPhase::SignedIn;
     let need_login = || { if !signed_in { stamp("not signed in (run login first)"); std::process::exit(1) } };
 
-    let mut start: Option<Box<dyn FnOnce(&PetSession)>> = None;
+    let mut start: Option<Start> = None;
     let step: Option<Step> = match command {
         "login" => {
             let (http, endpoint, finish2) = (http.clone(), endpoint.clone(), finish.clone());
