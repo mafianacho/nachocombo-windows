@@ -177,6 +177,15 @@ pub fn columns_for_width(width: f64, min_cell: f64, gap: f64) -> usize {
     [6usize, 4].into_iter().find(|n| *n as f64 * min_cell + (*n as f64 - 1.0) * gap <= width).unwrap_or(2)
 }
 
+/// The name in a tile's header: the gadget's name, shortened where the cell is narrow ("Calendar", "Tray").
+pub fn tile_name(id: ModuleId, size: BentoSize) -> &'static str {
+    if size != BentoSize::Small { return id.name(); }
+    match id {
+        ModuleId::CalendarClock => "Calendar", ModuleId::CaptureFloat => "Capture", ModuleId::Clipboard => "Clipboard", ModuleId::DeviceControl => "Devices",
+        ModuleId::TrayOrganizer => "Tray", ModuleId::SystemMonitor => "Monitor", ModuleId::FileShelf => "Shelf", _ => id.name(),
+    }
+}
+
 /// What each size of a tile shows, for the edit panel's three previews.
 pub fn size_text(id: ModuleId, size: BentoSize) -> &'static str {
     use BentoSize::*;
@@ -608,6 +617,15 @@ mod tests {
         let sizes: AppSettings = serde_json::from_str(r#"{"bento":{"items":[{"id":"clipboard","size":"wide"}]}}"#).unwrap();
         assert_eq!(sizes.board_layout().items.len(), ModuleId::ALL.len() - 1, "missing gadgets are added");
         assert!(sizes.board_layout().items.iter().all(|i| !i.hidden || i.id != "clipboard"));
+    }
+
+    #[test] fn small_tiles_use_short_names_that_fit_a_narrow_cell() {
+        for m in board_modules() {
+            assert_eq!(tile_name(m, BentoSize::Wide), m.name());
+            assert!(tile_name(m, BentoSize::Small).chars().count() <= 11, "{m:?}");
+        }
+        assert_eq!(tile_name(CalendarClock, BentoSize::Small), "Calendar");
+        assert_eq!(tile_name(CalendarClock, BentoSize::Large), "Calendar Clock");
     }
 
     #[test] fn the_board_is_a_gadget_with_a_key_and_a_name() {

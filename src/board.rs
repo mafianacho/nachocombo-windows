@@ -384,13 +384,16 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
 
                 // Header: the gadget's mark, its name and its state in words, and the switch.
                 crate::pages::tile(ui.c, m, r.x + 12.0, r.y + 10.0, 26.0);
-                let name = if m == ModuleId::TrayOrganizer && item.size == BentoSize::Small { "Tray" } else { m.name() };
-                ui.c.line_text(name, semi(13), Rect::new(r.x + 46.0, r.y + 8.0, (r.w - 46.0 - 56.0).max(20.0), 18.0), th.ink, Align::Left);
+                let small = item.size == BentoSize::Small;
+                let switch_w = if small { 0.0 } else { 56.0 };
+                ui.c.line_text(tile_name(m, item.size), semi(13), Rect::new(r.x + 46.0, r.y + 8.0, (r.w - 46.0 - switch_w - 6.0).max(20.0), 18.0), th.ink, Align::Left);
                 let dot = dot_of(m);
                 let dc = match dot { BentoDot::On => th.guac, BentoDot::Error => th.salsa, BentoDot::Off => STATUS_OFF };
                 ui.c.circle(r.x + 50.0, r.y + 33.0, 3.5, dc);
-                ui.c.line_text(dot.text(), mono(10), Rect::new(r.x + 58.0, r.y + 25.0, (r.w - 58.0 - 8.0).max(20.0), 16.0), th.ink2, Align::Left);
-                if !edit_mode && ui.switch("on", r.right() - 52.0, r.y + 10.0, on || state != State::Off) { later(move || app().set_enabled(m, !(app().state(m) != State::Off))); }
+                ui.c.line_text(dot.text(), mono(10), Rect::new(r.x + 58.0, r.y + 25.0, (r.w - 58.0 - 52.0).max(20.0), 16.0), th.ink2, Align::Left);
+                // The switch is the user's own click; a small tile puts it on the state line so the name keeps its room.
+                let sy = if small { r.y + 24.0 } else { r.y + 10.0 };
+                if !edit_mode && ui.switch("on", r.right() - 52.0, sy, on || state != State::Off) { later(move || app().set_enabled(m, !(app().state(m) != State::Off))); }
 
                 // Body.
                 let foot = if edit_mode { 34.0 } else { 0.0 };
