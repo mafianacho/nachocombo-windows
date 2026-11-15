@@ -70,6 +70,11 @@ pub enum Event {
     /// The server took (or refused) the message the field held.
     SendDone(Option<String>),
     ArtChanged,
+    /// The selection bar's hooks saw the mouse or keys (kinds only, never which letter).
+    SelWatch(crate::core::pet::selection_watch::WatchEvent),
+    /// A read of the selection finished.
+    SelRead { generation: u64, result: Option<Box<crate::pet_selection::ReadOk>> },
+    SelChanged,
 }
 
 static QUEUE: Mutex<Vec<Event>> = Mutex::new(Vec::new());
@@ -121,6 +126,7 @@ pub struct PetUi {
     pub digits: DigitHold,
     pub dictation: DictationState,
     pub chat: ChatView,
+    pub sel: crate::pet_selection::SelState,
     pet: Option<PetWin>,
     motion: PetMotion,
     gesture: PetHoldGesture,
@@ -247,12 +253,14 @@ pub fn start() -> std::result::Result<(), String> {
     }
     refresh_face();
     start_art();
+    crate::pet_selection::start();
     Ok(())
 }
 
 pub fn stop() {
     let a = app();
     if !a.pet.started { return; }
+    crate::pet_selection::stop();
     let p = &mut a.pet;
     if let Some(r) = p.recorder.take() { r.cancel(); }
     if let Some(b) = &p.browser { b.cancel(); }
@@ -309,6 +317,9 @@ pub fn on_message() {
                 invalidate_chat();
             }
             Event::ArtChanged => { pet_art::art_changed(); render_pet(); invalidate_chat(); }
+            Event::SelWatch(e) => crate::pet_selection::on_watch(e),
+            Event::SelRead { generation, result } => crate::pet_selection::on_read(generation, result),
+            Event::SelChanged => crate::pet_selection::on_changed(),
         }
     }
 }
@@ -359,6 +370,7 @@ pub fn update_settings(change: impl FnOnce(&mut PetSettings)) {
             p.session = Some(s);
         }
     } else if let Some(s) = &p.session { s.apply_settings(next); }
+    crate::pet_selection::refresh();
 }
 
 // ---------- screens ----------
@@ -656,6 +668,7 @@ unsafe extern "system" fn pet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM)
                     refresh_face();
                 }
                 T_FLASH => { let _ = KillTimer(Some(hwnd), T_FLASH); invalidate_chat(); }
+                crate::pet_selection::T_SELECT => crate::pet_selection::on_timer(),
                 _ => {}
             }
             LRESULT(0)
@@ -862,6 +875,7 @@ pub fn on_link(url: &str) {
         "cardconfirm" => if let Some(id) = q.get("id") { if let Some(c) = card_by_id(id) { let step = app().pet.flow.confirm(&c); card_step(step); } },
         "cardretry" => if let Some(id) = q.get("id") { if let Some(c) = card_by_id(id) { let step = app().pet.flow.retry(&c); card_step(step); } },
         "micsettings" => crate::app::open_url("ms-settings:privacy-microphone"),
+        a if a.starts_with("sel") => { crate::pet_selection::on_link(a, &q); }
         _ => {}
     }
 }
@@ -1065,6 +1079,7 @@ pub fn settings_controls(ui: &mut Ui, x: f64, y: f64, w: f64) -> f64 {
     if button(ui, "petsize", "Reset Chat Size", Btn::Secondary, running, &mut bx, y) { later(reset_chat_size); }
     y += 46.0;
     y += ui.label(&t("Nothing connects to the Nacho server until you open the chat. The login is stored in Windows Credential Manager, for your account only."), sans(12), x + 18.0, y, w - 36.0, th.ink2) + 14.0;
+    y = crate::pet_selection::settings_controls(ui, x, y, w);
     y
 }
 
@@ -1072,5 +1087,5 @@ pub fn diagnostics() -> serde_json::Value {
     let p = &app().pet;
     // Phases and counts only: never text, tokens or addresses of a login.
     serde_json::json!({ "started": p.started, "auth": format!("{:?}", p.state.auth).split('(').next(), "chat": format!("{:?}", p.state.chat.phase).split(' ').next(),
-        "turns": p.state.chat.turns.len(), "chatOpen": p.chat.hwnd.is_some(), "recording": p.recorder.is_some(), "waitingForLogin": p.browser.as_ref().is_some_and(|b| b.is_waiting()) })
+        "turns": p.state.chat.turns.len(), "chatOpen": p.chat.hwnd.is_some(), "recording": p.recorder.is_some(), "selection": crate::pet_selection::diagnostics(), "waitingForLogin": p.browser.as_ref().is_some_and(|b| b.is_waiting()) })
 }
