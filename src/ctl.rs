@@ -30,6 +30,15 @@ pub fn run(a: &[String]) {
     let x = app();
     match arg(a, 0) {
         "set" => if let Some(m) = ModuleId::from_key(arg(a, 1)) { x.set_enabled(m, arg(a, 2) == "on"); },
+        "pet" => match arg(a, 1) {
+            "chat" => crate::pet_ui::open_chat(),
+            "close" => crate::pet_ui::close_chat(),
+            "signin" => { crate::pet_ui::open_chat(); crate::pet_ui::sign_in(); }
+            "signout" => crate::pet_ui::sign_out(),
+            "say" => crate::pet_ui::send_when_ready(a[2..].join(" "), false, 0),
+            "reset" => crate::pet_ui::reset_position(),
+            _ => {}
+        },
         "snap" => if let Some(s) = SnapAction::from_id(arg(a, 1)) { snap::run(s); },
         "action" => x.run_action(arg(a, 1)),
         "option" => {

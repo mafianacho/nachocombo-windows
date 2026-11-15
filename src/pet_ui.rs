@@ -596,8 +596,9 @@ unsafe extern "system" fn pet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM)
             LRESULT(0)
         }
         WM_LBUTTONUP => {
-            let _ = ReleaseCapture();
+            // The gesture ends first: releasing the capture sends WM_CAPTURECHANGED, which must find it finished.
             let ev = a.pet.gesture.up(now_secs());
+            let _ = ReleaseCapture();
             a.pet.motion.release(now_ms());
             handle_hold(ev);
             request_frames();
