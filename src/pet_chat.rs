@@ -557,7 +557,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     {
         let c = &mut a.pet.chat;
         if sig != c.sig {
-            if c.pinned || c.sig == 0 { c.stick = true; }
+            if c.pinned || c.sig == 0 { c.stick = true; c.stick_frames = 4; }
             c.sig = sig;
         }
         if (view.h - c.last_view_h).abs() > 0.5 {
@@ -568,7 +568,9 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         if c.stick {
             // Stay at the end until the content stops growing (a card is measured one frame later).
             ui.st.scroll.insert(log_id, 1.0e9);
-            if (content - c.last_content).abs() < 0.5 { c.stick = false; }
+            // A new item is measured a frame after it is first drawn: keep following for a few frames before judging.
+            c.stick_frames = c.stick_frames.saturating_sub(1);
+            if c.stick_frames == 0 && (content - c.last_content).abs() < 0.5 { c.stick = false; }
             ui.st.again = true;
         }
         c.last_content = content;

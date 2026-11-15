@@ -108,6 +108,7 @@ pub struct ChatView {
     pub sending: bool,
     /// The log follows its end while new content is still being measured (a card is taller than one frame knows).
     pub stick: bool,
+    pub stick_frames: u8,
     pub last_content: f64,
     /// The user is at the end of the log (until the wheel moves it away): new content then keeps the end in view.
     pub pinned: bool,
