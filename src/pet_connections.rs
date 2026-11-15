@@ -93,7 +93,7 @@ fn gadget_states() -> Vec<GadgetSwitchState> {
     use crate::app::State;
     GadgetSwitchState::listed().into_iter().map(|(module, gadget)| GadgetSwitchState {
         module, gadget,
-        phase: match app().state(module) { State::Running => GadgetPhase::On, State::Off => GadgetPhase::Off, State::Failed(_) => GadgetPhase::Failed },
+        phase: match module { None => GadgetPhase::AlwaysAvailable, Some(m) => match app().state(m) { State::Running => GadgetPhase::On, State::Off => GadgetPhase::Off, State::Failed(_) => GadgetPhase::Failed } },
     }).collect()
 }
 
@@ -372,7 +372,7 @@ fn apply(a: Act, gadgets: &[GadgetSwitchState], disabled: &BTreeSet<String>) {
         Act::Refresh => load(),
         Act::Gadget(g, on) => {
             if let Some(s) = gadgets.iter().find(|s| s.gadget == g) {
-                let m = s.module;
+                let Some(m) = s.module else { return };
                 later(move || { app().set_enabled(m, on); crate::pet_chat::invalidate(); });
             }
         }

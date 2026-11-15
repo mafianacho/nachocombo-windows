@@ -11,7 +11,7 @@
 //! the scope of and disconnects what is already connected. See docs/parity-macos.md.
 use super::commands::PetCommands;
 use super::connectors::{ConnectionRow, ConnectorDecoder, ConnectorOverview, ToolRow};
-use super::gadget_tools::{PetGadgetTools, PetToolRisk};
+use super::gadget_tools::{PetApproval, PetGadgetTool, PetGadgetTools, PetToolRisk};
 use super::http::{HTTPResult, PetHTTPClient, PetHTTPRequest, PetServerError};
 use super::json::{self, JsonExt};
 use super::settings::ServerEndpoint;
@@ -192,21 +192,13 @@ pub struct PcActionRow {
     pub gadget: &'static str,
     pub title: String,
     pub risk: PetToolRisk,
+    pub approval: PetApproval,
     pub on: bool,
 }
 
-/// Every tool this app declares, in registry order: [`PetGadgetTools::WINDOWS`], then the two chat-handoff tools after
-/// the last tool of their gadget when the shell has the handoff.
+/// Every tool this app declares, in registry order (`PetGadgetTools::declared`, the list hello is made from).
 pub fn declared_names(chat_handoff: bool) -> Vec<&'static str> {
-    let mut names: Vec<&'static str> = PetGadgetTools::WINDOWS.to_vec();
-    if chat_handoff {
-        for extra in PetGadgetTools::WITH_CHAT_HANDOFF {
-            let gadget = PetGadgetTools::gadget(extra);
-            let at = names.iter().rposition(|n| PetGadgetTools::gadget(n) == gadget).map_or(names.len(), |i| i + 1);
-            names.insert(at, extra);
-        }
-    }
-    names
+    PetGadgetTools::declared(chat_handoff).iter().map(|t| t.name).collect()
 }
 
 /// Short sentences for the actions, one per tool (macOS shows the first sentence of each tool's description; these are
@@ -259,17 +251,17 @@ pub fn actions_for(gadget: &str, disabled: &BTreeSet<String>, names: &[&'static 
             None => PetCommands::spec(name).map(|(d, _)| first_sentence(&d, 120)).filter(|d| !d.is_empty()).unwrap_or_else(|| tool_title(name)),
         };
         let off = disabled.contains(*name) || PetCommands::connector_names(name).iter().any(|c| disabled.contains(*c));
-        Some(PcActionRow { id: name.to_string(), gadget: tool.gadget, title, risk: tool.risk, on: !off })
+        Some(PcActionRow { id: name.to_string(), gadget: tool.gadget, title, risk: tool.risk, approval: tool.approval, on: !off })
     }).collect()
 }
 
-/// What the user reads under an action: how Nacho asks. None for read / change (they just run).
-pub fn risk_text(risk: PetToolRisk, always_allowed: bool) -> Option<&'static str> {
-    match risk {
-        PetToolRisk::Read | PetToolRisk::Change => None,
-        PetToolRisk::ContentOut | PetToolRisk::InputInject => Some(if always_allowed { "이 가젯은 항상 허용이라 묻지 않고 해요" } else { "보내기 전에 매번 물어봐요" }),
-        PetToolRisk::Destructive => Some("매번 물어봐요(항상 허용 안 됨)"),
-    }
+/// What the user reads under an action: how Nacho asks. None for what just runs. Derived from the registry row's own
+/// approval rule (`PetGadgetTool::approval_required`), so a tool that asks on Windows but not on macOS (monitor stats,
+/// disk scan) is shown as asking.
+pub fn risk_text(tool: &PetGadgetTool, always_allowed: bool) -> Option<&'static str> {
+    if !tool.approval_required(false) { return None; }
+    if tool.approval_required(true) { return Some("매번 물어봐요(항상 허용 안 됨)"); }
+    Some(if always_allowed { "이 가젯은 항상 허용이라 묻지 않고 해요" } else { "보내기 전에 매번 물어봐요" })
 }
 
 /// The sentence before "always allow" is switched on: what then goes out without a question.
@@ -287,23 +279,41 @@ pub fn actions_summary(rows: &[PcActionRow]) -> String {
 // MARK: - gadget switches (the app's own on/off)
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum GadgetPhase { On, Off, Failed }
+pub enum GadgetPhase {
+    On,
+    Off,
+    Failed,
+    /// No module of its own (Desktop Tidy): always available, no switch.
+    AlwaysAvailable,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GadgetSwitchState {
-    pub module: ModuleId,
+    /// None: a gadget without a module of its own (Desktop Tidy).
+    pub module: Option<ModuleId>,
     pub gadget: &'static str,
     pub phase: GadgetPhase,
 }
 
 impl GadgetSwitchState {
     /// The gadgets the tab lists: every gadget with a macOS gadget id but the pet itself (Nacho never switches it).
-    pub fn listed() -> Vec<(ModuleId, &'static str)> {
-        ModuleId::ALL.iter().filter_map(|m| PetGadgetTools::gadget_of_module(*m).map(|g| (*m, g))).collect()
+    pub fn listed() -> Vec<(Option<ModuleId>, &'static str)> {
+        let mut v: Vec<(Option<ModuleId>, &'static str)> = ModuleId::ALL.iter().filter_map(|m| PetGadgetTools::gadget_of_module(*m).map(|g| (Some(*m), g))).collect();
+        // Gadgets of the registry with no module (Desktop Tidy) are always available.
+        for g in PetGadgetTools::gadgets(true) {
+            if g != "combo" && !v.iter().any(|(_, x)| *x == g) { v.push((None, g)); }
+        }
+        v
     }
 
+    pub fn title(&self) -> String { self.module.map(|m| m.name().to_string()).unwrap_or_else(|| PetGadgetTools::display_name(self.gadget).to_string()) }
+
     pub fn control(&self) -> ConnectionsSwitch {
-        if self.phase == GadgetPhase::On { ConnectionsSwitch::On } else { ConnectionsSwitch::Off }
+        match self.phase {
+            GadgetPhase::On => ConnectionsSwitch::On,
+            GadgetPhase::Off | GadgetPhase::Failed => ConnectionsSwitch::Off,
+            GadgetPhase::AlwaysAvailable => ConnectionsSwitch::Fixed("항상 쓸 수 있어요".into()),
+        }
     }
 }
 
@@ -368,12 +378,12 @@ fn gadget_rows(input: &ConnectionsInput) -> Vec<ConnectionsRow> {
     input.gadgets.iter().map(|g| {
         let actions = actions_for(g.gadget, input.disabled, input.names);
         let (status, tone) = match g.phase {
-            GadgetPhase::On => (if actions.is_empty() { "켜짐".to_string() } else { actions_summary(&actions) }, ConnectionsTone::Normal),
+            GadgetPhase::On | GadgetPhase::AlwaysAvailable => (if actions.is_empty() { "켜짐".to_string() } else { actions_summary(&actions) }, ConnectionsTone::Normal),
             GadgetPhase::Off => ("꺼짐".to_string(), ConnectionsTone::Off),
             GadgetPhase::Failed => ("시작하지 못했어요".to_string(), ConnectionsTone::Attention),
         };
         ConnectionsRow { target: ConnectionsRef::Gadget(g.gadget), section: ConnectionsSection::Gadgets,
-            title: g.module.name().to_string(), status, tone, control: g.control() }
+            title: g.title(), status, tone, control: g.control() }
     }).collect()
 }
 
@@ -481,7 +491,7 @@ pub fn gadget_detail(g: &GadgetSwitchState, input: &ConnectionsInput) -> Connect
     let always = input.always_allowed.contains(g.gadget);
     let actions = actions_for(g.gadget, input.disabled, input.names);
     let abilities = actions.iter().map(|a| ConnectionsAbility {
-        id: a.id.clone(), title: a.title.clone(), on: Some(a.on), risk: Some(a.risk), risk_text: risk_text(a.risk, always), note: None,
+        id: a.id.clone(), title: a.title.clone(), on: Some(a.on), risk: Some(a.risk), risk_text: PetGadgetTools::find(&a.id).and_then(|t| risk_text(&t, always)), note: None,
     }).collect();
     let always_allow = input.trustable.contains(g.gadget).then(|| ConnectionsAlwaysAllow {
         gadget: g.gadget, on: always,
@@ -490,13 +500,14 @@ pub fn gadget_detail(g: &GadgetSwitchState, input: &ConnectionsInput) -> Connect
     });
     let (status, tone, mut notice) = match g.phase {
         GadgetPhase::On => ("켜짐", ConnectionsTone::Normal, None),
+        GadgetPhase::AlwaysAvailable => ("항상 쓸 수 있어요", ConnectionsTone::Normal, None),
         GadgetPhase::Off => ("꺼짐", ConnectionsTone::Off, Some("켜면 아래 일을 나초가 이 PC에서 할 수 있어요.".to_string())),
         GadgetPhase::Failed => ("시작하지 못했어요", ConnectionsTone::Attention, None),
     };
     if !input.allow_combo_control { notice = Some("나초가 이 PC를 쓰지 못하게 꺼 두었어요. 설정에서 다시 켤 수 있어요.".into()); }
     ConnectionsDetail {
-        target: ConnectionsRef::Gadget(g.gadget), title: g.module.name().to_string(), status: status.into(), tone,
-        control: g.control(), summary: format!("나초콤보의 {} 가젯이에요.", g.module.name()),
+        target: ConnectionsRef::Gadget(g.gadget), title: g.title(), status: status.into(), tone,
+        control: g.control(), summary: format!("나초콤보의 {} 가젯이에요.", g.title()),
         abilities_title: "이 PC에서 나초가 하는 일", abilities, empty_abilities: "나초가 이 가젯으로 하는 일이 없어요.",
         facts: vec![ConnectionsFact { label: "PC 행동", value: actions_summary(&actions) }], notice, scope: None, always_allow, can_disconnect: false,
     }
@@ -676,7 +687,7 @@ mod tests {
     }
 
     fn gadgets(on: &[ModuleId]) -> Vec<GadgetSwitchState> {
-        GadgetSwitchState::listed().into_iter().map(|(module, gadget)| GadgetSwitchState { module, gadget, phase: if on.contains(&module) { GadgetPhase::On } else { GadgetPhase::Off } }).collect()
+        GadgetSwitchState::listed().into_iter().map(|(module, gadget)| GadgetSwitchState { module, gadget, phase: match module { None => GadgetPhase::AlwaysAvailable, Some(m) if on.contains(&m) => GadgetPhase::On, Some(_) => GadgetPhase::Off } }).collect()
     }
 
     struct Fixture { gadgets: Vec<GadgetSwitchState>, disabled: BTreeSet<String>, always: BTreeSet<String>, trustable: BTreeSet<String>, names: Vec<&'static str>, overview: Option<ConnectorOverview>, control: bool }
@@ -782,8 +793,10 @@ mod tests {
         for (_, g) in GadgetSwitchState::listed() { seen += actions_for(g, &BTreeSet::new(), &n).len(); }
         // Nacho Combo's own tools (switch a gadget, workspaces) belong to no gadget row, as on macOS.
         let own = n.iter().filter(|t| PetGadgetTools::gadget(t) == Some("combo")).count();
-        assert_eq!(own, 5);
-        assert_eq!(seen + own, n.len(), "no declared tool is missing from the gadget lists");
+        assert!(own >= 5);
+        let listed: Vec<&str> = GadgetSwitchState::listed().into_iter().map(|(_, g)| g).collect();
+        let orphans: Vec<&str> = n.iter().copied().filter(|t| { let g = PetGadgetTools::gadget(t).unwrap_or("?"); g != "combo" && !listed.contains(&g) }).collect();
+        assert_eq!(seen + own, n.len(), "tools under no gadget row: {orphans:?}");
         // The handoff tools appear after the last tool of their gadget once the shell has the handoff.
         let with = declared_names(true);
         assert_eq!(with.len(), n.len() + 2);
@@ -795,8 +808,14 @@ mod tests {
     fn an_action_without_a_label_shows_the_first_sentence_of_its_description() {
         assert!(action_label("combo_unheard_of").is_none());
         // Every label belongs to a tool the registry knows (a stale label is a mistake).
-        for name in PetGadgetTools::WINDOWS.iter().chain(PetGadgetTools::WITH_CHAT_HANDOFF.iter()) {
-            assert!(action_label(name).is_some(), "label for {name}");
+        let known: Vec<&str> = PetGadgetTools::declared(true).iter().map(|t| t.name).collect();
+        for name in ["combo_arrange_window", "combo_clipboard_get_item", "combo_awake_stop", "combo_shelf_give", "combo_capture_ask"] {
+            assert!(action_label(name).is_some() && known.contains(&name), "label for {name}");
+        }
+        // A tool without a label shows the first sentence of its description (no empty row).
+        let n = declared_names(false);
+        for (_, g) in GadgetSwitchState::listed() {
+            for a in actions_for(g, &BTreeSet::new(), &n) { assert!(!a.title.trim().is_empty(), "{} has a title", a.id); }
         }
         let d = first_sentence("지금 소리 출력 장치 이름·소리 크기를 봐요. 소리를 바꾸기 전에 확인할 때 써요.", 120);
         assert_eq!(d, "지금 소리 출력 장치 이름·소리 크기를 봐요.");
@@ -807,11 +826,20 @@ mod tests {
 
     #[test]
     fn risk_text_follows_always_allow_and_destructive_always_asks() {
-        assert_eq!(risk_text(PetToolRisk::Read, false), None);
-        assert_eq!(risk_text(PetToolRisk::Change, true), None);
-        assert_eq!(risk_text(PetToolRisk::ContentOut, false), Some("보내기 전에 매번 물어봐요"));
-        assert_eq!(risk_text(PetToolRisk::ContentOut, true), Some("이 가젯은 항상 허용이라 묻지 않고 해요"));
-        assert_eq!(risk_text(PetToolRisk::Destructive, true), Some("매번 물어봐요(항상 허용 안 됨)"));
+        let tool = |n: &str| PetGadgetTools::find(n).unwrap();
+        assert_eq!(risk_text(&tool("combo_clipboard_list"), false), None);
+        assert_eq!(risk_text(&tool("combo_clipboard_copy_again"), true), None);
+        assert_eq!(risk_text(&tool("combo_clipboard_get_item"), false), Some("보내기 전에 매번 물어봐요"));
+        assert_eq!(risk_text(&tool("combo_clipboard_get_item"), true), Some("이 가젯은 항상 허용이라 묻지 않고 해요"));
+        assert_eq!(risk_text(&tool("combo_quit_app"), true), Some("매번 물어봐요(항상 허용 안 됨)"));
+        // Windows asks for the monitor's and the disk map's answers (program names and paths leave the PC) although
+        // their risk is only "read": the tab says so, as the declaration does.
+        for t in PetGadgetTools::declared(false) {
+            let asks = t.approval_required(false);
+            assert_eq!(risk_text(&t, false).is_some(), asks, "{}: the tab and the declaration agree", t.name);
+            assert_eq!(risk_text(&t, true).is_some(), asks);
+        }
+        assert!(PetGadgetTools::declared(false).iter().any(|t| t.risk == PetToolRisk::Read && t.approval_required(false) && risk_text(t, false).is_some()));
         let mut f = Fixture::new();
         let d = detail(&ConnectionsRef::Gadget("clipboard"), &f.input()).unwrap();
         let get = d.abilities.iter().find(|a| a.id == "combo_clipboard_get_item").unwrap();
@@ -905,6 +933,19 @@ mod tests {
         trust.set_disabled(BTreeSet::new());
         assert_eq!((get(&trust), declared.load(Ordering::SeqCst)), (Some(true), 4));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_gadget_without_a_module_is_always_available_and_has_no_switch() {
+        let f = Fixture::new();
+        let row = sections(&f.input(), "")[2].rows.iter().find(|r| r.target == ConnectionsRef::Gadget("desktop")).cloned().expect("Desktop Tidy is listed");
+        assert_eq!(row.title, "Desktop Tidy");
+        assert_eq!(row.control, ConnectionsSwitch::Fixed("항상 쓸 수 있어요".into()));
+        assert!(!row.control.can_toggle());
+        let d = detail(&ConnectionsRef::Gadget("desktop"), &f.input()).unwrap();
+        // apply / undo ask every time: the tab says so and offers no "always allow" for them.
+        assert_eq!(d.abilities.iter().find(|a| a.id == "combo_desktop_tidy_apply").unwrap().risk_text, Some("매번 물어봐요(항상 허용 안 됨)"));
+        assert!(d.always_allow.is_none());
     }
 
     #[test]
