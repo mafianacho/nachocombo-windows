@@ -256,6 +256,10 @@ pub fn controls(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
             ui.label(&a.clock.status(), sans(12), x, y, w, th.ink2);
             y += 24.0;
         }
+        ModuleId::WidgetBoard => {
+            if btn(ui, "board", "Open Widget Board", &mut y, Btn::Primary) { later(|| { close(); crate::board::show(); }); }
+            y += 46.0;
+        }
         ModuleId::MouseTune => {
             let on = a.settings.options.mouse_reverse;
             if btn(ui, "mreverse", if on { "Natural Wheel" } else { "Reverse the Wheel" }, &mut y, Btn::Primary) { later(crate::mouse::toggle_reverse); }

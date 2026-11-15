@@ -135,6 +135,7 @@ pub fn tile_colors(m: ModuleId) -> (Color, Color, Color) {
         ModuleId::AppSwitch => (rgb(0xB9C4FF), rgb(0x3C4FC4), white),
         ModuleId::CalendarClock => (rgb(0xFF9F9A), rgb(0xD9382F), white),
         ModuleId::MouseTune => (rgb(0xFF9A8A), rgb(0xC8321F), white),
+        ModuleId::WidgetBoard => (rgb(0xFFE08A), rgb(0xE59A12), rgb(0x2A1A0B)),
     }
 }
 
@@ -310,6 +311,7 @@ fn tile_status(m: ModuleId, st: &State) -> String {
             ModuleId::DiskMap => if crate::diskmap::is_open() { "Map open".into() } else { "Ready".into() },
             ModuleId::CalendarClock => a.clock.status(),
             ModuleId::MouseTune => if a.settings.options.mouse_reverse { "Wheel reversed".into() } else { "Wheel as Windows has it".into() },
+            ModuleId::WidgetBoard => if a.board.is_open() { "Board open".into() } else { "Ready".into() },
             ModuleId::DeviceControl => {
                 let out = a.devices.outputs.iter().find(|d| d.default).map_or("No output".to_string(), |d| d.name.clone());
                 if a.devices.mic_muted { format!("Mic muted · {out}") } else { out }
@@ -701,6 +703,14 @@ fn settings_tab(ui: &mut Ui, m: ModuleId, x: f64, y: f64, w: f64) -> f64 {
                 if let Some(v) = r { o.mouse_precision = v; }
                 y = ny;
                 y += ui.label("Your own pointer and scroll settings come back when you switch this off or quit.", sans(12), x + 18.0, y + 6.0, w - 36.0, th.ink2) + 14.0;
+            }
+            ModuleId::WidgetBoard => {
+                y += ui.label("The board has no options here: open it, press Edit, and move, resize or hide its tiles.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 12.0;
+                if !a.settings.bento.is_none() {
+                    if ui.button("boardreset", "Reset the Board", x + 18.0, y + 8.0, Btn::Secondary, true) { later(|| app().update(|s| s.bento = None)); }
+                    y += 44.0;
+                }
+                y += 12.0;
             }
             ModuleId::DiskMap => {
                 y += ui.label("Disk Map has no options: it scans when you open it.", sans(13), x + 18.0, y + 12.0, w - 36.0, th.ink2) + 24.0;
@@ -1252,7 +1262,7 @@ pub fn ctl(a: &[String]) {
 /// `ctl snapshot settings|panel|monitor <file.png>`: the window's picture without capturing the screen.
 pub fn snapshot(which: &str, path: &std::path::Path) {
     let a = app();
-    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), _ => None };
+    let h = match which { "settings" => a.settings_window.win, "panel" => a.panel.hwnd().map(|h| h.0 as isize), "monitor" => a.monitor.panel, "clock" => a.clock.popup_hwnd(), "board" => crate::board::hwnd(), _ => None };
     let Some(h) = h else { return };
     let ptr = unsafe { GetWindowLongPtrW(HWND(h as *mut _), GWLP_USERDATA) } as *mut UiWindow;
     if !ptr.is_null() { if let Err(e) = unsafe { &mut *ptr }.snapshot(path) { let _ = std::fs::write(a.dir.join("snapshot-error.txt"), format!("{e:?}")); } }

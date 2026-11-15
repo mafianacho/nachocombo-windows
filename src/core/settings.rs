@@ -8,17 +8,17 @@ use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock, MouseTune }
+pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock, MouseTune, WidgetBoard }
 
 impl ModuleId {
-    pub const ALL: [ModuleId; 13] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
-        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock, ModuleId::MouseTune];
+    pub const ALL: [ModuleId; 14] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
+        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock, ModuleId::MouseTune, ModuleId::WidgetBoard];
     pub fn name(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "Tray Organizer", ModuleId::SystemMonitor => "System Monitor", ModuleId::WindowSnap => "Window Snap",
             ModuleId::FileShelf => "File Shelf", ModuleId::CaptureFloat => "Capture Float", ModuleId::FocusDim => "Focus Dim",
             ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map", ModuleId::AppSwitch => "App Switch",
-            ModuleId::CalendarClock => "Calendar Clock", ModuleId::MouseTune => "Mouse Tune",
+            ModuleId::CalendarClock => "Calendar Clock", ModuleId::MouseTune => "Mouse Tune", ModuleId::WidgetBoard => "Widget Board",
         }
     }
     pub fn key(self) -> &'static str {
@@ -26,7 +26,7 @@ impl ModuleId {
             ModuleId::TrayOrganizer => "tray", ModuleId::SystemMonitor => "monitor", ModuleId::WindowSnap => "snap",
             ModuleId::FileShelf => "shelf", ModuleId::CaptureFloat => "capture", ModuleId::FocusDim => "dim",
             ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap", ModuleId::AppSwitch => "appswitch",
-            ModuleId::CalendarClock => "clock", ModuleId::MouseTune => "mouse",
+            ModuleId::CalendarClock => "clock", ModuleId::MouseTune => "mouse", ModuleId::WidgetBoard => "board",
         }
     }
     pub fn from_key(k: &str) -> Option<ModuleId> { Self::ALL.into_iter().find(|m| m.key() == k) }
@@ -203,6 +203,14 @@ pub struct AppSettings {
     pub language: Option<String>,
     /// Mouse Tune: the user's own system values and the ones it set, kept so they come back even after a crash.
     pub mouse_saved: Option<Saved>,
+    /// Widget Board: order, size and hidden tiles. None until the user edits it; a broken value falls back to None.
+    #[serde(deserialize_with = "lenient_board")]
+    pub bento: Option<super::bento::BentoLayout>,
+}
+
+fn lenient_board<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<super::bento::BentoLayout>, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(serde_json::from_value(v).ok())
 }
 
 impl Default for AppSettings {
@@ -210,7 +218,7 @@ impl Default for AppSettings {
         AppSettings { enabled: BTreeMap::new(), dim_intensity: 0.5, options: Options::default(),
             monitor_items: vec![MonitorItem::Cpu, MonitorItem::Memory, MonitorItem::Network], pinned_tools: vec![], tool_shortcuts: BTreeMap::new(),
             action_shortcuts: BTreeMap::new(), launch_window: LaunchWindow::WhenNeeded, attention_dot: true, combo: None, custom_combos: vec![], welcomed: false,
-            tray_keep: vec![], tray_original: BTreeMap::new(), tray_collapsed: false, window_size: None, last_page: None, language: None, mouse_saved: None }
+            tray_keep: vec![], tray_original: BTreeMap::new(), tray_collapsed: false, window_size: None, last_page: None, language: None, mouse_saved: None, bento: None }
     }
 }
 
@@ -225,6 +233,11 @@ pub fn clamp_dim(v: f64) -> f64 { if v.is_finite() { v.clamp(0.1, 0.9) } else { 
 impl AppSettings {
     pub fn is_on(&self, id: ModuleId) -> bool { self.enabled.get(&id).copied().unwrap_or(false) }
     pub fn set_on(&mut self, id: ModuleId, on: bool) { self.enabled.insert(id, on); }
+
+    /// The board to show: the saved one (with gadgets added since), else the default for these settings.
+    pub fn board_layout(&self) -> super::bento::BentoLayout {
+        match &self.bento { Some(b) => b.normalized(), None => super::bento::BentoLayout::defaults(|m| self.is_on(m)) }
+    }
 
     /// A missing or broken file gives the defaults; a broken file is kept beside it, never overwritten silently.
     pub fn load(path: &Path) -> AppSettings {
