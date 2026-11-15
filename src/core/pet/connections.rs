@@ -342,7 +342,7 @@ fn matches(row: &ConnectionsRow, q: &str, overview: Option<&ConnectorOverview>) 
     match &row.target {
         ConnectionsRef::Tool(id) => if let Some(t) = overview.and_then(|o| o.tools.iter().find(|t| &t.id == id)) { hay.extend([t.name.clone(), t.description.clone()]); },
         ConnectionsRef::Connector(id) => if let Some(c) = overview.and_then(|o| o.connections.iter().find(|c| &c.id == id)) { hay.extend([c.source.clone(), c.account_label.clone().unwrap_or_default()]); },
-        ConnectionsRef::Gadget(g) => hay.extend([g.to_string(), PetGadgetTools::display_name(g).to_string()]),
+        ConnectionsRef::Gadget(g) => hay.push(g.to_string()),
     }
     hay.iter().any(|h| h.to_lowercase().contains(q))
 }
@@ -373,7 +373,7 @@ fn gadget_rows(input: &ConnectionsInput) -> Vec<ConnectionsRow> {
             GadgetPhase::Failed => ("시작하지 못했어요".to_string(), ConnectionsTone::Attention),
         };
         ConnectionsRow { target: ConnectionsRef::Gadget(g.gadget), section: ConnectionsSection::Gadgets,
-            title: PetGadgetTools::display_name(g.gadget).to_string(), status, tone, control: g.control() }
+            title: g.module.name().to_string(), status, tone, control: g.control() }
     }).collect()
 }
 
@@ -495,8 +495,8 @@ pub fn gadget_detail(g: &GadgetSwitchState, input: &ConnectionsInput) -> Connect
     };
     if !input.allow_combo_control { notice = Some("나초가 이 PC를 쓰지 못하게 꺼 두었어요. 설정에서 다시 켤 수 있어요.".into()); }
     ConnectionsDetail {
-        target: ConnectionsRef::Gadget(g.gadget), title: PetGadgetTools::display_name(g.gadget).to_string(), status: status.into(), tone,
-        control: g.control(), summary: format!("나초콤보의 {} 가젯이에요.", PetGadgetTools::display_name(g.gadget)),
+        target: ConnectionsRef::Gadget(g.gadget), title: g.module.name().to_string(), status: status.into(), tone,
+        control: g.control(), summary: format!("나초콤보의 {} 가젯이에요.", g.module.name()),
         abilities_title: "이 PC에서 나초가 하는 일", abilities, empty_abilities: "나초가 이 가젯으로 하는 일이 없어요.",
         facts: vec![ConnectionsFact { label: "PC 행동", value: actions_summary(&actions) }], notice, scope: None, always_allow, can_disconnect: false,
     }
@@ -763,6 +763,8 @@ mod tests {
         assert!(clip.control.is_on());
         let dim = rows.iter().find(|r| r.target == ConnectionsRef::Gadget("dim")).unwrap();
         assert_eq!((dim.status.as_str(), dim.tone, dim.control.clone()), ("꺼짐", ConnectionsTone::Off, ConnectionsSwitch::Off));
+        assert!(rows.iter().all(|r| r.title != "Nacho Combo"), "every gadget row is named after its own gadget");
+        assert!(rows.iter().any(|r| r.title == ModuleId::TrayOrganizer.name()));
         // The pet itself is never listed: Nacho cannot switch it, and the tab has no switch for it either.
         assert!(!rows.iter().any(|r| r.title == ModuleId::NachoPet.name()));
         let mut f = Fixture::new();

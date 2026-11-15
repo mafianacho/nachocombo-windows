@@ -17,7 +17,7 @@
 // The model is NOT real: replies are canned. Tool use is simulated with keyword rules (see `planTool`) so the
 // connector round trip runs end to end; pictures are "seen" by reading the PNG header (width × height).
 //
-// usage: node tools/mock-server/server.mjs [--port 8787] [--log path.jsonl] [--delay-ms 60] [--access-ttl 300]
+// usage: node tools/mock-server/server.mjs [--port 8787] [--log path.jsonl] [--delay-ms 60] [--access-ttl 300] [--code-ttl 60]
 // magic texts: "/error" -> error frame, "/drop" -> server closes socket mid-stream but finishes and stores the answer,
 // "/long" -> long answer (for stop), "/task …" -> handed to a task (task_update, interim, choice card, task_result),
 // "/remember …" -> memory_update + an answer that used a memory, "/search …" -> tool call with an interim line,
@@ -37,6 +37,7 @@ const HOST = '127.0.0.1';
 const LOG = opt('log', '');
 const DELAY = Number(opt('delay-ms', '60'));
 const ACCESS_TTL = Number(opt('access-ttl', '300'));
+const CODE_TTL = Number(opt('code-ttl', '60')); // seconds a login code stays valid (a slow VM needs more)
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('--port must be 1..65535');
 
 const CLIENT_ID = 'nacho-gadget-app';
@@ -159,7 +160,7 @@ const server = http.createServer(async (req, res) => {
       if (q.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(q.code_challenge || '')) return bad('Missing parameter: code_challenge_method');
       if (!q.state) return bad('missing state');
       const code = 'mock-code-' + rand();
-      codes.set(code, { challenge: q.code_challenge, expires: Date.now() + 60_000 });
+      codes.set(code, { challenge: q.code_challenge, expires: Date.now() + CODE_TTL * 1000 });
       log('oidc', { event: 'authorized', client_id: q.client_id, redirect_uri: q.redirect_uri, code_challenge_method: q.code_challenge_method });
       const loc = `${REDIRECT}?state=${encodeURIComponent(q.state)}&session_state=${uuid()}&code=${encodeURIComponent(code)}`;
       res.writeHead(302, { location: loc });

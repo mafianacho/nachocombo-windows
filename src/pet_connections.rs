@@ -233,11 +233,13 @@ fn draw_detail(ui: &mut Ui, pal: &Pal, d: &ConnectionsDetail, confirm: &Option<C
     let cw = w - 2.0 * m;
     let mut y = y0;
     // back
-    let back = Rect::new(m - 6.0, y, 70.0, 28.0);
+    let back_label = t("연결");
+    let bw = ui.c.measure(&back_label, medium(12), 300.0).0.ceil();
+    let back = Rect::new(m - 6.0, y, 22.0 + bw + 10.0, 28.0);
     let resp = ui.hit(ui.id("conn-back"), back, true);
     if resp.hover { ui.c.round(back, 8.0, pal.surface); ui.st.cursor_hand = true; }
     ui.c.glyph(0xE72B, 12, Rect::new(back.x, y, 22.0, 28.0), pal.secondary);
-    ui.c.line_text(&t("연결"), medium(12), Rect::new(back.x + 22.0, y, 48.0, 28.0), pal.secondary, Align::Left);
+    ui.c.line_text(&back_label, medium(12), Rect::new(back.x + 22.0, y, bw + 4.0, 28.0), pal.secondary, Align::Left);
     if resp.clicked { acts.push(Act::Back); }
     y += 36.0;
     // title, status, the switch
@@ -314,8 +316,6 @@ fn draw_detail(ui: &mut Ui, pal: &Pal, d: &ConnectionsDetail, confirm: &Option<C
     // scope
     if let Some(sc) = &d.scope {
         y += 6.0;
-        ui.c.line_text(&t("권한 범위"), semi(12), Rect::new(m, y, cw, 20.0), pal.secondary, Align::Left);
-        y += 24.0;
         let opts: Vec<String> = sc.levels.iter().map(|(_, title)| t(title).into_owned()).collect();
         let cur = sc.levels.iter().position(|(id, _)| *id == sc.selected);
         if let Some(i) = ui.segments("scope", &opts, cur, Rect::new(m, y, cw, 30.0), false) {
