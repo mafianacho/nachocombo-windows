@@ -4,7 +4,8 @@
 # capture → pet (picture upload), shelf → pet (file upload), refused file type, connector commands (window, gadget,
 # list) through /ws/connector, server features (config/usage, history, delta recovery, tool progress, task + choice
 # card, plan task start / cancel / changed estimate, memory forget/undo/feedback, dictation, read mark), token refresh
-# after a restart, logout. Output: target/pet-roundtrip/*.log, server*.jsonl, summary.txt. Exit 0 only if every check
+# after a restart, logout; the W5a gadget tools (window grid + undo, monitor / disk with approval, desktop tidy plan ->
+# approved apply -> approved undo on a real folder, guide, mouse). Output: target/pet-roundtrip/*.log, server*.jsonl, summary.txt. Exit 0 only if every check
 # passes. Needs Rust and Node >= 18. CARGO may point at a wrapper (e.g. a container with a C linker).
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -80,7 +81,7 @@ check "chat -> Computer Use refused by the app (never reaches the PC)" $(( rc !=
 # Desktop actions (W3): the Windows declaration, approval cards, "always allow" per gadget.
 TRUST="$OUT/trust/gadget-trust.json"
 rc=$(run cmd-approve command --server "$S1" --store "$STORE" --trust "$TRUST" "클립보드 1번 읽어 줘")
-check "content_out: approval card first, approved -> PC reads clipboard item 1 -> result" $(( rc != 0 || $(cnt 'approval required: .*combo_clipboard_get_item' "$OUT/cmd-approve.log") != 1 || $(cnt 'card approval "PC에서 combo_clipboard_get_item 실행" -> approve' "$OUT/cmd-approve.log") != 1 || $(cnt 'pc: clipboard read item 1 (17 characters)' "$OUT/cmd-approve.log") != 1 || $(cnt '"event":"approval_card","capability":"combo_clipboard_get_item"' "$OUT/server.jsonl") != 1 || $(cnt 'combo_clipboard_get_item 결과: Clipboard item 1.' "$OUT/cmd-approve.log") < 1 ))
+check "content_out: approval card first, approved -> PC reads clipboard item 1 -> result" $(( rc != 0 || $(cnt 'approval required: .*combo_clipboard_get_item' "$OUT/cmd-approve.log") != 1 || $(cnt 'card approval "PC에서 클립보드 항목 읽기 실행" -> approve' "$OUT/cmd-approve.log") != 1 || $(cnt 'pc: clipboard read item 1 (17 characters)' "$OUT/cmd-approve.log") != 1 || $(cnt '"event":"approval_card","capability":"combo_clipboard_get_item"' "$OUT/server.jsonl") != 1 || $(cnt 'combo_clipboard_get_item 결과: Clipboard item 1.' "$OUT/cmd-approve.log") < 1 ))
 rc=$(run cmd-deny command --server "$S1" --store "$STORE" --trust "$TRUST" --deny "클립보드 1번 읽어 줘")
 check "content_out: denied card -> the PC is never asked" $(( rc != 0 || $(cnt 'card approval .* -> deny' "$OUT/cmd-deny.log") != 1 || $(cnt 'pc: clipboard read' "$OUT/cmd-deny.log") != 0 || $(cnt '"answer":"deny"' "$OUT/server.jsonl") != 1 || $(cnt 'user_denied' "$OUT/cmd-deny.log") < 1 ))
 rc=$(run trust-on trust --trust "$TRUST" clipboard on)
@@ -90,10 +91,10 @@ check "always allow: a gadget without a content_out action has no switch" $(( rc
 rc=$(run cmd-trusted command --server "$S1" --store "$STORE" --trust "$TRUST" "클립보드 1번 읽어 줘")
 check "always allow (read back in a new run): declared without approval, no card, PC reads" $(( rc != 0 || $(cnt 'approval required: .*combo_clipboard_get_item' "$OUT/cmd-trusted.log") != 0 || $(cnt 'card approval' "$OUT/cmd-trusted.log") != 0 || $(cnt 'pc: clipboard read item 1' "$OUT/cmd-trusted.log") != 1 || $(cnt '"event":"approval_card","capability":"combo_clipboard_get_item"' "$OUT/server.jsonl") != 2 ))
 rc=$(run cmd-quit command --server "$S1" --store "$STORE" --trust "$TRUST" "메모장 종료해 줘")
-check "destructive (quit app): card even with always allow on" $(( rc != 0 || $(cnt 'card approval "PC에서 combo_quit_app 실행" -> approve' "$OUT/cmd-quit.log") != 1 || $(cnt 'pc: quit 메모장' "$OUT/cmd-quit.log") != 1 ))
+check "destructive (quit app): card even with always allow on" $(( rc != 0 || $(cnt 'card approval "PC에서 앱 종료 실행" -> approve' "$OUT/cmd-quit.log") != 1 || $(cnt 'pc: quit 메모장' "$OUT/cmd-quit.log") != 1 ))
 rc=$(run trust-off trust --trust "$TRUST" clipboard off)
 rc2=$(run cmd-untrusted command --server "$S1" --store "$STORE" --trust "$TRUST" "클립보드 1번 읽어 줘")
-check "always allow switched off and stored: the card is back" $(( rc != 0 || rc2 != 0 || $(cnt '"alwaysAllowed":\[\]' "$TRUST") != 1 || $(cnt 'card approval "PC에서 combo_clipboard_get_item 실행" -> approve' "$OUT/cmd-untrusted.log") != 1 ))
+check "always allow switched off and stored: the card is back" $(( rc != 0 || rc2 != 0 || $(cnt '"alwaysAllowed":\[\]' "$TRUST") != 1 || $(cnt 'card approval "PC에서 클립보드 항목 읽기 실행" -> approve' "$OUT/cmd-untrusted.log") != 1 ))
 rc=$(run cmd-awake command --server "$S1" --store "$STORE" --trust "$TRUST" "30분 동안 깨워 줘")
 check "change (Keep Awake for 30 min): runs at once, no card" $(( rc != 0 || $(cnt 'pc: keep awake 30 min' "$OUT/cmd-awake.log") != 1 || $(cnt 'card approval' "$OUT/cmd-awake.log") != 0 ))
 rc=$(run cmd-clear command --server "$S1" --store "$STORE" --trust "$TRUST" "선반 비워 줘")
@@ -134,6 +135,38 @@ check "dictation: multipart to POST /api/v1/dictation, text back (not sent by it
 rc=$(run dictate-refused dictate --server "$S1" --store "$STORE" "$OUT/voice.m4a" video/mp4)
 check "dictation: unsupported audio type refused before upload" $(( rc != 2 || $(cnt '"event":"transcribed"' "$OUT/server.jsonl") != 1 ))
 check "read mark sent as WS read frame after answers" $(( $(cnt '"event":"read","seq":' "$OUT/server.jsonl") < 1 ))
+
+# Gadget tools (W5a): the 57-tool declaration, window grid + undo (real planner), data gadgets (approval on Windows),
+# desktop tidy plan -> approved apply -> approved undo on a real folder (nothing deleted), guides, settings.
+rc=$(run cmd-tile command --server "$S1" --store "$STORE" --trust "$TRUST" "창 2x2 바둑판으로 깔고 되돌려 줘")
+check "W5a declaration: 57 capabilities, monitor/disk/desktop apply+undo ask" $(( rc != 0 || $(cnt 'declare 57 capabilities, approval required: .*combo_monitor_stats.*combo_disk_top_items,combo_disk_scan.*combo_desktop_tidy_apply,combo_desktop_tidy_undo,combo_desktop_arrange_apply' "$OUT/cmd-tile.log") != 1 ))
+check "window tile 2x2 of every window, then undo: change, no card, 4 placed and 4 restored" $(( rc != 0 || $(cnt 'pc: window tool placed 4 window(s)' "$OUT/cmd-tile.log") != 1 || $(cnt 'pc: window undo restored 4 window(s)' "$OUT/cmd-tile.log") != 1 || $(cnt 'card approval' "$OUT/cmd-tile.log") != 0 ))
+rc=$(run cmd-monitor command --server "$S1" --store "$STORE" --trust "$TRUST" "시스템 모니터 수치 알려 줘")
+check "monitor stats (program names leave the PC): approval card on Windows, approved -> numbers" $(( rc != 0 || $(cnt '"event":"approval_card","capability":"combo_monitor_stats"' "$OUT/server.jsonl") != 1 || $(cnt 'card approval "PC에서 시스템 수치 보기 실행" -> approve' "$OUT/cmd-monitor.log") != 1 || $(cnt 'pc: monitor stats' "$OUT/cmd-monitor.log") != 1 || $(cnt 'combo_monitor_stats 결과: Right now: CPU 38%' "$OUT/cmd-monitor.log") < 1 ))
+rc=$(run trust-monitor trust --trust "$TRUST" monitor on)
+rc2=$(run cmd-monitor-trusted command --server "$S1" --store "$STORE" --trust "$TRUST" "시스템 모니터 수치 알려 줘")
+check "monitor stats with always allow on: no card" $(( rc != 0 || rc2 != 0 || $(cnt 'card approval' "$OUT/cmd-monitor-trusted.log") != 0 || $(cnt 'pc: monitor stats' "$OUT/cmd-monitor-trusted.log") != 1 ))
+run trust-monitor-off trust --trust "$TRUST" monitor off >/dev/null
+rc=$(run cmd-disk command --server "$S1" --store "$STORE" --trust "$TRUST" "디스크에서 큰 거 뭐가 차지해?")
+check "disk top items (paths leave the PC): card, approved -> largest 2 items" $(( rc != 0 || $(cnt 'card approval "PC에서 디스크 큰 항목 보기 실행" -> approve' "$OUT/cmd-disk.log") != 1 || $(cnt 'pc: disk top 5' "$OUT/cmd-disk.log") != 1 ))
+DESK="$OUT/desk/Desktop"; mkdir -p "$DESK/폴더"
+for f in "스크린샷 2026-11-15 101010.png" "보고서.pdf" "사진.jpg" "자료.zip" "setup.exe" "메모.txt"; do printf 'x' > "$DESK/$f"; done
+printf '[.ShellClassInfo]' > "$DESK/desktop.ini"; printf 'L' > "$DESK/앱.lnk"; printf 'k' > "$DESK/폴더/keep.txt"
+touch -d '10 minutes ago' "$DESK"/* "$DESK"/폴더/*
+files_before=$(find "$OUT/desk" -type f ! -name 'desktop-tidy.json*' | wc -l)
+rc=$(run cmd-tidy-plan command --server "$S1" --store "$STORE" --trust "$TRUST" --desktop "$DESK" "바탕 화면 정리 계획 보여 줘")
+check "desktop tidy plan: read, no card, 6 plain files (shortcut, desktop.ini, folder skipped), nothing moved" $(( rc != 0 || $(cnt 'pc: desktop tidy_plan ok=true total=6' "$OUT/cmd-tidy-plan.log") != 1 || $(cnt 'card approval' "$OUT/cmd-tidy-plan.log") != 0 || $(find "$DESK" -maxdepth 1 -type f | wc -l) != 8 ))
+rc=$(run cmd-tidy-deny command --server "$S1" --store "$STORE" --trust "$TRUST" --deny --desktop "$DESK" "바탕 화면 정리해 줘")
+check "desktop tidy apply denied: plan made, card denied, no file moved" $(( rc != 0 || $(cnt 'card approval "PC에서 바탕 화면 정리 실행 실행" -> deny' "$OUT/cmd-tidy-deny.log") != 1 || $(cnt 'pc: desktop tidy_apply' "$OUT/cmd-tidy-deny.log") != 0 || $(find "$DESK" -maxdepth 1 -type f | wc -l) != 8 ))
+rc=$(run cmd-tidy-apply command --server "$S1" --store "$STORE" --trust "$TRUST" --desktop "$DESK" "바탕 화면 정리해 줘")
+moved=$(find "$DESK/정리됨" -type f 2>/dev/null | wc -l)
+check "desktop tidy apply: plan -> approval card -> 6 files moved into 정리됨\<category>, none deleted" $(( rc != 0 || $(cnt 'card approval "PC에서 바탕 화면 정리 실행 실행" -> approve' "$OUT/cmd-tidy-apply.log") != 1 || $(cnt 'pc: desktop tidy_apply ok=true total=0 moved=6' "$OUT/cmd-tidy-apply.log") != 1 || moved != 6 || $(find "$OUT/desk" -type f ! -name 'desktop-tidy.json*' | wc -l) != files_before ))
+rc=$(run cmd-tidy-undo command --server "$S1" --store "$STORE" --trust "$TRUST" --desktop "$DESK" "바탕 화면 정리 되돌려 줘")
+check "desktop tidy undo (new run, from the journal): card on Windows, 6 files back, none deleted" $(( rc != 0 || $(cnt '"event":"approval_card","capability":"combo_desktop_tidy_undo"' "$OUT/server.jsonl") != 1 || $(cnt 'card approval "PC에서 바탕 화면 정리 되돌리기 실행" -> approve' "$OUT/cmd-tidy-undo.log") != 1 || $(cnt 'pc: desktop tidy_undo ok=true total=0 moved=0 restored=6' "$OUT/cmd-tidy-undo.log") != 1 || $(find "$DESK" -maxdepth 1 -type f | wc -l) != 8 || $(find "$OUT/desk" -type f ! -name 'desktop-tidy.json*' | wc -l) != files_before ))
+rc=$(run cmd-guide command --server "$S1" --store "$STORE" --trust "$TRUST" "desktop 가젯 안내 해 줘")
+check "gadget guide (read): Windows guide text, no card" $(( rc != 0 || $(cnt 'pc: guide desktop (' "$OUT/cmd-guide.log") != 1 || $(cnt 'card approval' "$OUT/cmd-guide.log") != 0 ))
+rc=$(run cmd-mouse command --server "$S1" --store "$STORE" --trust "$TRUST" "마우스 휠 반대로 해 줘")
+check "mouse set (change): runs at once with the Windows options" $(( rc != 0 || $(cnt 'pc: MouseSet(PetMouseChange { reverse_scroll: Some(true)' "$OUT/cmd-mouse.log") != 1 || $(cnt 'card approval' "$OUT/cmd-mouse.log") != 0 ))
 
 rc=$(run refresh-login login --server "$S2" --store "$OUT/store2")
 sleep 3
