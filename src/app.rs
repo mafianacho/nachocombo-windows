@@ -27,7 +27,7 @@ pub const WM_PUBLIC_IP: u32 = WM_APP + 7;
 pub const WM_DEVICES: u32 = WM_APP + 8;
 pub const WM_PEEK: u32 = WM_APP + 9;
 /// Results the pet's worker threads handed over.
-pub const WM_PET: u32 = WM_APP + 10;
+pub const WM_PET: u32 = WM_APP + 11;
 
 pub const TIMER_MONITOR: usize = 1;
 pub const TIMER_TRAY: usize = 2;
@@ -461,5 +461,22 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
             let _ = TranslateMessage(&m);
             DispatchMessageW(&m);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Two gadgets once took the same private message number and the second one never ran: every number is its own.
+    #[test]
+    fn private_window_messages_are_all_different() {
+        let all = [WM_LATER, WM_TRAY, WM_SHAKE, WM_ANYDRAG, WM_WAKE, WM_OCR_DONE, WM_PUBLIC_IP, WM_DEVICES, WM_PEEK, WM_PET,
+            crate::pet_exec::WM_PET_EXEC, crate::diskmap::WM_DISKMAP, update::WM_UPDATE];
+        let mut sorted = all.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), all.len(), "a private window message number is used twice: {all:?}");
+        assert!(all.iter().all(|m| *m >= WM_APP), "private messages start at WM_APP");
     }
 }

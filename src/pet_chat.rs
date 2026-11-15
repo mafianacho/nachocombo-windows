@@ -44,6 +44,7 @@ pub fn open() {
     let c = &mut app().pet.chat;
     c.hwnd = Some(h.0 as isize);
     c.sig = 0;
+    c.pinned = true;
     c.taken_back = None;
     follow();
     win.show();
@@ -548,12 +549,11 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
     let view = Rect::new(0.0, y_top, w, bottom - y_top);
     let log_id = ui.id("log");
     let sig = signature(&items);
-    let (scroll, content) = (ui.st.scroll.get(&log_id).copied().unwrap_or(0.0), ui.st.content.get(&log_id).copied().unwrap_or(0.0));
-    let at_bottom = scroll >= content - view.h - 4.0;
+    let content = ui.st.content.get(&log_id).copied().unwrap_or(0.0);
     {
         let c = &mut a.pet.chat;
         if sig != c.sig {
-            if at_bottom || c.sig == 0 { c.stick = true; }
+            if c.pinned || c.sig == 0 { c.stick = true; }
             c.sig = sig;
         }
         if c.stick {
@@ -565,6 +565,7 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         c.last_content = content;
     }
     let mut cx = Cx { pal: &pal, w: w - 2.0 * space::M, clicked: vec![], input_fill: None };
+    let wheel = ui.st.wheel != 0.0 && view.contains(ui.st.mouse.0, ui.st.mouse.1);
     ui.scroll("log", view, |ui, y0| {
         let mut y = y0 + space::S;
         for (i, item) in items.iter().enumerate() {
@@ -573,6 +574,12 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         }
         y + space::XS
     });
+    if wheel {
+        // The user moved the log: it follows new content only when they left it at the end.
+        let (sc, ct) = (ui.st.scroll.get(&log_id).copied().unwrap_or(0.0), ui.st.content.get(&log_id).copied().unwrap_or(0.0));
+        a.pet.chat.pinned = sc >= ct - view.h - 4.0;
+        a.pet.chat.stick = false;
+    }
     let _ = focus_input;
 
     // ---- composer ----
@@ -716,7 +723,7 @@ fn sign_in_view(ui: &mut Ui, pal: &Pal, st: &crate::core::pet::session::PetSessi
     let inner = r.w - 2.0 * space::XL;
     let hi = t("Hi, I'm Nacho.");
     let p = t("Sign in with your Nacho account to chat here. You can hand me captures and files, or ask me to arrange windows and switch gadgets on and off.");
-    let small = t("You sign in in your browser. Nacho Combo never sees your password.");
+    let small = t("Signing in happens in your browser. Nacho Combo never sees your password.");
     let (_, h1) = ui.c.measure(&hi, semi(15), inner);
     let (_, h2) = ui.c.measure(&p, sans(13), inner);
     let (_, h3) = ui.c.measure(&small, sans(11), inner);

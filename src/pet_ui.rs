@@ -104,6 +104,8 @@ pub struct ChatView {
     /// The log follows its end while new content is still being measured (a card is taller than one frame knows).
     pub stick: bool,
     pub last_content: f64,
+    /// The user is at the end of the log (until the wheel moves it away): new content then keeps the end in view.
+    pub pinned: bool,
 }
 
 #[derive(Default)]
@@ -966,6 +968,16 @@ pub fn escape_recording() -> bool {
     request_frames();
     invalidate_chat();
     true
+}
+
+/// For `ctl petui dictate <file.wav> [hold]`: a 16 kHz mono 16-bit WAV goes the way a recording does (the microphone is
+/// the only thing skipped), so the dictation request can be tried on a PC without a microphone.
+pub fn dictate_from_wav(path: &str, hold: bool) {
+    let Ok(bytes) = std::fs::read(path) else { return };
+    if bytes.len() < 44 { return; }
+    let samples: Vec<i16> = bytes[44..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]])).collect();
+    app().pet.rec_mode = Some((if hold { RecMode::Hold } else { RecMode::Composer }, String::new()));
+    on_recorded(RecordEnd::Finished(samples), hold);
 }
 
 fn on_recorded(end: RecordEnd, hold: bool) {

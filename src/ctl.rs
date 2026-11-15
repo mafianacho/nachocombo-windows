@@ -37,6 +37,7 @@ pub fn run(a: &[String]) {
             "signout" => crate::pet_ui::sign_out(),
             "say" => crate::pet_ui::send_when_ready(a[2..].join(" "), false, 0),
             "reset" => crate::pet_ui::reset_position(),
+            "dictate" => crate::pet_ui::dictate_from_wav(arg(a, 2), arg(a, 3) == "hold"),
             "attach" => crate::pet_ui::attach_file(std::path::Path::new(arg(a, 2))),
             _ => {}
         },
