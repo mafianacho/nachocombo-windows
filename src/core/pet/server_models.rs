@@ -207,13 +207,16 @@ impl PetCard {
             answered_rule_id: None,
         };
         if kind == "approval" {
+            // The server may name the capability (`combo_quit_app`) in the card; the user reads what it does instead.
+            card.title = PetText::humanize_action_names(&card.title);
+            card.detail = card.detail.map(|d| PetText::humanize_action_names(&d));
             card.rule_options = p
                 .objs("rule_options")
                 .iter()
                 .filter_map(|opt| {
                     let id = opt.str("id")?;
                     let s = opt.str("summary").filter(|s| !s.is_empty())?;
-                    Some(PetCardOption::new(&id, &s))
+                    Some(PetCardOption::new(&id, &PetText::humanize_action_names(&s)))
                 })
                 .collect();
             card.answered_rule_id = answer.obj("allow_rule").and_then(|a| a.str("rule_option_id"));

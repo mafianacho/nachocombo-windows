@@ -9,6 +9,7 @@ use super::chat_state::{ChatState, ConnectionPhase, TurnStatus};
 use super::frames::ActivityKind;
 use super::selection::{PetSelectionPreview, PetSelectionRow};
 use super::server_models::{ActivityText, PetCard, PetFileLink, PetMemoryNote};
+use super::commands::PetCommands;
 use super::session::{PetAuthPhase, PetSessionState};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
@@ -180,6 +181,26 @@ fn encode(s: &str) -> String {
 pub struct PetText;
 
 impl PetText {
+    /// An approval card names the action it asks about; when the server writes the capability's own name there
+    /// (`PC에서 combo_quit_app 실행`), the user reads the tool's name instead (`앱 종료`). The raw name is not shown.
+    pub fn humanize_action_names(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut rest = text;
+        while let Some(at) = rest.find("combo_") {
+            let before_ok = rest[..at].chars().next_back().is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'));
+            let len = rest[at..].find(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).unwrap_or(rest.len() - at);
+            out.push_str(&rest[..at]);
+            let raw = &rest[at..at + len];
+            if before_ok {
+                let canonical = PetCommands::ALIASES.iter().find(|(a, _)| *a == raw).map(|(_, c)| *c).unwrap_or(raw);
+                out.push_str(Self::tool_name(canonical));
+            } else { out.push_str(raw); }
+            rest = &rest[at + len..];
+        }
+        out.push_str(rest);
+        out
+    }
+
     /// Tool names as the user reads them; the raw name stays in the tooltip.
     pub fn tool_name(raw: &str) -> &'static str {
         match raw {

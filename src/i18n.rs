@@ -18,7 +18,8 @@ fn source(lang: &str) -> &'static str {
         "ko" => include_str!("../assets/i18n/ko.json"),
         "ja" => include_str!("../assets/i18n/ja.json"),
         "zh" => include_str!("../assets/i18n/zh.json"),
-        _ => "{}",
+        // English has a table too, for the few sentences the pet's core writes in Korean (the macOS app's words).
+        _ => include_str!("../assets/i18n/en.json"),
     }
 }
 
@@ -75,18 +76,42 @@ fn fill(t: &str, args: &[String]) -> String {
     out
 }
 
+fn has_hangul(s: &str) -> bool { s.chars().any(|c| ('\u{AC00}'..='\u{D7A3}').contains(&c)) }
+
+/// One string through one table: exact, then a pattern. A piece captured from a Korean sentence is translated on its own.
+/// `open`: the patterns that start with a `{}` too; they match nearly any line that ends the same way, so they come last.
+fn lookup(table: &Table, s: &str, open: bool) -> Option<String> {
+    if let Some(v) = table.exact.get(s) { return Some(v.clone()); }
+    for (parts, v) in table.patterns.iter().filter(|(p, _)| p[0].is_empty() == open) {
+        if let Some(args) = captures(parts, s) {
+            let args: Vec<String> = args.into_iter().map(|a| if has_hangul(&a) { translate(table, &a) } else { a }).collect();
+            return Some(fill(v, &args));
+        }
+    }
+    None
+}
+
+/// `lookup`, and for a line made of several pieces (" · " or a new line apart) each piece on its own; what no table knows stays.
+fn translate(table: &Table, s: &str) -> String {
+    if let Some(v) = lookup(table, s, false) { return v; }
+    for sep in ["\n", " · "] {
+        if s.contains(sep) {
+            let out = s.split(sep).map(|p| translate(table, p)).collect::<Vec<_>>().join(sep);
+            if out != s { return out; }
+        }
+    }
+    lookup(table, s, true).unwrap_or_else(|| s.to_string())
+}
+
 pub fn t(s: &str) -> Cow<'_, str> {
     let lang = language();
-    if lang == "en" || s.is_empty() { return Cow::Borrowed(s); }
+    // English text in English needs no table; only the Korean sentences of the pet's core do.
+    if s.is_empty() || lang == "en" && s.is_ascii() { return Cow::Borrowed(s); }
     TABLE.with(|cell| {
         let mut c = cell.borrow_mut();
         if c.as_ref().is_none_or(|(l, _)| *l != lang) { *c = Some((lang.clone(), build(&lang))); }
-        let table = &c.as_ref().unwrap().1;
-        if let Some(v) = table.exact.get(s) { return Cow::Owned(v.clone()); }
-        for (parts, v) in &table.patterns {
-            if let Some(args) = captures(parts, s) { return Cow::Owned(fill(v, &args)); }
-        }
-        Cow::Borrowed(s)
+        let out = translate(&c.as_ref().unwrap().1, s);
+        if out == s { Cow::Borrowed(s) } else { Cow::Owned(out) }
     })
 }
 
