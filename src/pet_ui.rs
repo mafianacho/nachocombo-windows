@@ -106,6 +106,7 @@ pub struct ChatView {
     pub last_content: f64,
     /// The user is at the end of the log (until the wheel moves it away): new content then keeps the end in view.
     pub pinned: bool,
+    pub last_view_h: f64,
 }
 
 #[derive(Default)]

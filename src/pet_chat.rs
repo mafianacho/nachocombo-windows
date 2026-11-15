@@ -529,11 +529,11 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         let py = bottom - 4.0 - tok::CHIP_HEIGHT;
         for f in &st.pending {
             let label = f.file.name.clone();
-            let cw = (ui.c.measure(&label, sans(11), 300.0).0 + 40.0).min(tok::CHIP_MAX_WIDTH);
+            let cw = (ui.c.measure(&label, sans(11), 300.0).0 + 54.0).min(tok::CHIP_MAX_WIDTH + 30.0);
             let r = Rect::new(px, py, cw, tok::CHIP_HEIGHT);
             ui.c.round(r, rad::CHIP, pal.surface);
             ui.c.glyph(if f.file.kind == "image" { 0xEB9F } else { 0xE8A5 }, 11, Rect::new(r.x + 6.0, r.y, 16.0, r.h), pal.secondary);
-            ui.c.line_text(&label, sans(11), Rect::new(r.x + 24.0, r.y, r.w - 44.0, r.h), pal.text, Align::Left);
+            ui.c.line_text(&label, sans(11), Rect::new(r.x + 24.0, r.y, r.w - 46.0, r.h), pal.text, Align::Left);
             let xr = Rect::new(r.right() - 20.0, r.y + 2.0, 18.0, r.h - 4.0);
             let resp = ui.hit(ui.id(&format!("rm{}", f.id)), xr, false);
             ui.c.glyph(0xE711, 9, xr, if resp.hover { pal.danger } else { pal.tertiary });
@@ -555,6 +555,11 @@ fn draw(ui: &mut Ui, ctx: &mut WindowCtx) {
         if sig != c.sig {
             if c.pinned || c.sig == 0 { c.stick = true; }
             c.sig = sig;
+        }
+        if (view.h - c.last_view_h).abs() > 0.5 {
+            // Files waiting or a notice took room from the log: the end stays in view for a user who was at the end.
+            if c.pinned { c.stick = true; }
+            c.last_view_h = view.h;
         }
         if c.stick {
             // Stay at the end until the content stops growing (a card is measured one frame later).
