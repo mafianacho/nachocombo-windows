@@ -131,3 +131,20 @@ fn an_approval_card_shows_what_the_action_does_not_its_internal_name() {
     assert_eq!(PetText::humanize_action_names("my_combo_quit_app stays"), "my_combo_quit_app stays");
     assert_eq!(PetText::humanize_action_names("결제 승인"), "결제 승인");
 }
+
+/// Text the server wrote (a chat line, a card's words) passes `t` as well; a Korean pattern that starts with `{}`
+/// (`{}요일`, `{}원`, `{}까지` …) must not eat its tail.
+#[test]
+fn server_text_is_left_alone() {
+    use crate::i18n::{set_language, t};
+    let said = ["다음 주 수요일", "점심은 만원", "회의는 3월 5일 오후 2시", "내일까지", "오늘은 수요일이에요", "저녁 7시까지 부탁해요", "내일 3월 5일"];
+    for lang in ["en", "ja", "zh"] {
+        set_language(Some(lang));
+        for s in said { assert_eq!(t(s), s, "{lang}: {s}"); }
+    }
+    set_language(Some("en"));
+    assert_eq!(t("3월 5일 10:00 KST까지"), "until 3/5 10:00 KST");
+    assert_eq!(t("수요일"), "Wed");
+    assert_eq!(t("5,000원"), "5,000 KRW");
+    set_language(None);
+}

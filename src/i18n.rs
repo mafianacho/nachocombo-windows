@@ -84,8 +84,18 @@ fn lookup(table: &Table, s: &str, open: bool) -> Option<String> {
     if let Some(v) = table.exact.get(s) { return Some(v.clone()); }
     for (parts, v) in table.patterns.iter().filter(|(p, _)| p[0].is_empty() == open) {
         if let Some(args) = captures(parts, s) {
-            let args: Vec<String> = args.into_iter().map(|a| if has_hangul(&a) { translate(table, &a) } else { a }).collect();
-            return Some(fill(v, &args));
+            // A Korean pattern that starts with `{}` (`{}요일`, `{}원` …) fits the tail of any server sentence. It applies only when
+            // every Korean piece it caught is itself a sentence of ours; "다음 주 수요일" is not, so it stays as the server wrote it.
+            let ours = parts.iter().any(|p| has_hangul(p));
+            let mut out = Vec::with_capacity(args.len());
+            let mut fits = true;
+            for a in args {
+                if !has_hangul(&a) { out.push(a); continue; }
+                let t = translate(table, &a);
+                if open && ours && t == a { fits = false; break; }
+                out.push(t);
+            }
+            if fits { return Some(fill(v, &out)); }
         }
     }
     None
