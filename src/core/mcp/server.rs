@@ -30,12 +30,22 @@ impl McpServer {
     pub const MAX_CONNECTIONS: usize = 16;
     pub const REQUEST_SECONDS: u64 = 15;
 
-    /// Opens `127.0.0.1:<port>` (port 0 = any free port, for tests).
+    /// Opens `127.0.0.1:<port>` (port 0 = any free port, for tests) with the standard library's bind.
     pub fn start(service: Arc<McpService>, port: u16) -> Result<McpServer, String> {
-        let listener = TcpListener::bind((NetworkPolicy::BIND_ADDRESS, port)).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::AddrInUse { format!("Port {port} is already in use by another program.") } else { format!("The MCP server could not open port {port}: {e}") }
+        Self::start_with(service, port, |p| TcpListener::bind((NetworkPolicy::BIND_ADDRESS, p)))
+    }
+
+    /// Opens the port with `bind` (the Windows app binds with `SO_EXCLUSIVEADDRUSE`, so no other program can bind
+    /// the same address and take connections meant for Nacho Combo). A port that is taken fails here and nothing opens.
+    pub fn start_with(service: Arc<McpService>, port: u16, bind: impl FnOnce(u16) -> std::io::Result<TcpListener>) -> Result<McpServer, String> {
+        let listener = bind(port).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AddrInUse || e.kind() == std::io::ErrorKind::PermissionDenied {
+                format!("Port {port} is already in use by another program.")
+            } else { format!("The MCP server could not open port {port}: {e}") }
         })?;
         let addr = listener.local_addr().map_err(|e| e.to_string())?;
+        // Only ever loopback, whatever the bind function did.
+        if !addr.ip().is_loopback() { return Err(format!("The MCP server refused to open on {addr}: only 127.0.0.1 is allowed.")); }
         let stopping = Arc::new(AtomicBool::new(false));
         let open: Arc<Mutex<HashMap<u64, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
         let (st, sv, op) = (stopping.clone(), service.clone(), open.clone());
@@ -196,6 +206,27 @@ mod tests {
         let r = rig(None);
         let e = McpServer::start(Arc::new(r.service), port).err().unwrap();
         assert!(e.contains(&port.to_string()), "{e}");
+    }
+
+    #[test]
+    fn a_refused_bind_opens_nothing_and_says_the_port_is_taken() {
+        // What SO_EXCLUSIVEADDRUSE does on Windows when another program holds the port: the bind fails.
+        let r = rig(None);
+        let e = McpServer::start_with(Arc::new(r.service), 47653, |_| Err(std::io::Error::from(std::io::ErrorKind::AddrInUse))).err().unwrap();
+        assert_eq!(e, "Port 47653 is already in use by another program.");
+        let r = rig(None);
+        let e = McpServer::start_with(Arc::new(r.service), 47653, |_| Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied))).err().unwrap();
+        assert!(e.contains("already in use"), "WSAEACCES (another program's exclusive socket) reads the same: {e}");
+    }
+
+    #[test]
+    fn a_listener_that_is_not_loopback_is_never_served() {
+        let r = rig(None);
+        let e = McpServer::start_with(Arc::new(r.service), 0, |_| TcpListener::bind("0.0.0.0:0")).err().unwrap();
+        assert!(e.contains("only 127.0.0.1"), "{e}");
+        let r = rig(None);
+        let s = McpServer::start_with(Arc::new(r.service), 0, |p| TcpListener::bind(("127.0.0.1", p))).unwrap();
+        assert!(s.local_addr().ip().is_loopback());
     }
 
     #[test]

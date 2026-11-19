@@ -1,0 +1,1028 @@
+{
+ "groups": [
+  {
+   "high_risk": false,
+   "id": "screen",
+   "tools": [
+    "computer_screen_list_displays",
+    "computer_screen_capture"
+   ]
+  },
+  {
+   "high_risk": false,
+   "id": "appsWindows",
+   "tools": [
+    "computer_app_list",
+    "computer_app_open",
+    "computer_app_activate",
+    "computer_app_quit",
+    "computer_window_list",
+    "computer_window_set_frame",
+    "computer_window_minimize"
+   ]
+  },
+  {
+   "high_risk": false,
+   "id": "input",
+   "tools": [
+    "computer_mouse_move",
+    "computer_mouse_click",
+    "computer_mouse_drag",
+    "computer_mouse_scroll",
+    "computer_key_press",
+    "computer_type_text"
+   ]
+  },
+  {
+   "high_risk": false,
+   "id": "clipboard",
+   "tools": [
+    "computer_clipboard_read",
+    "computer_clipboard_write"
+   ]
+  },
+  {
+   "high_risk": false,
+   "id": "openItems",
+   "tools": [
+    "computer_open_url",
+    "computer_open_file"
+   ]
+  },
+  {
+   "high_risk": false,
+   "id": "systemInfo",
+   "tools": [
+    "computer_system_info",
+    "computer_process_list"
+   ]
+  },
+  {
+   "high_risk": true,
+   "id": "appleScript",
+   "tools": [
+    "computer_applescript_run"
+   ]
+  },
+  {
+   "high_risk": true,
+   "id": "shell",
+   "tools": [
+    "computer_shell_run"
+   ]
+  },
+  {
+   "high_risk": true,
+   "id": "fileAccess",
+   "tools": [
+    "computer_file_read",
+    "computer_file_write"
+   ]
+  },
+  {
+   "high_risk": true,
+   "id": "processControl",
+   "tools": [
+    "computer_process_kill"
+   ]
+  }
+ ],
+ "limits": {
+  "file_max_read": 262144,
+  "file_max_write": 1048576,
+  "gadget_default_groups": [
+   "screen",
+   "appsWindows",
+   "input",
+   "clipboard",
+   "openItems",
+   "systemInfo"
+  ],
+  "max_coordinate": 100000,
+  "screenshot_default_width": 1568,
+  "screenshot_max_width": 4096,
+  "screenshot_min_width": 64,
+  "shell_default_timeout": 30,
+  "shell_max_output": 65536,
+  "shell_max_timeout": 120,
+  "text_max": 4000
+ },
+ "source": "nachocombo (macOS) main 430ddd2, GadgetToolRegistry.all where gadget == computer, ToolGroup.allCases and the policy limits, printed by a Swift program on Linux (swift:6.0)",
+ "tools": [
+  {
+   "action": "screen_list_displays",
+   "connector_name": "combo_computer_screen_list_displays",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "screen",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "legacy_mcp_name": "screen_list_displays",
+   "mcp_name": "computer_screen_list_displays",
+   "risk": "read"
+  },
+  {
+   "action": "screen_capture",
+   "connector_name": "combo_computer_screen_capture",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "screen",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "displayId": {
+      "description": "Display ID (main display if omitted)",
+      "type": "integer"
+     },
+     "height": {
+      "description": "Region height",
+      "type": "number"
+     },
+     "maxWidth": {
+      "description": "Wider images are scaled down keeping the aspect ratio (default 1568)",
+      "type": "integer"
+     },
+     "target": {
+      "description": "What to capture",
+      "enum": [
+       "display",
+       "window",
+       "region"
+      ],
+      "type": "string"
+     },
+     "width": {
+      "description": "Region width",
+      "type": "number"
+     },
+     "windowId": {
+      "description": "Window ID (windowId from window_list)",
+      "type": "integer"
+     },
+     "x": {
+      "description": "Region top-left x",
+      "type": "number"
+     },
+     "y": {
+      "description": "Region top-left y",
+      "type": "number"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "screen_capture",
+   "mcp_name": "computer_screen_capture",
+   "risk": "content_out"
+  },
+  {
+   "action": "app_list",
+   "connector_name": "combo_computer_app_list",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "legacy_mcp_name": "app_list",
+   "mcp_name": "computer_app_list",
+   "risk": "read"
+  },
+  {
+   "action": "app_open",
+   "connector_name": "combo_computer_app_open",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "bundleId": {
+      "description": "e.g. com.apple.Safari",
+      "type": "string"
+     },
+     "name": {
+      "description": "App name",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "legacy_mcp_name": "app_open",
+   "mcp_name": "computer_app_open",
+   "risk": "change"
+  },
+  {
+   "action": "app_activate",
+   "connector_name": "combo_computer_app_activate",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "bundleId": {
+      "description": "bundleId",
+      "type": "string"
+     },
+     "pid": {
+      "description": "Process ID",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "legacy_mcp_name": "app_activate",
+   "mcp_name": "computer_app_activate",
+   "risk": "change"
+  },
+  {
+   "action": "app_quit",
+   "connector_name": "combo_computer_app_quit",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "bundleId": {
+      "description": "bundleId",
+      "type": "string"
+     },
+     "pid": {
+      "description": "Process ID",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "legacy_mcp_name": "app_quit",
+   "mcp_name": "computer_app_quit",
+   "risk": "destructive"
+  },
+  {
+   "action": "window_list",
+   "connector_name": "combo_computer_window_list",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "legacy_mcp_name": "window_list",
+   "mcp_name": "computer_window_list",
+   "risk": "read"
+  },
+  {
+   "action": "window_set_frame",
+   "connector_name": "combo_computer_window_set_frame",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "height": {
+      "description": "New height",
+      "type": "number"
+     },
+     "pid": {
+      "description": "Process ID of the app that owns the window (from app_list/window_list)",
+      "type": "integer"
+     },
+     "width": {
+      "description": "New width",
+      "type": "number"
+     },
+     "windowIndex": {
+      "description": "Window number within that app (starts at 0, the index from window_list)",
+      "type": "integer"
+     },
+     "x": {
+      "description": "New x",
+      "type": "number"
+     },
+     "y": {
+      "description": "New y",
+      "type": "number"
+     }
+    },
+    "required": [
+     "pid",
+     "windowIndex"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "window_set_frame",
+   "mcp_name": "computer_window_set_frame",
+   "risk": "change"
+  },
+  {
+   "action": "window_minimize",
+   "connector_name": "combo_computer_window_minimize",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "minimized": {
+      "description": "true = minimize, false = restore (default true)",
+      "type": "boolean"
+     },
+     "pid": {
+      "description": "Process ID of the app that owns the window (from app_list/window_list)",
+      "type": "integer"
+     },
+     "windowIndex": {
+      "description": "Window number within that app (starts at 0, the index from window_list)",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "pid",
+     "windowIndex"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "window_minimize",
+   "mcp_name": "computer_window_minimize",
+   "risk": "change"
+  },
+  {
+   "action": "mouse_move",
+   "connector_name": "combo_computer_mouse_move",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "x": {
+      "description": "x",
+      "type": "number"
+     },
+     "y": {
+      "description": "y",
+      "type": "number"
+     }
+    },
+    "required": [
+     "x",
+     "y"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "mouse_move",
+   "mcp_name": "computer_mouse_move",
+   "risk": "input_inject"
+  },
+  {
+   "action": "mouse_click",
+   "connector_name": "combo_computer_mouse_click",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "button": {
+      "description": "Default left",
+      "enum": [
+       "left",
+       "right",
+       "middle"
+      ],
+      "type": "string"
+     },
+     "clickCount": {
+      "description": "1 to 3, default 1",
+      "type": "integer"
+     },
+     "x": {
+      "description": "x",
+      "type": "number"
+     },
+     "y": {
+      "description": "y",
+      "type": "number"
+     }
+    },
+    "required": [
+     "x",
+     "y"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "mouse_click",
+   "mcp_name": "computer_mouse_click",
+   "risk": "input_inject"
+  },
+  {
+   "action": "mouse_drag",
+   "connector_name": "combo_computer_mouse_drag",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "fromX": {
+      "description": "Start x",
+      "type": "number"
+     },
+     "fromY": {
+      "description": "Start y",
+      "type": "number"
+     },
+     "toX": {
+      "description": "End x",
+      "type": "number"
+     },
+     "toY": {
+      "description": "End y",
+      "type": "number"
+     }
+    },
+    "required": [
+     "fromX",
+     "fromY",
+     "toX",
+     "toY"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "mouse_drag",
+   "mcp_name": "computer_mouse_drag",
+   "risk": "input_inject"
+  },
+  {
+   "action": "mouse_scroll",
+   "connector_name": "combo_computer_mouse_scroll",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "deltaX": {
+      "description": "Horizontal",
+      "type": "integer"
+     },
+     "deltaY": {
+      "description": "Vertical (positive = up)",
+      "type": "integer"
+     },
+     "x": {
+      "description": "x",
+      "type": "number"
+     },
+     "y": {
+      "description": "y",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "legacy_mcp_name": "mouse_scroll",
+   "mcp_name": "computer_mouse_scroll",
+   "risk": "input_inject"
+  },
+  {
+   "action": "key_press",
+   "connector_name": "combo_computer_key_press",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "key": {
+      "description": "Key name",
+      "type": "string"
+     },
+     "modifiers": {
+      "description": "cmd, shift, option(alt), control(ctrl), fn",
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "key"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "key_press",
+   "mcp_name": "computer_key_press",
+   "risk": "input_inject"
+  },
+  {
+   "action": "type_text",
+   "connector_name": "combo_computer_type_text",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "text": {
+      "description": "Text to type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "text"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "type_text",
+   "mcp_name": "computer_type_text",
+   "risk": "input_inject"
+  },
+  {
+   "action": "clipboard_read",
+   "connector_name": "combo_computer_clipboard_read",
+   "exits": [
+    "mcp"
+   ],
+   "group": "clipboard",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "legacy_mcp_name": "clipboard_read",
+   "mcp_name": "computer_clipboard_read",
+   "risk": "content_out"
+  },
+  {
+   "action": "clipboard_write",
+   "connector_name": "combo_computer_clipboard_write",
+   "exits": [
+    "mcp"
+   ],
+   "group": "clipboard",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "text": {
+      "description": "Text to copy",
+      "type": "string"
+     }
+    },
+    "required": [
+     "text"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "clipboard_write",
+   "mcp_name": "computer_clipboard_write",
+   "risk": "change"
+  },
+  {
+   "action": "open_url",
+   "connector_name": "combo_computer_open_url",
+   "exits": [
+    "mcp"
+   ],
+   "group": "openItems",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "url": {
+      "description": "URL",
+      "type": "string"
+     }
+    },
+    "required": [
+     "url"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "open_url",
+   "mcp_name": "computer_open_url",
+   "risk": "change"
+  },
+  {
+   "action": "open_file",
+   "connector_name": "combo_computer_open_file",
+   "exits": [
+    "mcp"
+   ],
+   "group": "openItems",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "path": {
+      "description": "Absolute path",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "open_file",
+   "mcp_name": "computer_open_file",
+   "risk": "change"
+  },
+  {
+   "action": "system_info",
+   "connector_name": "combo_computer_system_info",
+   "exits": [
+    "mcp"
+   ],
+   "group": "systemInfo",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "legacy_mcp_name": "system_info",
+   "mcp_name": "computer_system_info",
+   "risk": "read"
+  },
+  {
+   "action": "process_list",
+   "connector_name": "combo_computer_process_list",
+   "exits": [
+    "mcp"
+   ],
+   "group": "systemInfo",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "legacy_mcp_name": "process_list",
+   "mcp_name": "computer_process_list",
+   "risk": "read"
+  },
+  {
+   "action": "applescript_run",
+   "connector_name": "combo_computer_applescript_run",
+   "exits": [
+    "mcp"
+   ],
+   "group": "appleScript",
+   "high_risk_group": true,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "script": {
+      "description": "AppleScript source",
+      "type": "string"
+     }
+    },
+    "required": [
+     "script"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "applescript_run",
+   "mcp_name": "computer_applescript_run",
+   "risk": "destructive"
+  },
+  {
+   "action": "shell_run",
+   "connector_name": "combo_computer_shell_run",
+   "exits": [
+    "mcp"
+   ],
+   "group": "shell",
+   "high_risk_group": true,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "command": {
+      "description": "Command",
+      "type": "string"
+     },
+     "cwd": {
+      "description": "Working directory (absolute path, optional)",
+      "type": "string"
+     },
+     "timeoutSeconds": {
+      "description": "1 to 120, default 30",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "command"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "shell_run",
+   "mcp_name": "computer_shell_run",
+   "risk": "destructive"
+  },
+  {
+   "action": "file_read",
+   "connector_name": "combo_computer_file_read",
+   "exits": [
+    "mcp"
+   ],
+   "group": "fileAccess",
+   "high_risk_group": true,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "path": {
+      "description": "Absolute path",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "file_read",
+   "mcp_name": "computer_file_read",
+   "risk": "content_out"
+  },
+  {
+   "action": "file_write",
+   "connector_name": "combo_computer_file_write",
+   "exits": [
+    "mcp"
+   ],
+   "group": "fileAccess",
+   "high_risk_group": true,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "append": {
+      "description": "Whether to append",
+      "type": "boolean"
+     },
+     "content": {
+      "description": "Content",
+      "type": "string"
+     },
+     "path": {
+      "description": "Absolute path",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path",
+     "content"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "file_write",
+   "mcp_name": "computer_file_write",
+   "risk": "destructive"
+  },
+  {
+   "action": "process_kill",
+   "connector_name": "combo_computer_process_kill",
+   "exits": [
+    "mcp"
+   ],
+   "group": "processControl",
+   "high_risk_group": true,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "pid": {
+      "description": "Process ID",
+      "type": "integer"
+     },
+     "signal": {
+      "description": "Default TERM",
+      "enum": [
+       "TERM",
+       "KILL",
+       "INT",
+       "HUP"
+      ],
+      "type": "string"
+     }
+    },
+    "required": [
+     "pid"
+    ],
+    "type": "object"
+   },
+   "legacy_mcp_name": "process_kill",
+   "mcp_name": "computer_process_kill",
+   "risk": "destructive"
+  },
+  {
+   "action": "ui_tree",
+   "connector_name": "combo_computer_ui_tree",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "App name or bundle id (default: the frontmost app)",
+      "maxLength": 100,
+      "minLength": 1,
+      "type": "string"
+     },
+     "maxDepth": {
+      "description": "How deep to read (1-25, default 8)",
+      "maximum": 25,
+      "minimum": 1,
+      "type": "integer"
+     },
+     "maxNodes": {
+      "description": "At most this many elements (1-500, default 200)",
+      "maximum": 500,
+      "minimum": 1,
+      "type": "integer"
+     },
+     "maxTextLength": {
+      "description": "Texts are cut to this many characters (10-200, default 80)",
+      "maximum": 200,
+      "minimum": 10,
+      "type": "integer"
+     },
+     "pid": {
+      "description": "Process id of the app (from computer_app_list), instead of app",
+      "minimum": 1,
+      "type": "integer"
+     },
+     "scope": {
+      "description": "window = the app's front window (default), app = menu bar and every window",
+      "enum": [
+       "window",
+       "app"
+      ],
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "mcp_name": "computer_ui_tree",
+   "risk": "content_out"
+  },
+  {
+   "action": "find_element",
+   "connector_name": "combo_computer_find_element",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "appsWindows",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "app": {
+      "description": "App name or bundle id (default: the frontmost app)",
+      "maxLength": 100,
+      "minLength": 1,
+      "type": "string"
+     },
+     "maxResults": {
+      "description": "1-30, default 10",
+      "maximum": 30,
+      "minimum": 1,
+      "type": "integer"
+     },
+     "pid": {
+      "description": "Process id of the app (from computer_app_list), instead of app",
+      "minimum": 1,
+      "type": "integer"
+     },
+     "role": {
+      "description": "Role, e.g. button, textField, checkBox, menuItem (AX prefix optional)",
+      "maxLength": 60,
+      "type": "string"
+     },
+     "scope": {
+      "description": "window = the app's front window (default), app = menu bar and every window",
+      "enum": [
+       "window",
+       "app"
+      ],
+      "type": "string"
+     },
+     "title": {
+      "description": "Text the title, label or value contains (case-insensitive)",
+      "maxLength": 100,
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "mcp_name": "computer_find_element",
+   "risk": "content_out"
+  },
+  {
+   "action": "click_element",
+   "connector_name": "combo_computer_click_element",
+   "exits": [
+    "connector",
+    "mcp"
+   ],
+   "group": "input",
+   "high_risk_group": false,
+   "inputSchema": {
+    "additionalProperties": false,
+    "properties": {
+     "button": {
+      "description": "Default left",
+      "enum": [
+       "left",
+       "right",
+       "middle"
+      ],
+      "type": "string"
+     },
+     "clickCount": {
+      "description": "1 to 3, default 1",
+      "maximum": 3,
+      "minimum": 1,
+      "type": "integer"
+     },
+     "id": {
+      "description": "Element id, e.g. t3.12",
+      "maxLength": 20,
+      "type": "string"
+     },
+     "press": {
+      "description": "true = run the element's default action (AXPress) instead of a mouse click",
+      "type": "boolean"
+     },
+     "x": {
+      "description": "Screen x in points (instead of id)",
+      "type": "number"
+     },
+     "y": {
+      "description": "Screen y in points (instead of id)",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "mcp_name": "computer_click_element",
+   "risk": "input_inject"
+  }
+ ]
+}

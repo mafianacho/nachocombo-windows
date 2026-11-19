@@ -5,6 +5,7 @@ pub mod bento;
 pub mod catalog;
 pub mod clock;
 pub mod combos;
+pub mod computer;
 pub mod format;
 pub mod layout;
 pub mod mcp;

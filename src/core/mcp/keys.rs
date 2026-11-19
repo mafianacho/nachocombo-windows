@@ -63,8 +63,13 @@ struct State {
     last_persisted: f64,
 }
 
+/// Restricts who can open a file (Windows: a protected DACL for the current user only). Called on the empty temp file
+/// before the keys are written into it; an error means nothing is written.
+pub type Protect = Arc<dyn Fn(&Path) -> std::io::Result<()> + Send + Sync>;
+
 pub struct KeyStore {
     path: Option<PathBuf>,
+    protect: Option<Protect>,
     random: RandomBytes,
     now: Clock,
     state: Mutex<State>,
@@ -81,12 +86,15 @@ impl KeyStore {
 
     /// `path` None keeps the keys in memory only (tests).
     pub fn new(path: Option<PathBuf>, random: RandomBytes, now: Clock) -> Self {
-        let mut store = Self { path, random, now, state: Mutex::new(State { keys: vec![], last_persisted: f64::MIN }), last_load_problem: None };
+        let mut store = Self { path, protect: None, random, now, state: Mutex::new(State { keys: vec![], last_persisted: f64::MIN }), last_load_problem: None };
         store.load();
         store
     }
 
     pub fn path_in(dir: &Path) -> PathBuf { dir.join(Self::FILE_NAME) }
+
+    /// Every later write goes through `protect` first (the Windows app: only the current user can open the file).
+    pub fn with_protection(mut self, protect: Protect) -> Self { self.protect = Some(protect); self }
 
     pub fn records(&self) -> Vec<KeyRecord> { self.state.lock().unwrap().keys.clone() }
 
@@ -170,7 +178,13 @@ impl KeyStore {
         if let Some(dir) = path.parent() { std::fs::create_dir_all(dir)?; }
         let data = serde_json::to_vec_pretty(&FileFormat { version: 1, keys: keys.to_vec() })?;
         let tmp = path.with_extension("json.tmp");
-        std::fs::write(&tmp, data)?;
+        let _ = std::fs::remove_file(&tmp);
+        // The access rules are set on the empty file, so the hashes never sit in a file anyone else may open.
+        std::fs::File::create(&tmp)?;
+        if let Some(protect) = &self.protect {
+            if let Err(e) = protect(&tmp) { let _ = std::fs::remove_file(&tmp); return Err(e); }
+        }
+        if let Err(e) = std::fs::write(&tmp, data) { let _ = std::fs::remove_file(&tmp); return Err(e); }
         std::fs::rename(tmp, path)
     }
 }
@@ -260,6 +274,32 @@ pub(crate) mod tests {
         assert!(s.last_load_problem.is_some());
         assert!(dir.join("computer-use-keys.json.corrupt").exists());
         assert!(!path.exists());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn the_file_is_protected_before_any_hash_is_written_and_not_written_when_that_fails() {
+        let dir = temp_dir("protect");
+        let path = KeyStore::path_in(&dir);
+        let seen: Arc<Mutex<Vec<(PathBuf, u64)>>> = Arc::new(Mutex::new(vec![]));
+        let sn = seen.clone();
+        let s = store(Some(path.clone())).with_protection(Arc::new(move |p: &Path| {
+            sn.lock().unwrap().push((p.to_path_buf(), std::fs::metadata(p)?.len()));
+            Ok(())
+        }));
+        s.create("a").unwrap();
+        let calls = seen.lock().unwrap().clone();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].1, 0, "protected while still empty");
+        assert!(calls[0].0.to_string_lossy().ends_with(".json.tmp"));
+        assert!(path.exists());
+        // Protection fails: no key, no file change, no temp file left.
+        let before = std::fs::read(&path).unwrap();
+        let s = store(Some(path.clone())).with_protection(Arc::new(|_: &Path| Err(std::io::Error::other("no ACL"))));
+        assert_eq!(s.create("b").unwrap_err(), KeyError::PersistFailed);
+        assert_eq!(s.records().len(), 1, "the failed key is not kept");
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert!(!path.with_extension("json.tmp").exists());
         let _ = std::fs::remove_dir_all(dir);
     }
 
