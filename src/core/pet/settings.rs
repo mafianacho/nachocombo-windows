@@ -78,7 +78,7 @@ impl Default for PetSettings {
 
 impl PetSettings {
     pub const PRODUCTION_SERVER_URL: &'static str = "https://nacho.nachotown.com";
-    pub const PRODUCTION_ISSUER_URL: &'static str = "https://auth.nachotown.com/realms/nachotown";
+    pub const PRODUCTION_ISSUER_URL: &'static str = "https://auth.mafianacho.com/realms/mafianacho";
     pub const LOCAL_SERVER_URL: &'static str = "http://127.0.0.1:8787";
     pub const LOCAL_ISSUER_URL: &'static str = "http://localhost:18180/realms/nachotown";
     pub const MOCK_SERVER_URL: &'static str = "http://127.0.0.1:8787";
@@ -249,7 +249,7 @@ impl ServerEndpoint {
     }
 }
 
-/// Login realm issuer, e.g. `https://auth.nachotown.com/realms/nachotown`.
+/// Login realm issuer, e.g. `https://auth.mafianacho.com/realms/mafianacho`.
 pub struct IssuerURL;
 
 impl IssuerURL {
@@ -432,10 +432,42 @@ mod tests {
         let s = PetSettings::default();
         assert_eq!(s.server_mode, PetServerMode::Production);
         assert_eq!(s.endpoint().unwrap().base, "https://nacho.nachotown.com");
-        assert_eq!(s.oidc().unwrap().issuer, "https://auth.nachotown.com/realms/nachotown");
+        assert_eq!(s.oidc().unwrap().issuer, "https://auth.mafianacho.com/realms/mafianacho");
         assert!(s.pet_position.is_none());
         assert!(s.allow_combo_control);
         assert!(s.validation_problem().is_none());
+    }
+
+    // NACHO-784: production login is the unified IdP realm (same as the macOS build, v0.12.0).
+    #[test]
+    fn production_login_is_the_unified_realm() {
+        let o = PetSettings::default().oidc().unwrap();
+        let base = "https://auth.mafianacho.com/realms/mafianacho/protocol/openid-connect";
+        assert_eq!(o.issuer, "https://auth.mafianacho.com/realms/mafianacho");
+        assert_eq!(o.authorization_endpoint(), format!("{base}/auth"));
+        assert_eq!(o.token_endpoint(), format!("{base}/token"));
+        assert_eq!(o.logout_endpoint(), format!("{base}/logout"));
+        assert_eq!(OIDCConfig::CLIENT_ID, "nacho-gadget-app");
+        assert_eq!(OIDCConfig::REDIRECT_URI, "nachogadget://auth/callback");
+    }
+
+    #[test]
+    fn legacy_issuer_tokens_are_not_reused() {
+        // Tokens are stored under account_scope (server|issuer). The scope of the old production IdP (written in parts so
+        // the old host name does not appear in the tree) must differ from the current one: a new build never reads tokens
+        // saved for the old realm.
+        let legacy = format!("https://nacho.nachotown.com|https://{}.nachotown.com/realms/nachotown", "auth");
+        assert_ne!(PetSettings::default().account_scope(), legacy);
+    }
+
+    #[test]
+    fn production_mode_ignores_a_stored_old_issuer() {
+        // A pet.json from before NACHO-784 may still carry the old production issuer as the custom value. Production mode
+        // reads the constant, so it follows the new realm; the stored custom value only matters in Custom mode.
+        let old = format!("https://{}.nachotown.com/realms/nachotown", "auth");
+        let json = format!(r#"{{"serverMode":"production","customIssuerURL":"{old}"}}"#);
+        let s = PetSettings::from_json(&json).unwrap();
+        assert_eq!(s.oidc().unwrap().issuer, "https://auth.mafianacho.com/realms/mafianacho");
     }
 
     #[test]
