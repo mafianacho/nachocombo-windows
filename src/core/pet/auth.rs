@@ -1,4 +1,4 @@
-//! Nacho Pet login: Keycloak (realm `nachotown`), public client `nacho-gadget-app`, Authorization Code + PKCE (S256),
+//! Nacho Pet login: Keycloak (realm `mafianacho`, the unified IdP), public client `nacho-gadget-app`, Authorization Code + PKCE (S256),
 //! redirect `nachogadget://auth/callback` — the values nacho-server already accepts. Port of `PetAuth.swift`.
 //! Everything that decides (URLs, PKCE, callback checks, token parsing, refresh timing) is here so it is tested on any
 //! OS; the shell only opens the system browser ([`PetAuthBrowser`]), registers the `nachogadget:` URL scheme and keeps
@@ -21,7 +21,7 @@ pub type AuthCompletion = Box<dyn FnOnce(Result<(), AuthProblem>) + Send>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OIDCConfig {
-    /// Realm issuer, e.g. `https://auth.nachotown.com/realms/nachotown` (validated by `settings::IssuerURL`).
+    /// Realm issuer, e.g. `https://auth.mafianacho.com/realms/mafianacho` (validated by `settings::IssuerURL`).
     pub issuer: String,
 }
 
@@ -575,9 +575,9 @@ mod tests {
     use crate::core::pet::secrets::{MemorySecretStore, PetSecretBundle};
     use std::sync::mpsc;
 
-    const TOKEN_PATH: &str = "/realms/nachotown/protocol/openid-connect/token";
+    const TOKEN_PATH: &str = "/realms/mafianacho/protocol/openid-connect/token";
 
-    fn config() -> OIDCConfig { OIDCConfig::new("https://auth.nachotown.com/realms/nachotown".into()) }
+    fn config() -> OIDCConfig { OIDCConfig::new("https://auth.mafianacho.com/realms/mafianacho".into()) }
 
     /// A clock the test moves.
     fn clock(start: f64) -> (Arc<Mutex<f64>>, Clock) {
@@ -630,7 +630,7 @@ mod tests {
     fn authorization_url_carries_the_server_accepted_values() {
         let pending = OAuthRequests::begin(&config(), &fixed_random()).unwrap();
         let (base, query) = pending.url.split_once('?').unwrap();
-        assert_eq!(base, "https://auth.nachotown.com/realms/nachotown/protocol/openid-connect/auth");
+        assert_eq!(base, "https://auth.mafianacho.com/realms/mafianacho/protocol/openid-connect/auth");
         let q: BTreeMap<String, String> = query_items(query).unwrap().into_iter().map(|(k, v)| (k, v.unwrap())).collect();
         assert_eq!(q["client_id"], "nacho-gadget-app");
         assert_eq!(q["redirect_uri"], "nachogadget://auth/callback");
@@ -759,7 +759,7 @@ mod tests {
         let (tx, rx) = mpsc::channel();
         a.sign_out(Box::new(move || tx.send(()).unwrap()));
         rx.recv().unwrap();
-        let logout = http.sent("POST", "/realms/nachotown/protocol/openid-connect/logout");
+        let logout = http.sent("POST", "/realms/mafianacho/protocol/openid-connect/logout");
         assert_eq!(logout.len(), 1);
         assert_eq!(PetStubHTTP::form(&logout[0])["refresh_token"], "rt-1");
         assert!(!a.is_signed_in());
