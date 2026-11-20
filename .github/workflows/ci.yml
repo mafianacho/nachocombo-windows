@@ -22,11 +22,12 @@ jobs:
           persist-credentials: false
       - name: Unit tests
         run: cargo test --locked
+      # The exe is built to prove it builds; it is not uploaded (nobody downloads it,
+      # and releases ship from release.yml).
       - name: Build NachoCombo.exe (release)
         run: cargo build --release --locked
-      - name: Upload NachoCombo.exe
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: NachoCombo-windows
-          path: target/release/NachoCombo.exe
-          if-no-files-found: error
+      - name: Check the exe runs without the VC++ runtime
+        shell: pwsh
+        run: |
+          # A clean Windows has no VCRUNTIME140.dll; the C runtime is linked in (.cargo/config.toml).
+          if (Select-String -Path target/release/NachoCombo.exe -Pattern 'vcruntime140' -SimpleMatch -Quiet) { throw "the exe needs VCRUNTIME140.dll" }
