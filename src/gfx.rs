@@ -21,7 +21,7 @@ pub const fn rgb(v: u32) -> Color {
 impl Color {
     pub fn alpha(self, a: f32) -> Color { Color(self.0, self.1, self.2, a) }
     pub fn mix(self, o: Color, t: f32) -> Color { Color(self.0 + (o.0 - self.0) * t, self.1 + (o.1 - self.1) * t, self.2 + (o.2 - self.2) * t, self.3 + (o.3 - self.3) * t) }
-    fn d2d(self) -> D2D1_COLOR_F { D2D1_COLOR_F { r: self.0, g: self.1, b: self.2, a: self.3 } }
+    pub(crate) fn d2d(self) -> D2D1_COLOR_F { D2D1_COLOR_F { r: self.0, g: self.1, b: self.2, a: self.3 } }
 }
 
 /// The design system's tokens, from `Sources/NachoCombo/Brand.swift`.
@@ -77,6 +77,12 @@ pub struct Gfx {
 thread_local! { static GFX: RefCell<Option<std::rc::Rc<Gfx>>> = const { RefCell::new(None) }; }
 
 pub fn gfx() -> std::rc::Rc<Gfx> { GFX.with(|g| g.borrow().clone().expect("gfx::init was not called")) }
+
+/// Releases the factories once the message loop has ended, while the process is still whole. Left to the thread-local
+/// destructor, the last Direct2D reference went at process exit: the factory keeps the Direct3D device its window
+/// targets used, and on a PC without a GPU driver (WARP: VMs, basic display) destroying that device flushes work to a
+/// thread pool that exit has already torn down, which ends in `0xC000000D` from ntdll. No drawing after this.
+pub fn shutdown() { let g = GFX.with(|g| g.borrow_mut().take()); drop(g); }
 
 const FONT_FILES: [&[u8]; 7] = [
     include_bytes!("../assets/fonts/Anton-Regular.ttf"),
@@ -167,12 +173,14 @@ pub struct Canvas {
     brush: ID2D1SolidColorBrush,
     g: std::rc::Rc<Gfx>,
     logo: RefCell<Option<ID2D1Bitmap>>,
+    /// Pictures uploaded to this target by key (None = could not be decoded, not tried again).
+    images: RefCell<HashMap<String, Option<ID2D1Bitmap>>>,
 }
 
 impl Canvas {
     pub fn new(rt: ID2D1RenderTarget) -> Result<Canvas> {
         let brush = unsafe { rt.CreateSolidColorBrush(&Color(0.0, 0.0, 0.0, 1.0).d2d(), None)? };
-        Ok(Canvas { rt, brush, g: gfx(), logo: RefCell::new(None) })
+        Ok(Canvas { rt, brush, g: gfx(), logo: RefCell::new(None), images: RefCell::new(HashMap::new()) })
     }
     fn b(&self, c: Color) -> &ID2D1SolidColorBrush { unsafe { self.brush.SetColor(&c.d2d()) }; &self.brush }
     pub fn clear(&self, c: Color) { unsafe { self.rt.Clear(Some(&c.d2d())) } }
@@ -376,6 +384,113 @@ pub fn save_png(path: &std::path::Path, px: &[u8], w: u32, h: u32) -> Result<()>
         frame.WritePixels(h, w * 4, px)?;
         frame.Commit()?;
         enc.Commit()
+    }
+}
+
+/// One run of text in a rich paragraph.
+#[derive(Clone, Debug, Default)]
+pub struct Span {
+    pub text: String,
+    pub bold: bool,
+    pub italic: bool,
+    pub code: bool,
+    pub color: Option<Color>,
+    /// Drawn underlined and reported by [`Canvas::draw_rich`] as clickable.
+    pub link: Option<String>,
+}
+
+impl Span {
+    pub fn plain(text: &str) -> Span { Span { text: text.into(), ..Default::default() } }
+}
+
+/// A paragraph of [`Span`]s laid out for one width. Built and drawn within one frame by the same canvas.
+pub struct RichLayout {
+    layout: IDWriteTextLayout,
+    pub w: f64,
+    pub h: f64,
+    /// (start, length in UTF-16 units, link)
+    links: Vec<(u32, u32, String)>,
+}
+
+impl Canvas {
+    /// A picture by key, aspect-fit and centred in `r`. `make` gives top-down premultiplied BGRA pixels and runs once per
+    /// canvas (and again only after the render target was recreated).
+    pub fn image(&self, key: &str, make: impl FnOnce() -> Option<(Vec<u8>, u32, u32)>, r: Rect, opacity: f32) -> bool {
+        if !self.images.borrow().contains_key(key) {
+            let b = make().and_then(|(px, w, h)| self.make_bitmap(&px, w, h));
+            self.images.borrow_mut().insert(key.to_string(), b);
+        }
+        let images = self.images.borrow();
+        let Some(Some(b)) = images.get(key) else { return false };
+        let size = unsafe { b.GetSize() };
+        let (iw, ih) = (size.width as f64, size.height as f64);
+        if iw <= 0.0 || ih <= 0.0 { return false; }
+        let k = (r.w / iw).min(r.h / ih);
+        let (w, h) = (iw * k, ih * k);
+        self.bitmap(b, Rect::new(r.cx() - w / 2.0, r.cy() - h / 2.0, w, h), opacity);
+        true
+    }
+
+    /// Draws `draw` moved, scaled and rotated (degrees, clockwise) around (cx, cy); the transform is undone after.
+    pub fn transformed(&self, cx: f64, cy: f64, dx: f64, dy: f64, sx: f64, sy: f64, degrees: f64, draw: impl FnOnce()) {
+        use windows_numerics::{Matrix3x2, Vector2};
+        let c = Vector2 { X: cx as f32, Y: cy as f32 };
+        let m = Matrix3x2::scale_around(sx as f32, sy as f32, c) * Matrix3x2::rotation_around(degrees as f32, c) * Matrix3x2::translation(dx as f32, dy as f32);
+        unsafe { self.rt.SetTransform(&m); }
+        draw();
+        unsafe { self.rt.SetTransform(&Matrix3x2::identity()); }
+    }
+
+    /// A paragraph of spans wrapped to `max_w`, in `f`'s size; `base` colours spans without their own colour.
+    pub fn rich_layout(&self, spans: &[Span], f: Font, max_w: f64, base: Color) -> Option<RichLayout> {
+        let mut text = String::new();
+        let mut ranges: Vec<(u32, u32, &Span)> = vec![];
+        let mut at = 0u32;
+        for sp in spans {
+            let n = sp.text.encode_utf16().count() as u32;
+            if n == 0 { continue; }
+            text.push_str(&sp.text);
+            ranges.push((at, n, sp));
+            at += n;
+        }
+        let layout = self.g.layout(&text, f, Align::Left, max_w as f32, 100000.0).ok()?;
+        let mut links = vec![];
+        unsafe {
+            let brush = |c: Color| -> Option<IUnknown> { self.rt.CreateSolidColorBrush(&c.d2d(), None).ok().and_then(|b| b.cast().ok()) };
+            for (start, len, sp) in &ranges {
+                let range = DWRITE_TEXT_RANGE { startPosition: *start, length: *len };
+                if sp.bold { let _ = layout.SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, range); }
+                if sp.italic { let _ = layout.SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range); }
+                if sp.code {
+                    let fam = HSTRING::from("IBM Plex Mono");
+                    if let Some(c) = self.g.fonts.as_ref().and_then(|c| c.cast::<IDWriteFontCollection>().ok()) { let _ = layout.SetFontCollection(&c, range); }
+                    let _ = layout.SetFontFamilyName(&fam, range);
+                }
+                let color = sp.color.or(sp.link.as_ref().map(|_| base));
+                if let Some(c) = color { if let Some(b) = brush(c) { let _ = layout.SetDrawingEffect(&b, range); } }
+                if let Some(l) = &sp.link { let _ = layout.SetUnderline(true, range); links.push((*start, *len, l.clone())); }
+            }
+        }
+        let mut m = DWRITE_TEXT_METRICS::default();
+        unsafe { layout.GetMetrics(&mut m).ok()?; }
+        Some(RichLayout { layout, w: m.width as f64, h: m.height as f64, links })
+    }
+
+    /// Draws a laid-out paragraph at (x, y); returns the clickable rectangles of its links.
+    pub fn draw_rich(&self, l: &RichLayout, x: f64, y: f64, base: Color) -> Vec<(Rect, String)> {
+        unsafe { self.rt.DrawTextLayout(pt(x, y), &l.layout, self.b(base), D2D1_DRAW_TEXT_OPTIONS_CLIP) }
+        let mut out = vec![];
+        for (start, len, url) in &l.links {
+            let mut n = 0u32;
+            unsafe {
+                let _ = l.layout.HitTestTextRange(*start, *len, 0.0, 0.0, None, &mut n);
+                if n == 0 { continue; }
+                let mut m = vec![DWRITE_HIT_TEST_METRICS::default(); n as usize];
+                if l.layout.HitTestTextRange(*start, *len, x as f32, y as f32, Some(&mut m), &mut n).is_err() { continue; }
+                for h in m.iter().take(n as usize) { out.push((Rect::new(h.left as f64, h.top as f64, h.width as f64, h.height as f64), url.clone())); }
+            }
+        }
+        out
     }
 }
 

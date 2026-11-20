@@ -30,6 +30,20 @@ pub fn run(a: &[String]) {
     let x = app();
     match arg(a, 0) {
         "set" => if let Some(m) = ModuleId::from_key(arg(a, 1)) { x.set_enabled(m, arg(a, 2) == "on"); },
+        "petui" => match arg(a, 1) {
+            "chat" => crate::pet_ui::open_chat(),
+            "close" => crate::pet_ui::close_chat(),
+            "signin" => { crate::pet_ui::open_chat(); crate::pet_ui::sign_in(); }
+            "signout" => crate::pet_ui::sign_out(),
+            "say" => crate::pet_ui::send_when_ready(a[2..].join(" "), false, 0),
+            "reset" => crate::pet_ui::reset_position(),
+            "dictate" => crate::pet_ui::dictate_from_wav(arg(a, 2), arg(a, 3) == "hold"),
+            "attach" => crate::pet_ui::attach_file(std::path::Path::new(arg(a, 2))),
+            // `petui sel <text>`: shows the selection bar for that text near the pointer, without reading any app.
+            "sel" => crate::pet_selection::present_text(&a[2..].join(" "), None),
+            "selhide" => crate::pet_selection::hide(),
+            _ => {}
+        },
         "snap" => if let Some(s) = SnapAction::from_id(arg(a, 1)) { snap::run(s); },
         "action" => x.run_action(arg(a, 1)),
         "option" => {
@@ -81,9 +95,14 @@ pub fn run(a: &[String]) {
             "undo" => x.undo_order(),
             _ => {}
         },
+        "board" => crate::board::ctl(&a[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>()),
         "snapshot" => pages::snapshot(arg(a, 1), std::path::Path::new(arg(a, 2))),
         "diskmap" => if arg(a, 1) == "open" { crate::app::later(crate::diskmap::open) },
+        "appswitch" => match arg(a, 1) { "next" => crate::appswitch::cycle(true), "previous" => crate::appswitch::cycle(false), "commit" => { let i = x.appswitch.diagnostics()["selected"].as_u64().unwrap_or(0) as usize; crate::appswitch::commit(i) }, "cancel" => crate::appswitch::cancel(), "hide" => crate::appswitch::hide_others(), _ => {} },
         "peek" => crate::app::later(crate::peek::on_space),
+        "update" => crate::update::ctl(&a[1..]),
+        "trust" => { crate::pet_exec::trust().set_always_allowed(arg(a, 1), arg(a, 2) == "on"); }
+        "pet" => crate::pet_exec::ctl(&a[1..]),
         "quit" => crate::app::quit(),
         _ => {}
     }

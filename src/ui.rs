@@ -340,6 +340,11 @@ pub fn gadget_icon(cv: &Canvas, id: crate::core::settings::ModuleId, x: f64, y: 
         Clipboard => 0xE77F,      // paste
         DeviceControl => 0xE767,  // volume
         DiskMap => 0xEDA2,        // hard drive
+        AppSwitch => 0xE7C4,      // task view
+        CalendarClock => 0xE787,  // calendar
+        MouseTune => 0xE962,      // mouse
+        NachoPet => 0xE77B,       // contact
+        WidgetBoard => 0xF0E2,    // tiles
     };
     if id == WindowSnap {
         // A split window: the font's snap glyphs differ between Windows versions, so it is drawn.

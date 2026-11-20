@@ -102,3 +102,5 @@ No.1 Starter、No.2 Desk、No.3 Builder、No.4 Focus、No.5 Meeting、No.6 Prese
 ## ライセンス
 
 [MIT](LICENSE) © 2026 Mafianacho。「Nacho Combo」の名称とロゴはこのライセンスの対象外です。
+
+**商標とナチョのキャラクター。** ソースコードは MIT です。ナチョのキャラクター画像（`assets/nacho/`）、アプリアイコンとロゴ、Nacho Combo™・Nacho™・Mafianacho™ の名称はオープンソースの対象では**なく**、MIT ライセンスに含まれません。[TRADEMARKS.md](TRADEMARKS.md) を参照してください。フォークは独自の名称と画像を使ってください。

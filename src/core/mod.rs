@@ -1,10 +1,19 @@
 //! Logic with no Windows calls, ported from `Sources/NachoComboCore`. Everything here is unit tested.
 pub mod alerts;
+pub mod appswitch;
+pub mod bento;
 pub mod catalog;
+pub mod clock;
 pub mod combos;
 pub mod format;
 pub mod layout;
+pub mod mouse;
+pub mod pet;
 pub mod series;
 pub mod settings;
+pub mod sha256;
 pub mod shelf;
 pub mod shortcut;
+pub mod unzip;
+pub mod update;
+pub mod update_store;

@@ -110,3 +110,5 @@ vulnerability.
 ## License
 
 [MIT](LICENSE) © 2026 Mafianacho. The "Nacho Combo" name and logo are not covered by this license.
+
+**Trademarks and the Nacho character.** The source code is MIT. The Nacho character pictures (`assets/nacho/`), the app icon and logo, and the names Nacho Combo™, Nacho™ and Mafianacho™ are **not** open source and are not covered by the MIT license: see [TRADEMARKS.md](TRADEMARKS.md). Forks must use their own name and artwork.

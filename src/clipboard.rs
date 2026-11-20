@@ -18,6 +18,20 @@ use windows::Win32::UI::Shell::{DragQueryFileW, HDROP};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
 pub const WM_CLIPBOARDUPDATE: u32 = 0x031D;
+
+/// Copies made by the selection bar's fallback (and the clipboard given back) are not the user's: until this tick the
+/// history ignores updates.
+static QUIET_UNTIL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+pub fn quiet_for(ms: u64) {
+    let until = unsafe { windows::Win32::System::SystemInformation::GetTickCount64() } + ms;
+    QUIET_UNTIL.fetch_max(until, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn quiet() -> bool {
+    let now = unsafe { windows::Win32::System::SystemInformation::GetTickCount64() };
+    now < QUIET_UNTIL.load(std::sync::atomic::Ordering::Relaxed)
+}
 const CF_UNICODETEXT: u32 = 13;
 const CF_HDROP: u32 = 15;
 const CF_DIB: u32 = 8;
@@ -125,6 +139,7 @@ pub fn on_update() {
     let a = app();
     if a.state(ModuleId::Clipboard) != State::Running { return; }
     if std::mem::take(&mut a.clipboard.ignore_next) { return; }
+    if quiet() { return; }
     let clip = unsafe {
         let private = IsClipboardFormatAvailable(format_id(w!("ExcludeClipboardContentFromMonitorProcessing"))).is_ok()
             || IsClipboardFormatAvailable(format_id(w!("Clipboard Viewer Ignore"))).is_ok()
@@ -385,6 +400,16 @@ pub fn paste_last_plain() {
     let Some(i) = a.clipboard.items.iter().position(|c| matches!(c.content, Content::Text(_))) else { return };
     a.clipboard.target = Some(unsafe { GetForegroundWindow() }.0 as isize);
     paste(i, true);
+}
+
+/// Puts item `i` on the clipboard again and first in the list (pins keep their place). false when it is gone.
+pub fn copy_again(i: usize) -> bool {
+    let a = app();
+    let Some(c) = a.clipboard.items.get(i).cloned() else { return false };
+    restore(&c, false);
+    if !c.pinned { let it = a.clipboard.items.remove(i); a.clipboard.items.insert(0, it); }
+    a.changed();
+    true
 }
 
 fn to_shelf(i: usize) {

@@ -195,6 +195,7 @@ pub fn on_message(wp: WPARAM, lp: LPARAM) {
             if uid == UID_MAIN { later(panel::toggle_list); }
             else if (UID_PIN..UID_PIN + ModuleId::ALL.len() as u32).contains(&uid) { let m = ModuleId::ALL[(uid - UID_PIN) as usize]; later(move || panel::open_tool(m)); }
             else if uid == crate::awake::UID { later(crate::awake::toggle); }
+            else if uid == crate::clock::UID { later(crate::clock::toggle_popup); }
             else if uid == crate::devices::UID_MIC { later(crate::devices::toggle_mic); }
             else if uid >= UID_MONITOR { let i = (uid - UID_MONITOR) as usize; later(move || monitor::toggle_panel(MonitorItem::ALL[i])); }
         }
@@ -217,6 +218,9 @@ fn show_menu() {
         }
         let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(crate::i18n::t("Combo").as_ref()));
         let _ = AppendMenuW(menu, MF_STRING, 1, &HSTRING::from(crate::i18n::t("Settings…").as_ref()));
+        if let crate::update::Status::Available { version, .. } = &a.updater.status {
+            let _ = AppendMenuW(menu, MF_STRING, 3, &HSTRING::from(crate::i18n::t(&format!("Update to {version}…")).as_ref()));
+        }
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
         let _ = AppendMenuW(menu, MF_STRING, 2, &HSTRING::from(crate::i18n::t("Quit Nacho Combo").as_ref()));
         let mut p = POINT::default();
@@ -229,6 +233,7 @@ fn show_menu() {
         match cmd {
             1 => pages::open(None),
             2 => app::quit(),
+            3 => crate::update::confirm_and_install(),
             n if n >= 100 => { if let Some(c) = all.get(n - 100) { app().order(c); } }
             _ => {}
         }
@@ -241,6 +246,7 @@ pub fn refresh_theme() {
     for (i, id) in ModuleId::ALL.into_iter().enumerate() { if a.settings.pinned_tools.contains(&id) { a.tray.remove(UID_PIN + i as u32); } }
     sync_pins();
     crate::monitor::redraw_tray();
+    crate::clock::redraw_tray();
 }
 
 pub fn exe_module() -> HINSTANCE { unsafe { GetModuleHandleW(None).unwrap_or_default().into() } }

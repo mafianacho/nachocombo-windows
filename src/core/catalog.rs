@@ -52,7 +52,14 @@ pub fn actions() -> Vec<Action> {
     add("device.brighter", DeviceControl, "Brighten External Displays", None);
     add("device.dimmer", DeviceControl, "Darken External Displays", None);
     add("diskmap.open", DiskMap, "Open Disk Map", None);
+    add("appswitch.next", AppSwitch, "Switch Windows", Some(super::appswitch::NEXT_DEFAULT));
+    add("appswitch.previous", AppSwitch, "Switch Windows Backward", Some(super::appswitch::PREVIOUS_DEFAULT));
+    add("appswitch.hideOthers", AppSwitch, "Hide Other Windows", None);
+    add("clock.show", CalendarClock, "Show Calendar", None);
     add("device.theme", DeviceControl, "Switch Light / Dark Mode", None);
+    add("pet.chat", NachoPet, "Open Nacho Chat", None);
+    add("board.show", WidgetBoard, "Show Widget Board", None);
+    add("mouse.reverse", MouseTune, "Reverse Mouse Scrolling On / Off", None);
     add("window.onTop", WindowSnap, "Keep Window on Top", Some(Shortcut::new(vk('T'), CTRL | WIN)));
     for item in MonitorItem::ALL {
         add(&format!("monitor.{}", item.name().to_lowercase()), SystemMonitor, &format!("Open {} Panel", item.name()), None);
@@ -80,6 +87,9 @@ impl AppSettings {
             .filter_map(|a| self.shortcut_for(a).map(|s| (format!("{} ▸ {}", a.module.name(), a.title), s))).collect();
         for (m, s) in &self.tool_shortcuts {
             if format!("open.{}", m.key()) != except { v.push((format!("{} ▸ Open Controls", m.name()), *s)); }
+        }
+        for h in &self.options.app_shortcuts {
+            if let Some(s) = h.shortcut { if super::appswitch::app_id(&h.path) != except { v.push((format!("{} ▸ {} (App Switch)", ModuleId::AppSwitch.name(), h.name), s)); } }
         }
         v
     }
@@ -255,6 +265,90 @@ pub fn info(id: ModuleId) -> &'static Info {
                 "A full scan of a large drive takes about a minute; the map stays for ten minutes after you close it.",
             ],
         },
+        ModuleId::AppSwitch => &Info {
+            tagline: "Goes through every window, not only apps, with a shortcut you hold and let go of.",
+            features: &[
+                f!("Window Switcher", "Hold Ctrl+Alt and press ` to go through every window; let go to switch to the one you stopped on."),
+                f!("Backward Too", "Add Shift to go the other way round the list."),
+                f!("Minimized Windows Too", "Minimized windows are listed after the open ones and come back when you pick them."),
+                f!("Pick with the Pointer", "Click a window in the switcher to go straight to it."),
+                f!("Hide Other Windows", "One shortcut minimizes every window except the front app's."),
+            ],
+            tips: &[t!("Ctrl+Alt+`", "", "Next window"), t!("Ctrl+Alt+Shift+`", "", "Previous window"), t!("", "Let go of Ctrl+Alt", "Switch to it"), t!("Esc", "", "Cancel")],
+            note: "No administrator rights needed. Windows' own Alt+Tab keeps working; this has shortcuts of its own, which you can change on the Shortcuts tab.",
+            limits: &[
+                "Windows keeps Alt+Tab for itself, so the default is Ctrl+Alt+` instead of the Mac's Option+Tab.",
+                "Windows of apps running as administrator can be listed but may refuse to come to the front.",
+                "Windows on other virtual desktops are not listed.",
+            ],
+        },
+        ModuleId::CalendarClock => &Info {
+            tagline: "A clock with a calendar and world clocks in the taskbar corner.",
+            features: &[
+                f!("Your Clock", "Date, weekday and time the way you like them, with seconds if you want, in the icon's tooltip."),
+                f!("Month at a Glance", "Click the icon for a month calendar; move between months and jump back to today."),
+                f!("World Clocks", "The time in the cities you add, with how far ahead or behind they are."),
+            ],
+            tips: &[t!("", "Click the icon", "Open the calendar"), t!("", "Hover the icon", "Read the clock")],
+            note: "No administrator rights needed and nothing to allow. It only reads the PC's clock; nothing is sent anywhere.",
+            limits: &[
+                "Windows has no place for text in the taskbar corner, so the clock is the icon's tooltip and the icon shows today's date. The taskbar's own clock stays; hide its date in Settings ▸ Personalization ▸ Taskbar if you do not want two.",
+                "Your calendar events, the countdown to the next meeting and the Join button are not here: Windows has no calendar every app shares.",
+                "World clocks know the daylight-saving rules of the listed cities as they are today; a city that changes its rules needs an update of this app.",
+            ],
+        },
+        ModuleId::NachoPet => &Info {
+            tagline: "Nacho, the character, sits on your desktop. Click it to chat; sign in once with your Nacho account.",
+            features: &[
+                f!("Nacho on Your Desktop", "Drag the character anywhere, on any monitor. It remembers where you left it and comes back to the corner if that monitor is gone."),
+                f!("Chat", "A chat bubble follows Nacho. Send a message while Nacho is still answering and it goes out when the answer ends."),
+                f!("Approve and Choose", "Approval and choice cards appear in the chat; answer them with a click or with the number keys."),
+                f!("Hold to Talk", "Hold the character for two seconds and speak; let go and your words are written down and sent."),
+                f!("Selection Bar", "Select text in any app and a small bar offers Copy, Search, Translate, Summarize, Explain or Ask Nacho. Off by default, and you see what will be sent before it goes."),
+                f!("Sign In Once", "The login page opens in your browser. Nacho never sees your password, and the login is kept on this PC until you sign out."),
+            ],
+            tips: &[t!("", "Click Nacho", "Open or close the chat"), t!("", "Hold Nacho", "Speak a message"), t!("", "Drag Nacho", "Move the character")],
+            note: "No administrator rights needed. Nothing connects to the Nacho server until you open the chat. The link that brings the login back to this app is registered for your user account only, and only when you press the sign-in button.",
+            limits: &[
+                "Hold to talk and the microphone button record through Windows' microphone settings (Settings ▸ Privacy ▸ Microphone must allow desktop apps).",
+                "Spoken replies and the Connections tab of the Mac app are not here yet.",
+                "Windows has no menu bar, so the character's menu opens with a right click.",
+            ],
+        },
+        ModuleId::MouseTune => &Info {
+            tagline: "Sets up a wheel mouse your way: its own scroll direction, scroll speed, pointer speed and pointer precision.",
+            features: &[
+                f!("Own Scroll Direction", "Reverse the wheel of a mouse while a precision touchpad keeps the direction Windows gives it."),
+                f!("Scroll Speed", "Half to three times as many lines per notch as your Windows setting."),
+                f!("Pointer Speed", "Pick a pointer speed from here, or leave it as Windows has it."),
+                f!("Pointer Precision", "Turn Enhance pointer precision on or off, or leave it alone."),
+                f!("Your Values Come Back", "Switch the gadget off, quit the app, or restart after a crash: the values you had before return, unless you changed them yourself meanwhile."),
+            ],
+            tips: &[t!("", "Tray panel", "Reverse the wheel with one click")],
+            note: "No administrator rights needed. Pointer speed, scroll lines and precision are the per-user settings of Settings ▸ Bluetooth & devices ▸ Mouse; they last until you sign out even if the app is killed, and the app puts them back as it stops.",
+            limits: &[
+                "Smooth scrolling, side-button actions and a middle-button action are not offered: Windows has no system setting for smooth wheel scrolling (apps do it themselves), side buttons already go back and forward in browsers and File Explorer, and there is no Mission Control to open.",
+                "Only wheel notches are reversed. A precision touchpad or a free-spinning wheel sends finer steps and keeps its own direction; change those in Windows' touchpad settings.",
+                "Windows apps running as administrator do not receive reversed wheel events from an app that is not.",
+                "Not checked on a physical mouse or touchpad yet.",
+            ],
+        },
+        ModuleId::WidgetBoard => &Info {
+            tagline: "One window with a tile for every gadget: what it shows right now, and a way to rearrange them.",
+            features: &[
+                f!("A Tile per Gadget", "System Monitor rings, the Clipboard's latest copies, the Keep Awake countdown, volume and more, each live. A gadget that is off shows one line about what it does."),
+                f!("Three Sizes", "Small, wide or large per tile. The board fits 6, 4 or 2 columns to the window."),
+                f!("Edit the Board", "Drag tiles to reorder (or use the arrow keys), pick a size, hide a tile and bring it back from the list."),
+                f!("Your Own Order", "The board remembers its order and sizes. Editing it never turns a gadget on or off."),
+            ],
+            tips: &[t!("", "Panel button or shortcut", "Open the board"), t!("Esc", "", "Close the board")],
+            note: "No administrator rights needed. The board reads the gadgets that are running and starts nothing itself; switching it off closes the window and stops its refresh timer.",
+            limits: &[
+                "There is no Nacho Pet tile yet: the pet is not part of this Windows app so far.",
+                "Windows lets no app read your calendar events, so the Calendar Clock tile shows the date and world clocks, not an event.",
+                "There is no Computer Use tile: Windows has no counterpart of that gadget.",
+            ],
+        },
         ModuleId::DeviceControl => &Info {
             tagline: "Switches sound devices, mutes the microphone and sets external display brightness.",
             features: &[
@@ -283,6 +377,13 @@ mod tests {
         let all: Vec<_> = SNAP_GROUPS.iter().flat_map(|g| g.1.iter().copied()).collect();
         assert_eq!(all.len(), 24);
         for a in SnapAction::ALL { assert_eq!(all.iter().filter(|x| **x == a).count(), 1); }
+    }
+    #[test] fn every_gadget_has_a_page_text() {
+        for m in ModuleId::ALL { let i = info(m); assert!(!i.tagline.is_empty() && !i.features.is_empty() && !i.note.is_empty(), "{}", m.name()); }
+    }
+    #[test] fn calendar_clock_is_listed_with_a_show_action_and_no_default_key() {
+        let a = actions().into_iter().find(|a| a.id == "clock.show").unwrap();
+        assert_eq!((a.module, a.default), (ModuleId::CalendarClock, None));
     }
     #[test] fn defaults_do_not_clash_and_pass_the_policy() {
         let s = AppSettings::default();

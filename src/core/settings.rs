@@ -1,4 +1,6 @@
 //! The settings file. Every field defaults on its own, so an older or partly broken file keeps everything else.
+use super::clock::ClockHours;
+use super::mouse::{Precision, Saved};
 use super::shortcut::*;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -6,23 +8,25 @@ use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap }
+pub enum ModuleId { TrayOrganizer, SystemMonitor, WindowSnap, FileShelf, CaptureFloat, FocusDim, KeepAwake, Clipboard, DeviceControl, DiskMap, AppSwitch, CalendarClock, MouseTune, WidgetBoard, NachoPet }
 
 impl ModuleId {
-    pub const ALL: [ModuleId; 10] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
-        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap];
+    pub const ALL: [ModuleId; 15] = [ModuleId::TrayOrganizer, ModuleId::SystemMonitor, ModuleId::WindowSnap, ModuleId::FileShelf, ModuleId::CaptureFloat, ModuleId::FocusDim,
+        ModuleId::KeepAwake, ModuleId::Clipboard, ModuleId::DeviceControl, ModuleId::DiskMap, ModuleId::AppSwitch, ModuleId::CalendarClock, ModuleId::MouseTune, ModuleId::WidgetBoard, ModuleId::NachoPet];
     pub fn name(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "Tray Organizer", ModuleId::SystemMonitor => "System Monitor", ModuleId::WindowSnap => "Window Snap",
             ModuleId::FileShelf => "File Shelf", ModuleId::CaptureFloat => "Capture Float", ModuleId::FocusDim => "Focus Dim",
-            ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map",
+            ModuleId::KeepAwake => "Keep Awake", ModuleId::Clipboard => "Clipboard History", ModuleId::DeviceControl => "Device Control", ModuleId::DiskMap => "Disk Map", ModuleId::AppSwitch => "App Switch",
+            ModuleId::CalendarClock => "Calendar Clock", ModuleId::MouseTune => "Mouse Tune", ModuleId::WidgetBoard => "Widget Board", ModuleId::NachoPet => "Nacho Pet",
         }
     }
     pub fn key(self) -> &'static str {
         match self {
             ModuleId::TrayOrganizer => "tray", ModuleId::SystemMonitor => "monitor", ModuleId::WindowSnap => "snap",
             ModuleId::FileShelf => "shelf", ModuleId::CaptureFloat => "capture", ModuleId::FocusDim => "dim",
-            ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap",
+            ModuleId::KeepAwake => "awake", ModuleId::Clipboard => "clipboard", ModuleId::DeviceControl => "devices", ModuleId::DiskMap => "diskmap", ModuleId::AppSwitch => "appswitch",
+            ModuleId::CalendarClock => "clock", ModuleId::MouseTune => "mouse", ModuleId::WidgetBoard => "board", ModuleId::NachoPet => "pet",
         }
     }
     pub fn from_key(k: &str) -> Option<ModuleId> { Self::ALL.into_iter().find(|m| m.key() == k) }
@@ -54,6 +58,13 @@ pub enum SnapRepeat { CycleSizes, NextDisplay, Nothing }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LaunchWindow { Always, WhenNeeded, Never }
+
+/// A shortcut that opens (or brings forward, or hides) one program, named by its full exe path.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AppHotKey { pub path: String, pub name: String, pub shortcut: Option<Shortcut> }
+
+impl Default for AppHotKey { fn default() -> Self { AppHotKey { path: String::new(), name: String::new(), shortcut: None } } }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -91,6 +102,28 @@ pub struct Options {
     pub snap_restore_layouts: bool,
     /// File Shelf: Space in File Explorer previews the selected file.
     pub explorer_preview: bool,
+    /// Calendar Clock: what the clock shows, and the cities of the world clocks (time zone ids such as "Asia/Tokyo").
+    pub clock_date: bool,
+    pub clock_weekday: bool,
+    pub clock_seconds: bool,
+    pub clock_hours: ClockHours,
+    pub world_clocks: Vec<String>,
+    /// Mouse Tune: a wheel mouse scrolls the other way (precision touchpads keep their own direction).
+    pub mouse_reverse: bool,
+    /// Mouse Tune: lines per wheel notch, as a factor of the user's own setting.
+    pub mouse_speed: f64,
+    /// Mouse Tune: pointer speed 1 to 20; 0 leaves it as it is.
+    pub mouse_pointer: i32,
+    pub mouse_precision: Precision,
+    /// App Switch: one shortcut per program.
+    pub app_shortcuts: Vec<AppHotKey>,
+    /// App Switch: pressing a program's shortcut while it is in front hides it.
+    pub app_hide_on_repeat: bool,
+    /// General ▸ Updates: look for a new release on GitHub by itself (off until the user turns it on). Finding one
+    /// only tells the user; nothing is downloaded or replaced until they confirm.
+    pub update_check: bool,
+    /// Hours between those checks: one of `update::INTERVAL_CHOICES`.
+    pub update_interval_hours: u32,
 }
 
 impl Default for Options {
@@ -99,7 +132,10 @@ impl Default for Options {
             window_motion: true, cpu_alert_percent: 90, alert_notifications: false, shelf_trigger: ShelfTrigger::Shake, capture_rounded_corners: true,
             dim_scope: DimScope::FrontWindow, dim_other_displays: true, dim_fade_seconds: 0.25, public_ip_auto: false,
             awake_display: true, awake_apps: vec![], awake_battery_guard: 0, clip_max: 100, preferred_output: None, preferred_input: None,
-            theme_schedule: false, light_minute: 7 * 60, dark_minute: 19 * 60, snap_restore_layouts: true, explorer_preview: true }
+            theme_schedule: false, light_minute: 7 * 60, dark_minute: 19 * 60, snap_restore_layouts: true, explorer_preview: true,
+            clock_date: true, clock_weekday: true, clock_seconds: false, clock_hours: ClockHours::System, world_clocks: vec![],
+            mouse_reverse: true, mouse_speed: 1.0, mouse_pointer: 0, mouse_precision: Precision::Keep,
+            app_shortcuts: vec![], app_hide_on_repeat: true, update_check: false, update_interval_hours: 6 }
     }
 }
 
@@ -118,7 +154,11 @@ impl Options {
         self.clip_max = self.clip_max.clamp(10, 1000);
         self.light_minute = self.light_minute.rem_euclid(1440);
         self.dark_minute = self.dark_minute.rem_euclid(1440);
+        self.world_clocks.truncate(super::clock::MAX_WORLD_CLOCKS);
+        self.mouse_speed = if self.mouse_speed.is_finite() { self.mouse_speed.clamp(0.25, 4.0) } else { 1.0 };
+        self.mouse_pointer = self.mouse_pointer.clamp(0, 20);
         self.dim_fade_seconds = if self.dim_fade_seconds.is_finite() { self.dim_fade_seconds.clamp(0.0, 5.0) } else { 0.25 };
+        if !super::update::INTERVAL_CHOICES.contains(&self.update_interval_hours) { self.update_interval_hours = 6; }
         self
     }
 }
@@ -161,6 +201,16 @@ pub struct AppSettings {
     pub last_page: Option<String>,
     /// "en", "ko", "ja" or "zh"; None follows Windows.
     pub language: Option<String>,
+    /// Mouse Tune: the user's own system values and the ones it set, kept so they come back even after a crash.
+    pub mouse_saved: Option<Saved>,
+    /// Widget Board: order, size and hidden tiles. None until the user edits it; a broken value falls back to None.
+    #[serde(deserialize_with = "lenient_board")]
+    pub bento: Option<super::bento::BentoLayout>,
+}
+
+fn lenient_board<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<super::bento::BentoLayout>, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(serde_json::from_value(v).ok())
 }
 
 impl Default for AppSettings {
@@ -168,7 +218,7 @@ impl Default for AppSettings {
         AppSettings { enabled: BTreeMap::new(), dim_intensity: 0.5, options: Options::default(),
             monitor_items: vec![MonitorItem::Cpu, MonitorItem::Memory, MonitorItem::Network], pinned_tools: vec![], tool_shortcuts: BTreeMap::new(),
             action_shortcuts: BTreeMap::new(), launch_window: LaunchWindow::WhenNeeded, attention_dot: true, combo: None, custom_combos: vec![], welcomed: false,
-            tray_keep: vec![], tray_original: BTreeMap::new(), tray_collapsed: false, window_size: None, last_page: None, language: None }
+            tray_keep: vec![], tray_original: BTreeMap::new(), tray_collapsed: false, window_size: None, last_page: None, language: None, mouse_saved: None, bento: None }
     }
 }
 
@@ -183,6 +233,11 @@ pub fn clamp_dim(v: f64) -> f64 { if v.is_finite() { v.clamp(0.1, 0.9) } else { 
 impl AppSettings {
     pub fn is_on(&self, id: ModuleId) -> bool { self.enabled.get(&id).copied().unwrap_or(false) }
     pub fn set_on(&mut self, id: ModuleId, on: bool) { self.enabled.insert(id, on); }
+
+    /// The board to show: the saved one (with gadgets added since), else the default for these settings.
+    pub fn board_layout(&self) -> super::bento::BentoLayout {
+        match &self.bento { Some(b) => b.normalized(), None => super::bento::BentoLayout::defaults(|m| self.is_on(m)) }
+    }
 
     /// A missing or broken file gives the defaults; a broken file is kept beside it, never overwritten silently.
     pub fn load(path: &Path) -> AppSettings {
@@ -212,6 +267,36 @@ mod tests {
         assert!(s.options.window_motion);
         assert_eq!(s.launch_window, LaunchWindow::WhenNeeded);
     }
+    #[test] fn a_settings_file_from_before_calendar_clock_still_loads() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true,"keepAwake":false},"options":{"snapGap":8,"awakeApps":["zoom.exe"]}}"#).unwrap();
+        assert!(s.is_on(ModuleId::FocusDim));
+        assert!(!s.is_on(ModuleId::CalendarClock), "a new gadget is off until it is turned on");
+        assert_eq!(s.options.snap_gap, 8);
+        assert_eq!(s.options.awake_apps, vec!["zoom.exe".to_string()]);
+        let o = s.options;
+        assert!(o.clock_date && o.clock_weekday && !o.clock_seconds);
+        assert_eq!(o.clock_hours, ClockHours::System);
+        assert!(o.world_clocks.is_empty());
+    }
+    #[test] fn clock_options_roundtrip_and_survive_a_bad_value() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"calendarClock":true},"options":{"clockHours":"twentyFour","clockSeconds":true,"worldClocks":["Asia/Tokyo"]}}"#).unwrap();
+        assert!(s.is_on(ModuleId::CalendarClock));
+        assert_eq!((s.options.clock_hours, s.options.clock_seconds, s.options.world_clocks.clone()), (ClockHours::TwentyFour, true, vec!["Asia/Tokyo".to_string()]));
+        let again: AppSettings = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        assert_eq!(again, s);
+        // A value this version does not know falls back instead of throwing the whole file away.
+        let odd: AppSettings = serde_json::from_str(r#"{"dimIntensity":0.7,"options":{"clockHours":"bogus"}}"#).unwrap();
+        assert_eq!(odd.dim_intensity, 0.7);
+        assert_eq!(odd.options.clock_hours, ClockHours::Unknown);
+    }
+    #[test] fn too_many_world_clocks_are_trimmed_on_load() {
+        let dir = std::env::temp_dir().join(format!("nacho-clocks-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("s.json");
+        std::fs::write(&path, r#"{"options":{"worldClocks":["UTC","UTC","UTC","UTC","UTC","UTC","UTC","UTC"]}}"#).unwrap();
+        assert_eq!(AppSettings::load(&path).options.world_clocks.len(), super::super::clock::MAX_WORLD_CLOCKS);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
     #[test] fn roundtrip_and_broken_file() {
         let dir = std::env::temp_dir().join(format!("nacho-test-{}", std::process::id()));
         let path = dir.join("settings.json");
@@ -234,6 +319,42 @@ mod tests {
         assert!(light_due(23 * 60, 22 * 60, 6 * 60));
         assert!(light_due(60, 22 * 60, 6 * 60));
         assert!(!light_due(12 * 60, 22 * 60, 6 * 60));
+    }
+    #[test] fn mouse_tune_is_off_and_leaves_the_system_alone_until_asked() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true},"options":{"snapGap":8}}"#).unwrap();
+        assert!(!s.is_on(ModuleId::MouseTune));
+        assert!(s.is_on(ModuleId::FocusDim), "an older file keeps the user's choices");
+        assert_eq!((s.options.mouse_speed, s.options.mouse_pointer, s.options.mouse_precision), (1.0, 0, Precision::Keep));
+        assert_eq!(s.mouse_saved, None);
+        assert_eq!(ModuleId::from_key("mouse"), Some(ModuleId::MouseTune));
+    }
+    #[test] fn mouse_values_are_clamped_and_saved_values_survive_a_restart() {
+        let dir = std::env::temp_dir().join(format!("nacho-mouse-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("s.json");
+        std::fs::write(&path, r#"{"options":{"mouseSpeed":99,"mousePointer":-4}}"#).unwrap();
+        let mut s = AppSettings::load(&path);
+        assert_eq!((s.options.mouse_speed, s.options.mouse_pointer), (4.0, 0));
+        let sys = crate::core::mouse::Sys { pointer_speed: 10, wheel_lines: 3, precision: true };
+        s.mouse_saved = Some(Saved { original: sys, applied: crate::core::mouse::Sys { wheel_lines: 6, ..sys } });
+        s.save(&path).unwrap();
+        assert_eq!(AppSettings::load(&path).mouse_saved, s.mouse_saved);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test] fn updates_are_not_checked_until_asked_and_an_odd_interval_falls_back() {
+        let s: AppSettings = serde_json::from_str(r#"{"enabled":{"focusDim":true},"options":{"snapGap":8}}"#).unwrap();
+        assert!(!s.options.update_check, "an older file does not start talking to GitHub");
+        assert_eq!(s.options.update_interval_hours, 6);
+        assert!(s.is_on(ModuleId::FocusDim));
+        let dir = std::env::temp_dir().join(format!("nacho-upd-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("s.json");
+        std::fs::write(&path, r#"{"options":{"updateCheck":true,"updateIntervalHours":5}}"#).unwrap();
+        let s = AppSettings::load(&path);
+        assert_eq!((s.options.update_check, s.options.update_interval_hours), (true, 6));
+        std::fs::write(&path, r#"{"options":{"updateCheck":true,"updateIntervalHours":168}}"#).unwrap();
+        assert_eq!(AppSettings::load(&path).options.update_interval_hours, 168);
+        std::fs::remove_dir_all(dir).unwrap();
     }
     #[test] fn out_of_range_values_are_clamped() {
         let dir = std::env::temp_dir().join(format!("nacho-clamp-{}", std::process::id()));

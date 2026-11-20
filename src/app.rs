@@ -4,7 +4,7 @@ use crate::core::combos::{self, Combo, Snapshot};
 use crate::core::layout::SnapAction;
 use crate::core::settings::*;
 use crate::core::shortcut::*;
-use crate::{awake, capture, clipboard, devices, dim, hooks, monitor, panel, pages, shelf, snap, tray, trayorg};
+use crate::{appswitch, awake, board, capture, clipboard, clock, devices, dim, hooks, monitor, mouse, panel, pages, shelf, snap, tray, trayorg, update};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use windows::core::*;
@@ -26,6 +26,8 @@ pub const WM_OCR_DONE: u32 = WM_APP + 6;
 pub const WM_PUBLIC_IP: u32 = WM_APP + 7;
 pub const WM_DEVICES: u32 = WM_APP + 8;
 pub const WM_PEEK: u32 = WM_APP + 9;
+/// Results the pet's worker threads handed over.
+pub const WM_PET: u32 = WM_APP + 11;
 
 pub const TIMER_MONITOR: usize = 1;
 pub const TIMER_TRAY: usize = 2;
@@ -38,6 +40,11 @@ pub const TIMER_PASTE: usize = 8;
 pub const TIMER_THEME: usize = 9;
 pub const TIMER_LAYOUT: usize = 10;
 pub const TIMER_ONTOP: usize = 11;
+pub const TIMER_APPSWITCH: usize = 12;
+pub const TIMER_CLOCK: usize = 13;
+pub const TIMER_UPDATE_HEALTHY: usize = 14;
+pub const TIMER_UPDATE_CHECK: usize = 15;
+pub const TIMER_BOARD: usize = 16;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State { Off, Running, Failed(String) }
@@ -62,8 +69,13 @@ pub struct App {
     pub awake: awake::Awake,
     pub clipboard: clipboard::ClipModule,
     pub devices: devices::Devices,
+    pub appswitch: appswitch::AppSwitch,
+    pub clock: clock::Clock,
+    pub pet: crate::pet_ui::PetUi,
+    pub board: board::Board,
     pub settings_window: pages::SettingsWindow,
     pub panel: panel::Panel,
+    pub updater: update::Updater,
     pub undo: Option<(Snapshot, String)>,
 }
 
@@ -144,6 +156,11 @@ impl App {
             ModuleId::Clipboard => clipboard::start(),
             ModuleId::DeviceControl => devices::start(),
             ModuleId::DiskMap => crate::diskmap::start(),
+            ModuleId::AppSwitch => appswitch::start(),
+            ModuleId::CalendarClock => clock::start(),
+            ModuleId::MouseTune => mouse::start(),
+            ModuleId::NachoPet => crate::pet_ui::start(),
+            ModuleId::WidgetBoard => board::start(),
         };
         self.states.insert(id, match r { Ok(()) => State::Running, Err(e) => State::Failed(e) });
         hooks::sync();
@@ -163,12 +180,18 @@ impl App {
             ModuleId::Clipboard => clipboard::stop(),
             ModuleId::DeviceControl => devices::stop(),
             ModuleId::DiskMap => crate::diskmap::stop(),
+            ModuleId::AppSwitch => appswitch::stop(),
+            ModuleId::CalendarClock => clock::stop(),
+            ModuleId::MouseTune => mouse::stop(),
+            ModuleId::NachoPet => crate::pet_ui::stop(),
+            ModuleId::WidgetBoard => board::stop(),
         }
         self.states.insert(id, State::Off);
         hooks::sync();
     }
 
     pub fn shutdown(&mut self) {
+        update::on_quit();
         for id in ModuleId::ALL { self.stop(id); }
         self.unregister_hotkeys();
         self.tray.remove_all();
@@ -190,6 +213,11 @@ impl App {
             }
         }
         for (m, s) in &self.settings.tool_shortcuts { want.push((format!("open.{}", m.key()), *s)); }
+        // App shortcuts wait while one is being recorded, so the keys reach the settings window.
+        let recording = self.settings_window.capture_for.as_deref().is_some_and(|c| c.starts_with("app:"));
+        if self.state(ModuleId::AppSwitch) == State::Running && !recording {
+            for h in &self.settings.options.app_shortcuts { if let Some(s) = h.shortcut { want.push((crate::core::appswitch::app_id(&h.path), s)); } }
+        }
         for (id, s) in want {
             let hid = self.hotkey_ids.len() as i32 + 1;
             let ok = unsafe { RegisterHotKey(Some(self.main), hid, HOT_KEY_MODIFIERS(s.mods) | MOD_NOREPEAT, s.key) }.is_ok();
@@ -211,6 +239,10 @@ impl App {
 
     pub fn run_action(&mut self, id: &str) {
         if let Some(a) = id.strip_prefix("snap.") { if let Some(act) = SnapAction::from_id(a) { snap::run(act); } return; }
+        if id.starts_with("app:") {
+            if let Some(h) = self.settings.options.app_shortcuts.iter().find(|h| crate::core::appswitch::app_id(&h.path) == id).cloned() { appswitch::open_or_toggle(&h.path); }
+            return;
+        }
         if let Some(m) = id.strip_prefix("open.") { if let Some(m) = ModuleId::from_key(m) { panel::open_tool(m); } return; }
         if let Some(m) = id.strip_prefix("monitor.") {
             if let Some(i) = MonitorItem::ALL.into_iter().find(|i| i.name().to_lowercase() == m) { monitor::open_panel(i); }
@@ -241,6 +273,13 @@ impl App {
             "diskmap.open" => if self.state(ModuleId::DiskMap) == State::Running { crate::diskmap::open() },
             "device.theme" => if self.state(ModuleId::DeviceControl) == State::Running { devices::toggle_theme() },
             "window.onTop" => snap::toggle_on_top(),
+            "appswitch.next" => appswitch::cycle(true),
+            "appswitch.previous" => appswitch::cycle(false),
+            "appswitch.hideOthers" => appswitch::hide_others(),
+            "clock.show" => clock::show(),
+            "mouse.reverse" => mouse::toggle_reverse(),
+            "pet.chat" => crate::pet_ui::open_chat(),
+            "board.show" => board::show(),
             _ => {}
         }
     }
@@ -273,6 +312,8 @@ impl App {
     pub fn apply_options(&mut self) {
         dim::options_changed();
         monitor::options_changed();
+        clock::options_changed();
+        mouse::options_changed();
         hooks::sync();
         self.changed();
     }
@@ -297,10 +338,18 @@ impl App {
             "awake": self.awake.diagnostics(),
             "clipboard": self.clipboard.diagnostics(),
             "devices": self.devices.diagnostics(),
+            "appswitch": self.appswitch.diagnostics(),
+            "appShortcuts": self.hotkey_ids.iter().filter(|i| i.starts_with("app:")).count(),
+            "appShortcutsFailed": self.hotkey_clashes.iter().filter(|i| i.starts_with("app:")).collect::<Vec<_>>(),
             "diskmap": crate::diskmap::diagnostics(),
+            "clock": self.clock.diagnostics(),
+            "pet": crate::pet_ui::diagnostics(),
+            "board": self.board.diagnostics(),
+            "mouse": mouse::diagnostics(),
             "organizer": self.organizer.diagnostics(),
             "settingsWindow": self.settings_window.is_open(),
             "panel": self.panel.is_open(),
+            "update": update::diagnostics(),
         });
         let _ = std::fs::write(self.dir.join("state.json"), serde_json::to_vec_pretty(&v).unwrap_or_default());
     }
@@ -315,7 +364,8 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
             LRESULT(0)
         }
         WM_HOTKEY => {
-            if let Some(id) = a.hotkey_ids.get(wp.0.wrapping_sub(1)).cloned() { a.run_action(&id); }
+            if (appswitch::CANCEL_ID as usize..appswitch::CANCEL_ID as usize + 3).contains(&wp.0) { appswitch::cancel(); }
+            else if let Some(id) = a.hotkey_ids.get(wp.0.wrapping_sub(1)).cloned() { a.run_action(&id); }
             LRESULT(0)
         }
         WM_TRAY => { tray::on_message(wp, lp); LRESULT(0) }
@@ -326,6 +376,9 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
         WM_PUBLIC_IP => { monitor::on_public_ip(lp.0 as *mut String); LRESULT(0) }
         WM_DEVICES => { devices::on_change(wp.0 == 1); LRESULT(0) }
         WM_PEEK => { crate::peek::on_space(); LRESULT(0) }
+        WM_PET => { crate::pet_ui::on_message(); LRESULT(0) }
+        update::WM_UPDATE => { update::on_message(lp); LRESULT(0) }
+        crate::pet_exec::WM_PET_EXEC => { crate::pet_exec::on_message(); LRESULT(0) }
         crate::diskmap::WM_DISKMAP => { crate::diskmap::on_message(wp, lp); LRESULT(0) }
         clipboard::WM_CLIPBOARDUPDATE => { clipboard::on_update(); LRESULT(0) }
         WM_TIMER => {
@@ -338,7 +391,12 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
                 TIMER_AWAKE => awake::tick(),
                 TIMER_PASTE => clipboard::on_paste_timer(),
                 TIMER_THEME => devices::theme_tick(),
+                TIMER_CLOCK => clock::tick(),
+                TIMER_BOARD => board::tick(),
                 TIMER_LAYOUT => snap::layout_tick(),
+                TIMER_APPSWITCH => appswitch::on_timer(),
+                TIMER_UPDATE_HEALTHY => update::mark_healthy(),
+                TIMER_UPDATE_CHECK => update::check_if_due(),
                 TIMER_COMBO_UNDO => { let _ = KillTimer(Some(hwnd), TIMER_COMBO_UNDO); a.undo = None; a.changed(); }
                 _ => {}
             }
@@ -346,8 +404,16 @@ unsafe extern "system" fn main_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
         }
         WM_DISPLAYCHANGE => { dim::displays_changed(); snap::displays_changed(); a.changed(); DefWindowProcW(hwnd, msg, wp, lp) }
         WM_COPYDATA => {
-            if !a.debug_ctl { return LRESULT(0); }
             let cd = &*(lp.0 as *const COPYDATASTRUCT);
+            // The login redirect from the second copy that Windows started for the `nachogadget:` link.
+            if cd.dwData == crate::pet_ui::CALLBACK_TAG {
+                if cd.cbData > 0 && cd.cbData <= 8192 {
+                    let url = String::from_utf8_lossy(std::slice::from_raw_parts(cd.lpData as *const u8, cd.cbData as usize)).to_string();
+                    crate::pet_ui::deliver_callback(&url);
+                }
+                return LRESULT(1);
+            }
+            if !a.debug_ctl { return LRESULT(0); }
             let bytes = std::slice::from_raw_parts(cd.lpData as *const u8, cd.cbData as usize);
             let text = String::from_utf8_lossy(bytes).to_string();
             crate::ctl::run(&text.split('\u{1f}').map(String::from).collect::<Vec<_>>());
@@ -374,11 +440,16 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
         crate::i18n::set_language(settings.language.as_deref());
         let boxed = Box::leak(Box::new(App { settings, dir, states: BTreeMap::new(), main, debug_ctl, later: vec![], hotkey_ids: vec![], hotkey_clashes: BTreeSet::new(),
             tray: tray::Tray::default(), snap: Default::default(), dim: Default::default(), organizer: Default::default(), shelf: Default::default(), capture: Default::default(),
-            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), settings_window: Default::default(), panel: Default::default(), undo: None }));
+            monitor: Default::default(), awake: Default::default(), clipboard: Default::default(), devices: Default::default(), appswitch: Default::default(), clock: Default::default(), board: Default::default(), pet: Default::default(), settings_window: Default::default(), panel: Default::default(), updater: Default::default(), undo: None }));
         APP.with(|c| c.set(boxed));
         let a = app();
+        // A version that failed its first launches is replaced before anything starts.
+        if update::at_launch() { let _ = DestroyWindow(main); return; }
         crate::window::register_class();
+        crate::pet_exec::init(main, &a.dir);
         tray::create_main();
+        update::after_launch();
+        mouse::recover();
         for id in ModuleId::ALL { if a.settings.is_on(id) { a.start(id); } }
         a.sync_hotkeys();
         a.write_state();
@@ -390,5 +461,22 @@ pub fn run(dir: PathBuf, debug_ctl: bool) {
             let _ = TranslateMessage(&m);
             DispatchMessageW(&m);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Two gadgets once took the same private message number and the second one never ran: every number is its own.
+    #[test]
+    fn private_window_messages_are_all_different() {
+        let all = [WM_LATER, WM_TRAY, WM_SHAKE, WM_ANYDRAG, WM_WAKE, WM_OCR_DONE, WM_PUBLIC_IP, WM_DEVICES, WM_PEEK, WM_PET,
+            crate::pet_exec::WM_PET_EXEC, crate::diskmap::WM_DISKMAP, update::WM_UPDATE];
+        let mut sorted = all.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), all.len(), "a private window message number is used twice: {all:?}");
+        assert!(all.iter().all(|m| *m >= WM_APP), "private messages start at WM_APP");
     }
 }
